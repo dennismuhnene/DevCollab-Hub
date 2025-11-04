@@ -8,7 +8,6 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import Footer from '@/components/footer';
 
 export default function HomePage() {
   const { loading, user } = useAuth();
@@ -236,7 +235,6 @@ export default function HomePage() {
       </section>
 
     </main>
-    <Footer />
     </div>
   );
 }
