@@ -9,6 +9,7 @@ export interface UserProfile {
   bio?: string;
   skills?: string[];
   createdAt: Timestamp;
+  openForCollaboration?: boolean;
 }
 
 export interface Interest {

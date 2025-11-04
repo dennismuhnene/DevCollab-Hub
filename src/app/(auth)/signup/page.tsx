@@ -60,6 +60,7 @@ export default function SignupPage() {
         skills: [],
         bio: '',
         photoURL: '',
+        openForCollaboration: true,
       });
 
       toast({

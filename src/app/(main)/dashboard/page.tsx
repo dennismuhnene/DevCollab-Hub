@@ -130,6 +130,13 @@ export default function DashboardPage() {
                         ))}
                       </div>
                     </div>
+                    <div>
+                    {userProfile.openForCollaboration ? (
+                      <Badge variant="default" className="flex-shrink-0"><BadgeCheck className="mr-2 h-4 w-4"/>Open to Collab</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="flex-shrink-0"><BadgeX className="mr-2 h-4 w-4"/>Not seeking colabs</Badge>
+                    )}
+                    </div>
                   </div>
                 </div>
                  <CardContent className="p-8 space-y-8">

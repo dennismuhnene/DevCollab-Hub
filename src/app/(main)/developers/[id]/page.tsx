@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ProjectCard from '@/components/project-card';
-import { Briefcase } from 'lucide-react';
+import { Briefcase, BadgeCheck, BadgeX } from 'lucide-react';
 
 export default function DeveloperProfilePage() {
   const { user, loading: authLoading } = useAuth();
@@ -105,7 +105,15 @@ export default function DeveloperProfilePage() {
           <AvatarFallback className="text-5xl">{getInitials(developer.name)}</AvatarFallback>
         </Avatar>
         <div className="flex-1 pt-4">
-          <h1 className="text-4xl font-bold">{developer.name}</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-4xl font-bold">{developer.name}</h1>
+            {developer.openForCollaboration ? (
+              <Badge variant="default"><BadgeCheck className="mr-2 h-4 w-4"/>Open to Collab</Badge>
+            ) : (
+              <Badge variant="secondary"><BadgeX className="mr-2 h-4 w-4"/>Not seeking colabs</Badge>
+            )}
+          </div>
+
           <p className="text-muted-foreground text-lg">{developer.email}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {developer.skills?.map((skill) => (

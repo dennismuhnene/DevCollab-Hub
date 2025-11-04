@@ -28,12 +28,13 @@ import {
 } from '@/components/ui/alert-dialog';
 import { summarizeUserSkills } from '@/ai/flows/user-skills-summarizer';
 import { Sparkles, Loader2, X, Trash2 } from 'lucide-react';
+import { Switch } from './ui/switch';
 
 const profileSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters long' }),
   bio: z.string().optional(),
   skills: z.array(z.string()).optional(),
-  // photoURL is now managed on the parent page
+  openForCollaboration: z.boolean().optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -64,11 +65,13 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
       name: '',
       bio: '',
       skills: [],
+      openForCollaboration: true,
     },
   });
 
   const bioValue = watch('bio');
   const skills = watch('skills') || [];
+  const openForCollaboration = watch('openForCollaboration');
   
   useEffect(() => {
     if (userProfile) {
@@ -76,6 +79,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
         name: userProfile.name || '',
         bio: userProfile.bio || '',
         skills: userProfile.skills || [],
+        openForCollaboration: userProfile.openForCollaboration === false ? false : true,
       });
     }
   }, [userProfile, reset]);
@@ -135,9 +139,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
     setLoading(true);
     try {
       const userRef = doc(db, 'users', user.uid);
-      // Exclude photoURL from this form's submission data
-      const { ...updateData } = data;
-      await updateDoc(userRef, updateData);
+      await updateDoc(userRef, data);
       
       if (auth.currentUser) {
         await updateProfile(auth.currentUser, {
@@ -146,7 +148,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
       }
 
       toast({ title: 'Profile updated successfully!' });
-      reloadUserProfile(); // Reload user profile to reflect changes everywhere
+      reloadUserProfile();
     } catch (error) {
       console.error("Profile update error:", error);
       toast({ variant: 'destructive', title: 'An error occurred', description: 'Please check the console for details.' });
@@ -159,7 +161,6 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
     if (!user) return;
     setLoading(true);
     try {
-      // It's good practice to delete user's data from Firestore as well, though not implemented here.
       await deleteUser(user);
       toast({ title: 'Account deleted successfully' });
       router.push('/');
@@ -213,6 +214,22 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
                     </Button>
                 </div>
                 <Textarea id="bio" {...register('bio')} rows={5} />
+            </div>
+
+            <div className="flex items-center space-x-3 rounded-md border p-4">
+              <Switch 
+                id="openForCollaboration"
+                checked={openForCollaboration}
+                onCheckedChange={(checked) => setValue('openForCollaboration', checked, { shouldValidate: true, shouldDirty: true })}
+              />
+              <div className="space-y-0.5">
+                <Label htmlFor="openForCollaboration" className="text-base">
+                  Collaboration Status
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  {openForCollaboration ? "Open for Collaboration" : "Closed for colabs but can dm"}
+                </p>
+              </div>
             </div>
         </div>
         <Button type="submit" disabled={loading}>
