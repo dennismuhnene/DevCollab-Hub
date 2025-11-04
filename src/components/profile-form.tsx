@@ -227,7 +227,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
                   Collaboration Status
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  {openForCollaboration ? "Open for Collaboration" : "Closed for colabs but can dm"}
+                  {openForCollaboration ? "Open for Collaboration" : "Not seeking colabs"}
                 </p>
               </div>
             </div>
