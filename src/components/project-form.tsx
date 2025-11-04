@@ -153,6 +153,9 @@ export default function ProjectForm({ project }: ProjectFormProps) {
           <div className="space-y-2">
             <Label htmlFor="title">Project Title</Label>
             <Input id="title" {...register('title')} placeholder="e.g., AI-Powered Note Taking App" />
+            <p className="text-sm text-muted-foreground pt-1">
+              If your project is confidential, consider a more generic title like "Stealth Startup in FinTech".
+            </p>
             {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
           </div>
 
