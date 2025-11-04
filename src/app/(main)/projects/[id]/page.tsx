@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
+import { db, storage } from '@/lib/firebase/config';
+import { ref, deleteObject } from 'firebase/storage';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
@@ -14,9 +15,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Hand, Undo, Edit } from 'lucide-react';
+import { Hand, Undo, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 export default function ProjectDetailsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -104,6 +116,29 @@ export default function ProjectDetailsPage() {
       toast({ variant: 'destructive', title: 'Something went wrong', description: 'Could not update your interest.' });
     }
   };
+
+  const handleDeleteProject = async () => {
+    if (!project || !user) return;
+    setLoading(true);
+
+    try {
+      if (project.imageUrl) {
+        const imageRef = ref(storage, project.imageUrl);
+        await deleteObject(imageRef);
+      }
+      
+      const projectRef = doc(db, 'projects', project.id);
+      await deleteDoc(projectRef);
+
+      toast({ title: 'Project deleted successfully' });
+      router.push('/projects');
+
+    } catch (error: any) {
+      console.error("Project deletion error:", error);
+      toast({ variant: 'destructive', title: 'Error deleting project', description: error.message });
+      setLoading(false);
+    }
+  };
   
   const defaultProjectImage = PlaceHolderImages.find(p => p.id === 'project-1')?.imageUrl || "https://picsum.photos/seed/default/1200/800";
 
@@ -185,28 +220,53 @@ export default function ProjectDetailsPage() {
         </div>
         
         <div className="space-y-6">
-          {user && user.uid === project.ownerId ? (
-            <Button size="lg" className="w-full" asChild>
-                <Link href={`/projects/${project.id}/edit`}>
-                    <Edit className="mr-2 h-4 w-4"/>
-                    Edit Project
-                </Link>
-            </Button>
-          ) : user && (
-            <Button size="lg" className="w-full" onClick={handleInterest}>
-              {interested ? (
-                <>
-                  <Undo className="mr-2 h-4 w-4" />
-                  Remove Interest
-                </>
-              ) : (
-                <>
-                  <Hand className="mr-2 h-4 w-4" />
-                  I&apos;m interested
-                </>
-              )}
-            </Button>
-          )}
+          <div className="flex flex-col space-y-2">
+            {user && user.uid === project.ownerId ? (
+              <div className="flex gap-2">
+                <Button size="lg" className="w-full" asChild>
+                    <Link href={`/projects/${project.id}/edit`}>
+                        <Edit className="mr-2 h-4 w-4"/>
+                        Edit Project
+                    </Link>
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button size="lg" variant="destructive">
+                      <Trash2 className="h-4 w-4"/>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete your project and remove its data from our servers.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteProject} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            ) : user && (
+              <Button size="lg" className="w-full" onClick={handleInterest}>
+                {interested ? (
+                  <>
+                    <Undo className="mr-2 h-4 w-4" />
+                    Remove Interest
+                  </>
+                ) : (
+                  <>
+                    <Hand className="mr-2 h-4 w-4" />
+                    I&apos;m interested
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
 
           <Card>
             <CardHeader>

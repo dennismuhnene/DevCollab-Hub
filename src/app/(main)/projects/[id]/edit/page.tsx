@@ -33,15 +33,19 @@ export default function EditProjectPage() {
         if (projectData.ownerId === user.uid) {
           setProject(projectData);
         } else {
+          toast({ variant: 'destructive', title: 'Permission Denied' });
           router.push('/projects'); // Not the owner
         }
       } else {
+        toast({ variant: 'destructive', title: 'Project not found' });
         router.push('/projects'); // Not found
       }
       setLoading(false);
     };
 
-    fetchProject();
+    if (projectId && user) {
+      fetchProject();
+    }
   }, [projectId, user, authLoading, router]);
 
   if (loading || authLoading) {
@@ -66,7 +70,7 @@ export default function EditProjectPage() {
         <h1 className="text-3xl font-bold tracking-tight">Edit Project</h1>
         <p className="text-muted-foreground">Update the details for your project.</p>
       </div>
-      {project && <ProjectForm project={project} />}
+      {project ? <ProjectForm project={project} /> : <p>Project not found or you do not have permission to edit it.</p>}
     </div>
   );
 }
