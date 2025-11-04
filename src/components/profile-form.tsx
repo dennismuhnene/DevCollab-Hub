@@ -49,7 +49,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [skillInput, setSkillInput] = useState('');
-  const [skills, setSkills] = useState<string[]>(userProfile?.skills || []);
+  const [skills, setSkills] = useState<string[]>([]);
   const [isAiPending, startAiTransition] = useTransition();
 
   const {
@@ -57,16 +57,29 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors },
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: userProfile.name || '',
-      bio: userProfile.bio || '',
-      skills: userProfile.skills || [],
-      photoURL: userProfile.photoURL || '',
+      name: '',
+      bio: '',
+      skills: [],
+      photoURL: '',
     },
   });
+
+  useEffect(() => {
+    if (userProfile) {
+      reset({
+        name: userProfile.name || '',
+        bio: userProfile.bio || '',
+        skills: userProfile.skills || [],
+        photoURL: userProfile.photoURL || '',
+      });
+      setSkills(userProfile.skills || []);
+    }
+  }, [userProfile, reset]);
   
   const bioValue = watch('bio');
 
@@ -132,7 +145,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
       }
       toast({ title: 'Profile updated successfully!' });
       // We don't router.push because this form is part of the profile page
-      window.location.reload(); // Simple way to refresh profile data
+      router.refresh(); // Use router.refresh() to re-fetch server components
     } catch (error) {
       toast({ variant: 'destructive', title: 'An error occurred' });
     } finally {
