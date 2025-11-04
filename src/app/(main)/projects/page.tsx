@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import type { Project } from '@/types';
+import type { Project, UserProfile } from '@/types';
 import ProjectCard from '@/components/project-card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -29,7 +29,7 @@ export default function ProjectsPage() {
       const getProjects = async () => {
         setLoading(true);
         const projectsCol = collection(db, 'projects');
-        const q = query(projectsCol, orderBy('createdAt', 'desc'));
+        const q = query(projectsCol, where('ownerId', '==', user.uid), orderBy('createdAt', 'desc'));
         const querySnapshot = await getDocs(q);
         setProjects(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project)));
         setLoading(false);
@@ -61,7 +61,7 @@ export default function ProjectsPage() {
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Browse Projects</h1>
+        <h1 className="text-3xl font-bold tracking-tight">My Projects</h1>
         <Button asChild>
           <Link href="/projects/new">
             <PlusCircle className="mr-2 h-4 w-4" />
@@ -78,8 +78,8 @@ export default function ProjectsPage() {
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 py-20 text-center">
-          <h2 className="text-xl font-semibold">No projects yet</h2>
-          <p className="mt-2 text-muted-foreground">Be the first to create a project and start collaborating!</p>
+          <h2 className="text-xl font-semibold">You haven't created any projects yet.</h2>
+          <p className="mt-2 text-muted-foreground">Let's change that. Start your next big idea today!</p>
           <Button asChild className="mt-4">
             <Link href="/projects/new">Create a Project</Link>
           </Button>

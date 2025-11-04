@@ -53,13 +53,9 @@ export default function Header() {
           </Link>
           {user && (
             <>
-              <Link href="/discover" className="flex items-center gap-1.5 transition-colors hover:text-foreground/80 text-foreground/60">
+              <Link href="/developers" className="flex items-center gap-1.5 transition-colors hover:text-foreground/80 text-foreground/60">
                 <Sparkles className="h-4 w-4 text-accent" />
                 Discover
-              </Link>
-              <Link href="/developers" className="flex items-center gap-1.5 transition-colors hover:text-foreground/80 text-foreground/60">
-                <Users className="h-4 w-4" />
-                Developers
               </Link>
             </>
           )}
