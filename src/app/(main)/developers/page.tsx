@@ -40,7 +40,20 @@ export default function DiscoverDevelopersPage() {
       // Fetch all users except the currently logged-in one
       const usersQuery = query(usersCol, where('uid', '!=', user.uid));
       const usersSnapshot = await getDocs(usersQuery);
-      const developersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+      const developersData = usersSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          uid: doc.id,
+          name: data.name || 'Unnamed User',
+          email: data.email,
+          displayName: data.displayName || 'Unnamed User',
+          bio: data.bio || '',
+          skills: data.skills || [],
+          photoURL: data.photoURL || '',
+          openForCollaboration: data.openForCollaboration === false ? false : true,
+          ...data,
+        } as UserProfile;
+      });
       
       setAllDevelopers(developersData);
       setFilteredDevelopers(developersData);
@@ -59,8 +72,8 @@ export default function DiscoverDevelopersPage() {
       const lowercasedTerm = searchTerm.toLowerCase();
       const results = allDevelopers.filter(dev => 
         dev.name?.toLowerCase().includes(lowercasedTerm) ||
-        dev.bio?.toLowerCase().includes(lowercasedTerm) ||
-        dev.skills?.some(skill => skill.toLowerCase().includes(lowercasedTerm))
+        (dev.bio || '').toLowerCase().includes(lowercasedTerm) ||
+        (dev.skills || []).some(skill => skill.toLowerCase().includes(lowercasedTerm))
       );
       setFilteredDevelopers(results);
     };
@@ -80,7 +93,7 @@ export default function DiscoverDevelopersPage() {
     startAiSortTransition(async () => {
       try {
         const projectDescriptions = allDevelopers.map(dev => 
-          `Name: ${dev.name}, Bio: ${dev.bio || 'Not provided'}, Skills: ${dev.skills?.join(', ') || 'None'}`
+          `Name: ${dev.name}, Bio: ${dev.bio || 'Not provided'}, Skills: ${(dev.skills || []).join(', ') || 'None'}`
         );
 
         const recommendedOrder = await getUserRecommendations({
@@ -91,7 +104,7 @@ export default function DiscoverDevelopersPage() {
         const sortedDevelopers = recommendedOrder.map(rec => {
           // Find the developer that matches the recommended description
           return allDevelopers.find(dev => {
-            const devDescription = `Name: ${dev.name}, Bio: ${dev.bio || 'Not provided'}, Skills: ${dev.skills?.join(', ') || 'None'}`;
+            const devDescription = `Name: ${dev.name}, Bio: ${dev.bio || 'Not provided'}, Skills: ${(dev.skills || []).join(', ') || 'None'}`;
             return devDescription === rec;
           });
         }).filter((dev): dev is UserProfile => dev !== undefined);
@@ -189,5 +202,3 @@ export default function DiscoverDevelopersPage() {
       )}
     </div>
   );
-
-    
