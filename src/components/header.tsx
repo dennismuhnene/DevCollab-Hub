@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { LogIn, UserPlus, Code2, User, LogOut, Sparkles, Users, Home } from 'lucide-react';
+import { LogIn, UserPlus, Code2, User, LogOut, Sparkles, Users, Home, LayoutDashboard } from 'lucide-react';
 
 export default function Header() {
   const { user, userProfile, loading } = useAuth();
@@ -46,6 +46,12 @@ export default function Header() {
             <Home className="h-4 w-4" />
             Home
           </Link>
+          {user && (
+            <Link href="/dashboard" className="flex items-center gap-1.5 transition-colors hover:text-foreground/80 text-foreground/60">
+              <LayoutDashboard className="h-4 w-4" />
+              Dashboard
+            </Link>
+          )}
           <Link href="/projects" className="transition-colors hover:text-foreground/80 text-foreground/60">
             Projects
           </Link>

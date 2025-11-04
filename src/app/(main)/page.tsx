@@ -1,30 +1,21 @@
 'use client';
 
-import { useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/hooks/use-auth';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Users, Briefcase, Loader2 } from 'lucide-react';
+import { ArrowRight, Users, Briefcase } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useAuth } from '@/lib/hooks/use-auth';
+import { Loader2 } from 'lucide-react';
 
 export default function HomePage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && user) {
-      router.replace('/dashboard');
-    }
-  }, [user, loading, router]);
-
+  const { loading, user } = useAuth();
   const heroImage = PlaceHolderImages.find(p => p.id === 'hero-image');
   const project1 = PlaceHolderImages.find(p => p.id === 'project-1');
   const project2 = PlaceHolderImages.find(p => p.id === 'project-2');
   const project3 = PlaceHolderImages.find(p => p.id === 'project-3');
   
-  if (loading || user) {
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -53,12 +44,14 @@ export default function HomePage() {
                     <Briefcase className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
-                <Button asChild variant="secondary" size="lg">
-                  <Link href="/signup">
-                    Join the Community
-                    <Users className="ml-2 h-5 w-5" />
-                  </Link>
-                </Button>
+                {!user && (
+                    <Button asChild variant="secondary" size="lg">
+                    <Link href="/signup">
+                        Join the Community
+                        <Users className="ml-2 h-5 w-5" />
+                    </Link>
+                    </Button>
+                )}
               </div>
             </div>
             {heroImage && (
