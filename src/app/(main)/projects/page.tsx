@@ -80,9 +80,6 @@ export default function ProjectsPage() {
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 py-20 text-center">
           <h2 className="text-xl font-semibold">You haven't created any projects yet.</h2>
           <p className="mt-2 text-muted-foreground">Let's change that. Start your next big idea today!</p>
-          <Button asChild className="mt-4">
-            <Link href="/projects/new">Create a Project</Link>
-          </Button>
         </div>
       )}
     </div>
