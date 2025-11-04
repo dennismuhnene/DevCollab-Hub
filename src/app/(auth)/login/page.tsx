@@ -50,7 +50,7 @@ export default function LoginPage() {
         title: 'Login successful!',
         description: "Welcome back to DevCollab Hub.",
       });
-      router.push('/');
+      router.push('/dashboard');
     } catch (error: any) {
       toast({
         variant: 'destructive',
