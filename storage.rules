@@ -3,22 +3,17 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Helper function to check if the user is authenticated
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
     // Allow public read access to all files
     allow read: if true;
 
     // Users can only write to their own `profile-images` folder
     match /profile-images/{userId}/{allPaths=**} {
-      allow write: if isSignedIn() && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     // Users can only write to their own `project-images` folder
     match /project-images/{userId}/{allPaths=**} {
-      allow write: if isSignedIn() && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
