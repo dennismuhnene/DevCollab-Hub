@@ -49,7 +49,6 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [skillInput, setSkillInput] = useState('');
-  const [skills, setSkills] = useState<string[]>(userProfile.skills || []);
   const [isAiPending, startAiTransition] = useTransition();
 
   const {
@@ -58,39 +57,58 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
     setValue,
     watch,
     reset,
+    getValues,
     formState: { errors },
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
+    // Initialize with default values. Will be updated by reset in useEffect.
     defaultValues: {
-      name: userProfile.name || '',
-      bio: userProfile.bio || '',
-      skills: userProfile.skills || [],
-      photoURL: userProfile.photoURL || '',
+      name: '',
+      bio: '',
+      skills: [],
+      photoURL: '',
     },
   });
-  
-  const bioValue = watch('bio');
 
+  // Watch for changes in form values
+  const bioValue = watch('bio');
+  const skills = watch('skills') || [];
+  const photoURLValue = watch('photoURL');
+  
+  // When userProfile prop is available or changes, reset the form with the new data.
+  // This ensures the form is always in sync with the data from Firestore.
   useEffect(() => {
-    setValue('skills', skills);
-  }, [skills, setValue]);
+    if (userProfile) {
+      reset({
+        name: userProfile.name || '',
+        bio: userProfile.bio || '',
+        skills: userProfile.skills || [],
+        photoURL: userProfile.photoURL || '',
+      });
+    }
+  }, [userProfile, reset]);
+
 
   const handleSkillAdd = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && skillInput.trim()) {
       e.preventDefault();
-      if (!skills.includes(skillInput.trim())) {
-        setSkills([...skills, skillInput.trim()]);
+      const currentSkills = getValues('skills') || [];
+      const newSkill = skillInput.trim();
+      if (!currentSkills.includes(newSkill)) {
+        setValue('skills', [...currentSkills, newSkill]);
       }
       setSkillInput('');
     }
   };
 
   const handleSkillRemove = (skillToRemove: string) => {
-    setSkills(skills.filter((skill) => skill !== skillToRemove));
+    const currentSkills = getValues('skills') || [];
+    setValue('skills', currentSkills.filter((skill) => skill !== skillToRemove));
   };
   
   const handleGenerateBio = async () => {
-    if (skills.length === 0) {
+    const currentSkills = getValues('skills');
+    if (!currentSkills || currentSkills.length === 0) {
       toast({
         variant: 'destructive',
         title: 'Skills Required',
@@ -101,7 +119,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
     
     startAiTransition(async () => {
       try {
-        const result = await summarizeUserSkills({ profileDescription: bioValue || 'A passionate developer.', skills: skills });
+        const result = await summarizeUserSkills({ profileDescription: bioValue || 'A passionate developer.', skills: currentSkills });
         if (result?.summary) {
           setValue('bio', result.summary);
           toast({
@@ -132,8 +150,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
         });
       }
       toast({ title: 'Profile updated successfully!' });
-      // We don't router.push because this form is part of the profile page
-      router.refresh(); // Use router.refresh() to re-fetch server components
+      router.refresh(); 
     } catch (error) {
       toast({ variant: 'destructive', title: 'An error occurred' });
     } finally {
@@ -145,8 +162,6 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
     if (!user) return;
     setLoading(true);
     try {
-      // NOTE: This only deletes the user from Auth.
-      // Firestore data deletion would be handled by a Cloud Function trigger.
       await deleteUser(user);
       toast({ title: 'Account deleted successfully' });
       router.push('/');
@@ -178,7 +193,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
                         </div>
                     ))}
                     <Input
-                        id="skills"
+                        id="skills-input"
                         value={skillInput}
                         onChange={(e) => setSkillInput(e.target.value)}
                         onKeyDown={handleSkillAdd}
@@ -206,8 +221,9 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
                 <Label>Profile Picture</Label>
                 <ImageUploader
                     onUpload={(url) => setValue('photoURL', url)}
-                    initialUrl={userProfile.photoURL}
+                    initialUrl={photoURLValue}
                     folderPath={`profile-images/${user?.uid}`}
+                    key={photoURLValue}
                 />
             </div>
         </div>
