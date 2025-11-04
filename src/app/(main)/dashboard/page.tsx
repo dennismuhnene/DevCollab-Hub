@@ -150,7 +150,6 @@ export default function DashboardPage() {
                       </Avatar>
                       <div className="flex-1 pt-4">
                         <h1 className="text-4xl font-bold">{userProfile.name}</h1>
-                        <p className="text-muted-foreground text-lg">{userProfile.email}</p>
                         <div className="mt-4 flex flex-wrap gap-2">
                           {userProfile.skills?.map((skill) => (
                             <Badge key={skill} variant="secondary" className="text-sm">{skill}</Badge>

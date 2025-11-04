@@ -114,7 +114,6 @@ export default function DeveloperProfilePage() {
             )}
           </div>
 
-          <p className="text-muted-foreground text-lg">{developer.email}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {developer.skills?.map((skill) => (
               <Badge key={skill} variant="secondary" className="text-sm">{skill}</Badge>

@@ -28,7 +28,9 @@ export default function DeveloperCard({ developer }: DeveloperCardProps) {
         </Avatar>
         <div className="flex-1">
           <CardTitle className="text-xl font-bold leading-tight">{developer.name}</CardTitle>
-          <CardDescription className="text-muted-foreground truncate">{developer.email}</CardDescription>
+          {developer.openForCollaboration && (
+            <CardDescription className="text-primary font-semibold">Open to Collab</CardDescription>
+          )}
         </div>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col justify-between">
