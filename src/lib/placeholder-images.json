@@ -1,3 +1,40 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "user-1",
+      "description": "Default user avatar",
+      "imageUrl": "https://images.unsplash.com/photo-1590086782792-42dd2350140d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjIxODcyNzB8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person portrait"
+    },
+    {
+      "id": "project-1",
+      "description": "Project image for a web application",
+      "imageUrl": "https://images.unsplash.com/photo-1595623654300-b27329804025?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx0ZWNobm9sb2d5JTIwY29kZXxlbnwwfHx8fDE3NjIyNzA4NzR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "technology code"
+    },
+    {
+      "id": "project-2",
+      "description": "Project image for a mobile app",
+      "imageUrl": "https://images.unsplash.com/photo-1710993012000-f109972e3b8f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxtb2JpbGUlMjBpbnRlcmZhY2V8ZW58MHx8fHwxNzYyMjA3OTkwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "mobile interface"
+    },
+    {
+      "id": "project-3",
+      "description": "Project image for a data science project",
+      "imageUrl": "https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxkYXRhJTIwdmlzdWFsaXphdGlvbnxlbnwwfHx8fDE3NjIxODI3NTB8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "data visualization"
+    },
+    {
+      "id": "project-4",
+      "description": "Project image for a game development project",
+      "imageUrl": "https://images.unsplash.com/photo-1581093202218-980a6769202b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxnYW1lJTIwZGVzaWdufGVufDB8fHx8MTc2MjE4NzgxNHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "game design"
+    },
+    {
+      "id": "hero-image",
+      "description": "Hero image for the landing page",
+      "imageUrl": "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHx0ZWFtJTIwY29sbGFib3JhdGlvbnxlbnwwfHx8fDE3NjIyNzQ3Njd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "team collaboration"
+    }
+  ]
 }
