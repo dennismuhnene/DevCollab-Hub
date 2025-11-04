@@ -198,7 +198,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
           <div className="space-y-2">
             <Label>Project Image</Label>
             <ImageUploader
-              onUpload={(url) => setValue('imageUrl', url)}
+              onUpload={(url) => setValue('imageUrl', url, { shouldValidate: true, shouldDirty: true })}
               initialUrl={project?.imageUrl}
               folderPath={`project-images/${user?.uid}`}
             />
