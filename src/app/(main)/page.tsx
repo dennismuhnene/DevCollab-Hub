@@ -24,14 +24,14 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-dvh">
     <main className="flex-1">
-      <section className="w-full py-20 md:py-32 lg:py-40 bg-gradient-to-b from-background to-secondary/50 dark:from-background dark:to-slate-900/50">
-        <div className="container mx-auto max-w-7xl px-4 md:px-8">
+      <section className="w-full py-20 md:py-32 lg:py-40 border-b border-border/40 bg-background/95">
+        <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
             <div className="flex flex-col justify-center space-y-6">
               <div className="space-y-4">
-                <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none font-headline">
+                <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">
                   Find Your Crew, Build Your Vision
                 </h1>
                 <p className="max-w-[600px] text-muted-foreground md:text-xl">
@@ -42,14 +42,13 @@ export default function HomePage() {
                 <Button asChild size="lg">
                   <Link href="/projects">
                     Browse Projects
-                    <Briefcase className="ml-2 h-5 w-5" />
+                    <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
                 {!user && (
                     <Button asChild variant="secondary" size="lg">
                     <Link href="/signup">
                         Join the Community
-                        <Users className="ml-2 h-5 w-5" />
                     </Link>
                     </Button>
                 )}
@@ -73,29 +72,29 @@ export default function HomePage() {
       </section>
 
       <section id="how-it-works" className="w-full py-20 md:py-32">
-          <div className="container mx-auto max-w-7xl px-4 md:px-8">
+          <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="text-center space-y-4 mb-12">
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl font-headline">How It Works</h2>
+              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">How It Works</h2>
               <p className="max-w-2xl mx-auto text-muted-foreground md:text-xl">
                 Connecting with collaborators is as easy as 1, 2, 3.
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-              <div className="flex flex-col items-center space-y-4">
+              <div className="flex flex-col items-center space-y-4 p-6 rounded-lg border border-transparent hover:bg-secondary/40 hover:border-border transition-all">
                 <div className="bg-primary/10 p-4 rounded-full">
                   <Search className="h-10 w-10 text-primary" />
                 </div>
                 <h3 className="text-2xl font-bold">1. Discover</h3>
                 <p className="text-muted-foreground">Browse through a diverse range of developer profiles and exciting projects seeking collaboration.</p>
               </div>
-              <div className="flex flex-col items-center space-y-4">
+              <div className="flex flex-col items-center space-y-4 p-6 rounded-lg border border-transparent hover:bg-secondary/40 hover:border-border transition-all">
                 <div className="bg-primary/10 p-4 rounded-full">
                   <Handshake className="h-10 w-10 text-primary" />
                 </div>
                 <h3 className="text-2xl font-bold">2. Connect</h3>
                 <p className="text-muted-foreground">Show interest in projects or reach out to developers whose skills match your needs.</p>
               </div>
-              <div className="flex flex-col items-center space-y-4">
+              <div className="flex flex-col items-center space-y-4 p-6 rounded-lg border border-transparent hover:bg-secondary/40 hover:border-border transition-all">
                 <div className="bg-primary/10 p-4 rounded-full">
                   <Bot className="h-10 w-10 text-primary" />
                 </div>
@@ -106,22 +105,20 @@ export default function HomePage() {
           </div>
       </section>
 
-      <section id="features" className="w-full py-20 md:py-32 bg-secondary/50">
-        <div className="container mx-auto max-w-7xl px-4 md:px-8">
+      <section id="features" className="w-full py-20 md:py-32 bg-secondary/20">
+        <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
           <div className="flex flex-col items-center justify-center space-y-4 text-center">
             <div className="space-y-2">
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl font-headline">Featured Projects</h2>
+              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Featured Projects</h2>
               <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                 Check out some of the exciting projects currently looking for collaborators.
               </p>
             </div>
           </div>
           <div className="mx-auto grid grid-cols-1 gap-8 py-12 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Placeholder content */}
             {project1 && (
-              <div className="block h-full">
-                <div className="h-full transform transition-all duration-300 hover:scale-105 hover:shadow-xl dark:hover:shadow-primary/20 flex flex-col rounded-lg border bg-card text-card-foreground shadow-sm">
-                  <div className="p-0">
+                <Card className="h-full transform transition-all duration-300 hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-primary/10">
+                  <CardContent className="p-0">
                     <div className="aspect-[3/2] w-full overflow-hidden rounded-t-lg">
                       <Image
                         src={project1.imageUrl}
@@ -132,25 +129,23 @@ export default function HomePage() {
                         data-ai-hint={project1.imageHint}
                       />
                     </div>
-                  </div>
-                  <div className="flex flex-1 flex-col p-6">
-                    <div className="mb-2 text-xl font-bold leading-tight">AI-Powered Chatbot</div>
-                    <div className="mb-4 line-clamp-3 flex-grow text-muted-foreground">
+                  </CardContent>
+                  <div className="p-6">
+                    <h3 className="mb-2 text-xl font-bold leading-tight">AI-Powered Chatbot</h3>
+                    <p className="mb-4 line-clamp-3 flex-grow text-muted-foreground">
                       A cutting-edge chatbot for customer service.
-                    </div>
+                    </p>
                     <div className="flex flex-wrap gap-2 pt-2">
                       <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">React</div>
                       <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">Node.js</div>
                       <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">AI</div>
                     </div>
                   </div>
-                </div>
-              </div>
+                </Card>
             )}
              {project2 && (
-              <div className="block h-full">
-                <div className="h-full transform transition-all duration-300 hover:scale-105 hover:shadow-xl dark:hover:shadow-primary/20 flex flex-col rounded-lg border bg-card text-card-foreground shadow-sm">
-                  <div className="p-0">
+                <Card className="h-full transform transition-all duration-300 hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-primary/10">
+                  <CardContent className="p-0">
                     <div className="aspect-[3/2] w-full overflow-hidden rounded-t-lg">
                       <Image
                         src={project2.imageUrl}
@@ -161,25 +156,23 @@ export default function HomePage() {
                         data-ai-hint={project2.imageHint}
                       />
                     </div>
-                  </div>
-                  <div className="flex flex-1 flex-col p-6">
-                    <div className="mb-2 text-xl font-bold leading-tight">E-commerce Platform</div>
-                    <div className="mb-4 line-clamp-3 flex-grow text-muted-foreground">
+                  </CardContent>
+                  <div className="p-6">
+                    <h3 className="mb-2 text-xl font-bold leading-tight">E-commerce Platform</h3>
+                    <p className="mb-4 line-clamp-3 flex-grow text-muted-foreground">
                       Build a scalable online store from scratch.
-                    </div>
+                    </p>
                     <div className="flex flex-wrap gap-2 pt-2">
                        <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">Next.js</div>
                        <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">Stripe</div>
                        <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">GraphQL</div>
                     </div>
                   </div>
-                </div>
-              </div>
+                </Card>
             )}
              {project3 && (
-              <div className="block h-full">
-                <div className="h-full transform transition-all duration-300 hover:scale-105 hover:shadow-xl dark:hover:shadow-primary/20 flex flex-col rounded-lg border bg-card text-card-foreground shadow-sm">
-                  <div className="p-0">
+                <Card className="h-full transform transition-all duration-300 hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-primary/10">
+                  <CardContent className="p-0">
                     <div className="aspect-[3/2] w-full overflow-hidden rounded-t-lg">
                       <Image
                         src={project3.imageUrl}
@@ -190,22 +183,21 @@ export default function HomePage() {
                         data-ai-hint={project3.imageHint}
                       />
                     </div>
-                  </div>
-                  <div className="flex flex-1 flex-col p-6">
-                    <div className="mb-2 text-xl font-bold leading-tight">Mobile Fitness App</div>
-                    <div className="mb-4 line-clamp-3 flex-grow text-muted-foreground">
+                  </CardContent>
+                  <div className="p-6">
+                    <h3 className="mb-2 text-xl font-bold leading-tight">Mobile Fitness App</h3>
+                    <p className="mb-4 line-clamp-3 flex-grow text-muted-foreground">
                       An app to track workouts and nutrition.
-                    </div>
+                    </p>
                     <div className="flex flex-wrap gap-2 pt-2">
                        <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">React Native</div>
                        <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">Firebase</div>
                     </div>
                   </div>
-                </div>
-              </div>
+                </Card>
             )}
           </div>
-          <div className="flex justify-center">
+          <div className="flex justify-center mt-8">
             <Button asChild variant="outline">
               <Link href="/projects">
                 View All Projects <ArrowRight className="ml-2 h-4 w-4" />
@@ -216,10 +208,10 @@ export default function HomePage() {
       </section>
 
       <section id="about" className="w-full py-20 md:py-32">
-        <div className="container mx-auto max-w-7xl px-4 md:px-8">
+        <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl font-headline">About DevCollab Hub</h2>
+                    <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">About DevCollab Hub</h2>
                     <p className="mt-4 max-w-3xl text-muted-foreground md:text-xl">
                         DevCollab Hub was born from a simple idea: developers are stronger together. We believe that the best-in-class products are built by teams with diverse skills and a shared passion. Our mission is to break down the barriers to collaboration, making it easier than ever for developers to find each other, share ideas, and build the future of technology.
                     </p>
@@ -242,19 +234,19 @@ export default function HomePage() {
       </section>
 
       </main>
-      <footer className="bg-background border-t">
-        <div className="container mx-auto max-w-7xl px-4 md:px-8 py-8">
+      <footer className="bg-background border-t border-border/40">
+        <div className="container mx-auto max-w-screen-xl px-4 md:px-8 py-8">
             <div className="flex flex-col md:flex-row justify-between items-center">
                 <div className="flex items-center space-x-2">
-                    <Code2 className="h-6 w-6 text-primary" />
+                    <Code2 className="h-6 w-6" />
                     <span className="font-bold">DevCollab Hub</span>
                 </div>
                 <p className="text-muted-foreground text-sm mt-4 md:mt-0">
                     &copy; {new Date().getFullYear()} DevCollab Hub. All rights reserved.
                 </p>
                 <div className="flex space-x-4 mt-4 md:mt-0">
-                    <Link href="#" className="text-muted-foreground hover:text-primary">Privacy Policy</Link>
-                    <Link href="#" className="text-muted-foreground hover:text-primary">Terms of Service</Link>
+                    <Link href="#" className="text-sm text-muted-foreground hover:text-primary">Privacy Policy</Link>
+                    <Link href="#" className="text-sm text-muted-foreground hover:text-primary">Terms of Service</Link>
                 </div>
             </div>
         </div>
