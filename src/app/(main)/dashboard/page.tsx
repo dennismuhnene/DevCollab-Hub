@@ -60,15 +60,10 @@ export default function DashboardPage() {
   if (authLoading || loadingData || !userProfile) {
     return (
       <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            <Skeleton className="h-48 w-full" />
-            <Skeleton className="h-64 w-full" />
-            <Skeleton className="h-96 w-full" />
-          </div>
-          <div className="space-y-8">
-            <Skeleton className="h-64 w-full" />
-          </div>
+        <div className="space-y-8">
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-96 w-full" />
         </div>
       </div>
     );
@@ -76,11 +71,10 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+      <div className="flex flex-col gap-12">
         
-        {/* Main Content Column */}
-        <div className="lg:col-span-2 space-y-12">
-          
+        {/* Top Sections: Profile and My Projects */}
+        <div className="space-y-12">
           <Card>
             <CardHeader>
               <CardTitle>Your Profile</CardTitle>
@@ -120,8 +114,8 @@ export default function DashboardPage() {
               </Button>
             </div>
             {myProjects.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {myProjects.slice(0, 2).map(project => <ProjectCard key={project.id} project={project} />)}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {myProjects.slice(0, 3).map(project => <ProjectCard key={project.id} project={project} />)}
               </div>
             ) : (
               <div className="text-center py-16 border-2 border-dashed rounded-lg">
@@ -136,101 +130,107 @@ export default function DashboardPage() {
               </div>
             )}
           </section>
-
-           <section>
-            <div className="flex items-center mb-6">
-                <Eye className="h-7 w-7 text-primary mr-3" />
-                <h2 className="text-3xl font-bold tracking-tight">Public Profile Preview</h2>
-              </div>
-              <Card className="overflow-hidden">
-                <div className="bg-muted/40 p-8">
-                  <div className="flex flex-col md:flex-row items-start space-y-6 md:space-y-0 md:space-x-8">
-                    <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
-                      <AvatarImage src={userProfile.photoURL} alt={userProfile.name} />
-                      <AvatarFallback className="text-5xl">{getInitials(userProfile.name)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 pt-4">
-                      <h1 className="text-4xl font-bold">{userProfile.name}</h1>
-                      <p className="text-muted-foreground text-lg">{userProfile.email}</p>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {userProfile.skills?.map((skill) => (
-                          <Badge key={skill} variant="secondary" className="text-sm">{skill}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                    {userProfile.openForCollaboration ? (
-                      <Badge variant="default" className="flex-shrink-0"><BadgeCheck className="mr-2 h-4 w-4"/>Open to Collab</Badge>
-                    ) : (
-                      <Badge variant="secondary" className="flex-shrink-0"><BadgeX className="mr-2 h-4 w-4"/>Not seeking colabs</Badge>
-                    )}
-                    </div>
-                  </div>
-                </div>
-                 <CardContent className="p-8 space-y-8">
-                    <div>
-                      <h3 className="text-xl font-semibold mb-2">About</h3>
-                      <p className="text-foreground/80 leading-relaxed text-base">
-                        {userProfile.bio || 'No bio provided yet. Add one to attract collaborators!'}
-                      </p>
-                    </div>
-                     <div>
-                        <h3 className="text-xl font-semibold mb-4">Projects</h3>
-                        {myProjects.length > 0 ? (
-                           <div className="space-y-4">
-                            {myProjects.map(project => (
-                              <Card key={project.id} className="flex items-center justify-between p-4">
-                                <div className="flex-1">
-                                  <Link href={`/projects/${project.id}`} className="font-semibold hover:underline">{project.title}</Link>
-                                  <p className="text-sm text-muted-foreground line-clamp-1">{project.description}</p>
-                                </div>
-                                {project.collaborationOpen ? (
-                                    <Badge variant="default" className='ml-4 flex-shrink-0'><BadgeCheck className="mr-2 h-4 w-4"/>Open to Collab</Badge>
-                                ) : (
-                                     <Badge variant="secondary" className='ml-4 flex-shrink-0'><BadgeX className="mr-2 h-4 w-4"/>Closed</Badge>
-                                )}
-                              </Card>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-muted-foreground text-center py-4">No projects created yet.</p>
-                        )}
-                    </div>
-                </CardContent>
-              </Card>
-          </section>
         </div>
 
-        {/* Sidebar Column */}
-        <div className="space-y-8">
-          <section>
-             <div className="flex items-center mb-6">
-                <Users className="h-7 w-7 text-primary mr-3" />
-                <h2 className="text-3xl font-bold tracking-tight">Connect with Developers</h2>
-              </div>
-              <div className="space-y-4">
-                {recommendedDevelopers.map(dev => (
-                  <Card key={dev.uid} className="flex items-center p-4 gap-4 transition-all hover:shadow-md">
-                     <Avatar className="h-12 w-12">
-                        <AvatarImage src={dev.photoURL} alt={dev.name} />
-                        <AvatarFallback>{getInitials(dev.name)}</AvatarFallback>
+        {/* Bottom Section: Preview and Connect */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+          {/* Public Profile Preview */}
+          <div className="lg:col-span-2">
+            <section>
+              <div className="flex items-center mb-6">
+                  <Eye className="h-7 w-7 text-primary mr-3" />
+                  <h2 className="text-3xl font-bold tracking-tight">Public Profile Preview</h2>
+                </div>
+                <Card className="overflow-hidden">
+                  <div className="bg-muted/40 p-8">
+                    <div className="flex flex-col md:flex-row items-start space-y-6 md:space-y-0 md:space-x-8">
+                      <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
+                        <AvatarImage src={userProfile.photoURL} alt={userProfile.name} />
+                        <AvatarFallback className="text-5xl">{getInitials(userProfile.name)}</AvatarFallback>
                       </Avatar>
-                      <div className="flex-1">
-                        <p className="font-semibold">{dev.name}</p>
-                        <p className="text-sm text-muted-foreground truncate">{dev.skills?.join(', ') || 'No skills listed'}</p>
+                      <div className="flex-1 pt-4">
+                        <h1 className="text-4xl font-bold">{userProfile.name}</h1>
+                        <p className="text-muted-foreground text-lg">{userProfile.email}</p>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {userProfile.skills?.map((skill) => (
+                            <Badge key={skill} variant="secondary" className="text-sm">{skill}</Badge>
+                          ))}
+                        </div>
                       </div>
-                      <Button size="sm" variant="outline" asChild>
-                        <Link href={`/developers/${dev.uid}`}>Profile</Link>
-                      </Button>
-                  </Card>
-                ))}
-              </div>
-              <div className="mt-6 text-center">
-                 <Button variant="secondary" asChild>
-                  <Link href="/developers">Browse All Developers</Link>
-                </Button>
-              </div>
-          </section>
+                      <div>
+                      {userProfile.openForCollaboration ? (
+                        <Badge variant="default" className="flex-shrink-0"><BadgeCheck className="mr-2 h-4 w-4"/>Open to Collab</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="flex-shrink-0"><BadgeX className="mr-2 h-4 w-4"/>Not seeking colabs</Badge>
+                      )}
+                      </div>
+                    </div>
+                  </div>
+                   <CardContent className="p-8 space-y-8">
+                      <div>
+                        <h3 className="text-xl font-semibold mb-2">About</h3>
+                        <p className="text-foreground/80 leading-relaxed text-base">
+                          {userProfile.bio || 'No bio provided yet. Add one to attract collaborators!'}
+                        </p>
+                      </div>
+                       <div>
+                          <h3 className="text-xl font-semibold mb-4">Projects</h3>
+                          {myProjects.length > 0 ? (
+                             <div className="space-y-4">
+                              {myProjects.map(project => (
+                                <Card key={project.id} className="flex items-center justify-between p-4">
+                                  <div className="flex-1">
+                                    <Link href={`/projects/${project.id}`} className="font-semibold hover:underline">{project.title}</Link>
+                                    <p className="text-sm text-muted-foreground line-clamp-1">{project.description}</p>
+                                  </div>
+                                  {project.collaborationOpen ? (
+                                      <Badge variant="default" className='ml-4 flex-shrink-0'><BadgeCheck className="mr-2 h-4 w-4"/>Open to Collab</Badge>
+                                  ) : (
+                                       <Badge variant="secondary" className='ml-4 flex-shrink-0'><BadgeX className="mr-2 h-4 w-4"/>Closed</Badge>
+                                  )}
+                                </Card>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-muted-foreground text-center py-4">No projects created yet.</p>
+                          )}
+                      </div>
+                  </CardContent>
+                </Card>
+            </section>
+          </div>
+
+          {/* Connect with Developers */}
+          <div className="space-y-8">
+            <section>
+               <div className="flex items-center mb-6">
+                  <Users className="h-7 w-7 text-primary mr-3" />
+                  <h2 className="text-3xl font-bold tracking-tight">Connect with Developers</h2>
+                </div>
+                <div className="space-y-4">
+                  {recommendedDevelopers.map(dev => (
+                    <Card key={dev.uid} className="flex items-center p-4 gap-4 transition-all hover:shadow-md">
+                       <Avatar className="h-12 w-12">
+                          <AvatarImage src={dev.photoURL} alt={dev.name} />
+                          <AvatarFallback>{getInitials(dev.name)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="font-semibold">{dev.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">{dev.skills?.join(', ') || 'No skills listed'}</p>
+                        </div>
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href={`/developers/${dev.uid}`}>Profile</Link>
+                        </Button>
+                    </Card>
+                  ))}
+                </div>
+                <div className="mt-6 text-center">
+                   <Button variant="secondary" asChild>
+                    <Link href="/developers">Browse All Developers</Link>
+                  </Button>
+                </div>
+            </section>
+          </div>
         </div>
 
       </div>
