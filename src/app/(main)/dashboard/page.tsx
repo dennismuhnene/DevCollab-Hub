@@ -206,20 +206,21 @@ export default function DashboardPage() {
                   <Users className="h-7 w-7 text-primary mr-3" />
                   <h2 className="text-3xl font-bold tracking-tight">Connect with Developers</h2>
                 </div>
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">
                   {recommendedDevelopers.map(dev => (
-                    <Card key={dev.uid} className="flex items-center p-4 gap-4 transition-all hover:shadow-md">
-                       <Avatar className="h-12 w-12">
+                    <Card key={dev.uid} className="transition-all hover:shadow-md overflow-hidden">
+                      <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-4">
+                        <Avatar className="h-12 w-12 flex-shrink-0">
                           <AvatarImage src={dev.photoURL} alt={dev.name} />
                           <AvatarFallback>{getInitials(dev.name)}</AvatarFallback>
                         </Avatar>
-                        <div className="flex-1">
-                          <p className="font-semibold">{dev.name}</p>
-                          <p className="text-sm text-muted-foreground truncate">{dev.skills?.join(', ') || 'No skills listed'}</p>
+                        <div className="flex-1 text-center sm:text-left overflow-hidden">
+                          <p className="font-semibold truncate" title={dev.name}>{dev.name}</p>
                         </div>
-                        <Button size="sm" variant="outline" asChild>
+                        <Button size="sm" variant="outline" asChild className="flex-shrink-0 mt-2 sm:mt-0">
                           <Link href={`/developers/${dev.uid}`}>Profile</Link>
                         </Button>
+                      </CardContent>
                     </Card>
                   ))}
                 </div>
