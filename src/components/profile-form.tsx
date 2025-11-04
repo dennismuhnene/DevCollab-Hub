@@ -49,7 +49,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [skillInput, setSkillInput] = useState('');
-  const [skills, setSkills] = useState<string[]>([]);
+  const [skills, setSkills] = useState<string[]>(userProfile.skills || []);
   const [isAiPending, startAiTransition] = useTransition();
 
   const {
@@ -62,24 +62,12 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: '',
-      bio: '',
-      skills: [],
-      photoURL: '',
+      name: userProfile.name || '',
+      bio: userProfile.bio || '',
+      skills: userProfile.skills || [],
+      photoURL: userProfile.photoURL || '',
     },
   });
-
-  useEffect(() => {
-    if (userProfile) {
-      reset({
-        name: userProfile.name || '',
-        bio: userProfile.bio || '',
-        skills: userProfile.skills || [],
-        photoURL: userProfile.photoURL || '',
-      });
-      setSkills(userProfile.skills || []);
-    }
-  }, [userProfile, reset]);
   
   const bioValue = watch('bio');
 

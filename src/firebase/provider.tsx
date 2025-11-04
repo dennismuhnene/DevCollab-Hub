@@ -137,7 +137,7 @@ export const useFirebase = (): FirebaseServicesAndUser => {
 };
 
 /** Hook to access Firebase Auth instance. */
-export const useAuth = (): Auth => {
+export const useFirebaseAuth = (): Auth => {
   const { auth } = useFirebase();
   return auth;
 };
