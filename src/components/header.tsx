@@ -36,7 +36,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 max-w-7xl items-center">
         <div className="mr-4 flex">
-          <Link href={user ? "/dashboard" : "/"} className="flex items-center space-x-2">
+          <Link href="/" className="flex items-center space-x-2">
             <Code2 className="h-6 w-6 text-primary" />
             <span className="font-bold">DevCollab Hub</span>
           </Link>
