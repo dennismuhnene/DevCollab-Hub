@@ -1,3 +1,8 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/hooks/use-auth';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { Project } from '@/types';
@@ -5,16 +10,53 @@ import ProjectCard from '@/components/project-card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { PlusCircle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
-async function getProjects() {
-  const projectsCol = collection(db, 'projects');
-  const q = query(projectsCol, orderBy('createdAt', 'desc'));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
-}
+export default function ProjectsPage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export default async function ProjectsPage() {
-  const projects = await getProjects();
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (user) {
+      const getProjects = async () => {
+        setLoading(true);
+        const projectsCol = collection(db, 'projects');
+        const q = query(projectsCol, orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(q);
+        setProjects(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project)));
+        setLoading(false);
+      }
+      getProjects();
+    }
+  }, [user]);
+
+  if (authLoading || loading || !user) {
+    return (
+      <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between mb-8">
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-10 w-36" />
+        </div>
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="space-y-4">
+              <Skeleton className="h-48 w-full rounded-lg" />
+              <Skeleton className="h-6 w-3/4" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">

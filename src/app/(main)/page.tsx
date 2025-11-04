@@ -2,34 +2,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Users, Briefcase } from 'lucide-react';
-import ProjectCard from '@/components/project-card';
-import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
-import type { Project } from '@/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
-async function getFeaturedProjects(): Promise<Project[]> {
-  const projectsCol = collection(db, 'projects');
-  const q = query(projectsCol, orderBy('createdAt', 'desc'), limit(3));
-  const querySnapshot = await getDocs(q);
-  const projects = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
-  
-  if (projects.length < 3) {
-    const placeholders: Project[] = [
-      { id: 'placeholder-1', title: 'AI-Powered Chatbot', description: 'A cutting-edge chatbot for customer service.', ownerId: 'dev', requiredSkills: ['React', 'Node.js', 'AI'], imageUrl: PlaceHolderImages.find(p => p.id === 'project-1')?.imageUrl, interests: [], createdAt: null, updatedAt: null },
-      { id: 'placeholder-2', title: 'E-commerce Platform', description: 'Build a scalable online store from scratch.', ownerId: 'dev', requiredSkills: ['Next.js', 'Stripe', 'GraphQL'], imageUrl: PlaceHolderImages.find(p => p.id === 'project-2')?.imageUrl, interests: [], createdAt: null, updatedAt: null },
-      { id: 'placeholder-3', title: 'Mobile Fitness App', description: 'An app to track workouts and nutrition.', ownerId: 'dev', requiredSkills: ['React Native', 'Firebase'], imageUrl: PlaceHolderImages.find(p => p.id === 'project-3')?.imageUrl, interests: [], createdAt: null, updatedAt: null },
-    ];
-    const projectsNeeded = 3 - projects.length;
-    return [...projects, ...placeholders.slice(0, projectsNeeded)];
-  }
-
-  return projects;
-}
-
 export default async function HomePage() {
-  const featuredProjects = await getFeaturedProjects();
   const heroImage = PlaceHolderImages.find(p => p.id === 'hero-image');
+  const project1 = PlaceHolderImages.find(p => p.id === 'project-1');
+  const project2 = PlaceHolderImages.find(p => p.id === 'project-2');
+  const project3 = PlaceHolderImages.find(p => p.id === 'project-3');
 
   return (
     <>
@@ -88,9 +67,93 @@ export default async function HomePage() {
             </div>
           </div>
           <div className="mx-auto grid grid-cols-1 gap-8 py-12 sm:grid-cols-2 lg:grid-cols-3">
-            {featuredProjects.map(project => (
-              <ProjectCard key={project.id} project={project} />
-            ))}
+            {/* Placeholder content */}
+            {project1 && (
+              <div className="block h-full">
+                <div className="h-full transform transition-all duration-300 hover:scale-105 hover:shadow-xl dark:hover:shadow-primary/20 flex flex-col rounded-lg border bg-card text-card-foreground shadow-sm">
+                  <div className="p-0">
+                    <div className="aspect-[3/2] w-full overflow-hidden rounded-t-lg">
+                      <Image
+                        src={project1.imageUrl}
+                        alt="AI-Powered Chatbot"
+                        width={600}
+                        height={400}
+                        className="h-full w-full object-cover"
+                        data-ai-hint={project1.imageHint}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-1 flex-col p-6">
+                    <div className="mb-2 text-xl font-bold leading-tight">AI-Powered Chatbot</div>
+                    <div className="mb-4 line-clamp-3 flex-grow text-muted-foreground">
+                      A cutting-edge chatbot for customer service.
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">React</div>
+                      <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">Node.js</div>
+                      <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">AI</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+             {project2 && (
+              <div className="block h-full">
+                <div className="h-full transform transition-all duration-300 hover:scale-105 hover:shadow-xl dark:hover:shadow-primary/20 flex flex-col rounded-lg border bg-card text-card-foreground shadow-sm">
+                  <div className="p-0">
+                    <div className="aspect-[3/2] w-full overflow-hidden rounded-t-lg">
+                      <Image
+                        src={project2.imageUrl}
+                        alt="E-commerce Platform"
+                        width={600}
+                        height={400}
+                        className="h-full w-full object-cover"
+                        data-ai-hint={project2.imageHint}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-1 flex-col p-6">
+                    <div className="mb-2 text-xl font-bold leading-tight">E-commerce Platform</div>
+                    <div className="mb-4 line-clamp-3 flex-grow text-muted-foreground">
+                      Build a scalable online store from scratch.
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-2">
+                       <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">Next.js</div>
+                       <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">Stripe</div>
+                       <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">GraphQL</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+             {project3 && (
+              <div className="block h-full">
+                <div className="h-full transform transition-all duration-300 hover:scale-105 hover:shadow-xl dark:hover:shadow-primary/20 flex flex-col rounded-lg border bg-card text-card-foreground shadow-sm">
+                  <div className="p-0">
+                    <div className="aspect-[3/2] w-full overflow-hidden rounded-t-lg">
+                      <Image
+                        src={project3.imageUrl}
+                        alt="Mobile Fitness App"
+                        width={600}
+                        height={400}
+                        className="h-full w-full object-cover"
+                        data-ai-hint={project3.imageHint}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-1 flex-col p-6">
+                    <div className="mb-2 text-xl font-bold leading-tight">Mobile Fitness App</div>
+                    <div className="mb-4 line-clamp-3 flex-grow text-muted-foreground">
+                      An app to track workouts and nutrition.
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-2">
+                       <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">React Native</div>
+                       <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">Firebase</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex justify-center">
             <Button asChild variant="outline">

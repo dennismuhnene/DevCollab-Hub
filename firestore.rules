@@ -7,7 +7,7 @@
  *
  * Data Structure:
  * - /users/{userId}: Stores user profiles. User's can only read/write their own profile.
- * - /projects/{projectId}: Stores project information. Only the project owner can modify.
+ * - /projects/{projectId}: Stores project information. Only authenticated users can read/write.
  * - /users/{userId}/projects/{projectId}: Subcollection for projects owned by a specific user.
  * - /matches/{matchId}: Stores match data between users and projects.
  * - /projects/{projectId}/matches/{matchId}: Subcollection for matches related to a specific project.
@@ -22,6 +22,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
     /**
      * @description Controls access to user profiles. Only the authenticated user can read/write their own profile.
      * @path /users/{userId}
@@ -31,10 +35,6 @@ service cloud.firestore {
      * @principle Enforces document ownership for writes.
      */
     match /users/{userId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       function isOwner(userId) {
         return request.auth.uid == userId;
       }
@@ -43,27 +43,22 @@ service cloud.firestore {
         return isOwner(userId) && resource != null;
       }
 
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if false;
-      allow create: if request.auth.uid == userId;
+      allow get, list: if isSignedIn();
+      allow create: if isOwner(userId);
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to projects. Only the project owner can modify.
+     * @description Controls access to projects. Only authenticated users can read/write.
      * @path /projects/{projectId}
      * @allow (create) - Authenticated user creates a project with their userId as ownerId.
-     * @allow (get, list) - Any user can read project information.
+     * @allow (get, list) - Any authenticated user can read project information.
      * @allow (update, delete) - Only the project owner can modify or delete the project.
      * @deny (create, update, delete) - Any user tries to create a project as another user, or modify/delete a project they don't own.
      * @principle Enforces document ownership for writes.
      */
     match /projects/{projectId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       function isOwner(ownerId) {
         return request.auth.uid == ownerId;
       }
@@ -72,7 +67,7 @@ service cloud.firestore {
         return isOwner(ownerId) && resource != null;
       }
 
-      allow get, list: if true;
+      allow get, list: if isSignedIn();
       allow create: if isSignedIn() && isOwner(request.resource.data.ownerId) && request.resource.data.ownerId == request.auth.uid;
       allow update: if isExistingOwner(resource.data.ownerId);
       allow delete: if isExistingOwner(resource.data.ownerId);
@@ -87,10 +82,6 @@ service cloud.firestore {
      * @principle Enforces strict document ownership.
      */
     match /users/{userId}/projects/{projectId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       function isOwner(userId) {
         return request.auth.uid == userId;
       }
@@ -110,16 +101,12 @@ service cloud.firestore {
      * @description Controls access to matches. Checks that the user is creating/modifying matches related to their projects.
      * @path /matches/{matchId}
      * @allow (create) - Authenticated user can create match if they are related to the project or user involved.
-     * @allow (get, list) - Any user can read match information.
+     * @allow (get, list) - Any authenticated user can read match information.
      * @allow (update, delete) - Only the project owner or user involved can modify.
      * @deny (create, update, delete) - Any user tries to create a match for another user's project.
      * @principle Controls access based on user and project relationship.
      */
     match /matches/{matchId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       function isOwner(userId) {
         return request.auth.uid == userId;
       }
@@ -128,7 +115,7 @@ service cloud.firestore {
         return isOwner(userId) && resource != null;
       }
 
-      allow get, list: if true;
+      allow get, list: if isSignedIn();
       allow create: if isSignedIn();
       allow update: if isSignedIn() && resource != null;
       allow delete: if isSignedIn() && resource != null;
@@ -138,16 +125,12 @@ service cloud.firestore {
      * @description Controls access to matches nested under projects.
      * @path /projects/{projectId}/matches/{matchId}
      * @allow (create) - Authenticated user can create matches under the project.
-     * @allow (get, list) - Any user can read matches related to the project.
+     * @allow (get, list) - Any authenticated user can read matches related to the project.
      * @allow (update, delete) - Project owner and user involved can modify.
      * @deny (create, update, delete) - Other users cannot create or modify matches.
      * @principle Controls access based on project ownership.
      */
     match /projects/{projectId}/matches/{matchId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       function isProjectOwner(projectId) {
         return get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
       }
@@ -156,7 +139,7 @@ service cloud.firestore {
           return isProjectOwner(projectId) && resource != null;
       }
 
-      allow get, list: if true;
+      allow get, list: if isSignedIn();
       allow create: if isSignedIn();
       allow update: if isSignedIn() && resource != null;
       allow delete: if isSignedIn() && resource != null;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
@@ -18,7 +19,8 @@ import Link from 'next/link';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function ProjectDetailsPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const params = useParams();
   const projectId = params.id as string;
 
@@ -31,7 +33,13 @@ export default function ProjectDetailsPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!projectId) return;
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (!projectId || !user) return;
 
     const fetchProject = async () => {
       setLoading(true);
@@ -99,7 +107,7 @@ export default function ProjectDetailsPage() {
   
   const defaultProjectImage = PlaceHolderImages.find(p => p.id === 'project-1')?.imageUrl || "https://picsum.photos/seed/default/1200/800";
 
-  if (loading) {
+  if (loading || authLoading || !user) {
     return (
       <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
         <Skeleton className="h-10 w-3/4 mb-4" />
