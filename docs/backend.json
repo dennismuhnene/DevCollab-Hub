@@ -1,0 +1,247 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user within the DevCollab Hub application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User's display name."
+        },
+        "profileImageUrl": {
+          "type": "string",
+          "description": "URL of the user's profile image.",
+          "format": "uri"
+        },
+        "skills": {
+          "type": "array",
+          "description": "List of skills possessed by the user.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "techStack": {
+          "type": "array",
+          "description": "List of technologies the user is familiar with.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "yearsOfExperience": {
+          "type": "number",
+          "description": "The amount of experience in years."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user account was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "displayName",
+        "createdAt"
+      ]
+    },
+    "Project": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Project",
+      "type": "object",
+      "description": "Represents a project created by a user for collaboration.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Project entity."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Project). The ID of the user who owns the project."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the project."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the project."
+        },
+        "techStack": {
+          "type": "array",
+          "description": "List of technologies used in the project.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "collaborationOpen": {
+          "type": "boolean",
+          "description": "Indicates whether the project is open for collaboration."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the project was created.",
+          "format": "date-time"
+        },
+        "projectImageUrl": {
+          "type": "string",
+          "description": "URL of the project's image.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "title",
+        "description",
+        "collaborationOpen",
+        "createdAt"
+      ]
+    },
+    "Match": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Match",
+      "type": "object",
+      "description": "Represents a match between a user and a project.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Match entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Match). The ID of the user involved in the match."
+        },
+        "projectId": {
+          "type": "string",
+          "description": "Reference to Project. (Relationship: Project 1:N Match). The ID of the project involved in the match."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the match was created.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "Status of the match (e.g., pending, accepted, rejected)."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "projectId",
+        "createdAt",
+        "status"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. Uses path-based ownership for private data. Includes denormalized 'userId' for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/projects/{projectId}",
+        "definition": {
+          "entityName": "Project",
+          "schema": {
+            "$ref": "#/backend/entities/Project"
+          },
+          "description": "Stores project information. Includes 'ownerId' for authorization independence.",
+          "params": [
+            {
+              "name": "projectId",
+              "description": "The unique identifier for the project."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/projects/{projectId}",
+        "definition": {
+          "entityName": "Project",
+          "schema": {
+            "$ref": "#/backend/entities/Project"
+          },
+          "description": "Subcollection representing projects owned by a specific user. Includes denormalized 'ownerId' and 'userId' for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "projectId",
+              "description": "The unique identifier for the project."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/matches/{matchId}",
+        "definition": {
+          "entityName": "Match",
+          "schema": {
+            "$ref": "#/backend/entities/Match"
+          },
+          "description": "Stores match data between users and projects. Includes 'userId' and 'projectId' for authorization independence.",
+          "params": [
+            {
+              "name": "matchId",
+              "description": "The unique identifier for the match."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/projects/{projectId}/matches/{matchId}",
+        "definition": {
+          "entityName": "Match",
+          "schema": {
+            "$ref": "#/backend/entities/Match"
+          },
+          "description": "Subcollection to store matches related to a specific project. Includes denormalized 'projectId' and 'userId' for authorization independence.",
+          "params": [
+            {
+              "name": "projectId",
+              "description": "The unique identifier for the project."
+            },
+            {
+              "name": "matchId",
+              "description": "The unique identifier for the match."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure security, scalability, and ease of debugging, adhering to the principles of Authorization Independence, Clarity of Intent, DBAC, and QAPs. Authorization Independence is achieved through denormalization, specifically by including relevant authorization data within each document, eliminating the need for `get()` calls in security rules. Structural Segregation is applied by keeping data with different access requirements in separate collections. Access Modeling utilizes path-based ownership and membership maps for clear and consistent authorization patterns.\n\nSpecifically:\n\n*   `/users/{userId}`: Stores user profiles. This collection uses path-based ownership for private data. Security rules will ensure that only the user can read/write their own profile.\n*   `/projects/{projectId}`: Stores project information. The `ownerId` field in each project document is crucial for authorization, ensuring only the project owner can modify it.\n*   `/users/{userId}/projects/{projectId}`: A subcollection representing projects owned by a specific user. This nested structure reinforces the 1:N relationship between users and their projects, providing path-based authorization. The `ownerId` field is denormalized into this subcollection for authorization independence.\n*   `/matches/{matchId}`: Stores match data between users and projects. Security rules will control who can create or modify match documents based on user roles or project ownership.\n*   `/projects/{projectId}/matches/{matchId}`: A subcollection to store matches related to a specific project, further clarifying relationships. This structure improves query performance for finding matches associated with a given project. The `projectId` and `userId` are denormalized for authorization independence.\n\nQAPs (Rules are not Filters) are supported by the structural segregation. List operations can be securely performed on `/projects` with rules that filter based on `collaborationOpen` without risking unintended access to private project data. The path-based ownership for user data enables secure listing of user-owned projects under `/users/{userId}/projects`.\n\nThis structure facilitates simple, robust, and debuggable security rules. For example, a rule can easily check if `request.auth.uid == resource.data.ownerId` for project updates, or if a user is attempting to access their own profile via the `/users/{userId}` path."
+  }
+}
