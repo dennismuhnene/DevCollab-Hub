@@ -79,6 +79,35 @@ export default function DashboardPage() {
         
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-12">
+           <section>
+             <div className="flex items-center mb-6">
+                <Users className="h-7 w-7 text-primary mr-3" />
+                <h2 className="text-3xl font-bold tracking-tight">Connect with Developers</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {recommendedDevelopers.map(dev => (
+                  <Card key={dev.uid} className="flex items-center p-4 gap-4 transition-all hover:shadow-md">
+                     <Avatar className="h-12 w-12">
+                        <AvatarImage src={dev.photoURL} alt={dev.name} />
+                        <AvatarFallback>{getInitials(dev.name)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="font-semibold">{dev.name}</p>
+                        <p className="text-sm text-muted-foreground truncate">{dev.skills?.join(', ') || 'No skills listed'}</p>
+                      </div>
+                      <Button size="sm" variant="outline" asChild>
+                        <Link href={`/developers/${dev.uid}`}>Profile</Link>
+                      </Button>
+                  </Card>
+                ))}
+              </div>
+              <div className="mt-6 text-center">
+                 <Button variant="secondary" asChild>
+                  <Link href="/developers">Browse All Developers</Link>
+                </Button>
+              </div>
+          </section>
+
           <section>
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center">
@@ -198,34 +227,6 @@ export default function DashboardPage() {
               </Button>
             </CardContent>
           </Card>
-           <section>
-             <div className="flex items-center mb-6">
-                <Users className="h-7 w-7 text-primary mr-3" />
-                <h2 className="text-3xl font-bold tracking-tight">Connect with Developers</h2>
-              </div>
-              <div className="grid grid-cols-1 gap-6">
-                {recommendedDevelopers.map(dev => (
-                  <Card key={dev.uid} className="flex items-center p-4 gap-4 transition-all hover:shadow-md">
-                     <Avatar className="h-12 w-12">
-                        <AvatarImage src={dev.photoURL} alt={dev.name} />
-                        <AvatarFallback>{getInitials(dev.name)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="font-semibold">{dev.name}</p>
-                        <p className="text-sm text-muted-foreground truncate">{dev.skills?.join(', ') || 'No skills listed'}</p>
-                      </div>
-                      <Button size="sm" variant="outline" asChild>
-                        <Link href={`/developers/${dev.uid}`}>Profile</Link>
-                      </Button>
-                  </Card>
-                ))}
-              </div>
-              <div className="mt-6 text-center">
-                 <Button variant="secondary" asChild>
-                  <Link href="/developers">Browse All Developers</Link>
-                </Button>
-              </div>
-          </section>
         </div>
 
       </div>
