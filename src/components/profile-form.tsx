@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import ImageUploader from './image-uploader';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/types';
 import {
@@ -34,7 +33,7 @@ const profileSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters long' }),
   bio: z.string().optional(),
   skills: z.array(z.string()).optional(),
-  photoURL: z.string().optional(),
+  // photoURL is now managed on the parent page
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -44,7 +43,7 @@ type ProfileFormProps = {
 };
 
 export default function ProfileForm({ userProfile }: ProfileFormProps) {
-  const { user } = useAuth();
+  const { user, reloadUserProfile } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -61,29 +60,22 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
     formState: { errors },
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
-    // Initialize with default values. Will be updated by reset in useEffect.
     defaultValues: {
       name: '',
       bio: '',
       skills: [],
-      photoURL: '',
     },
   });
 
-  // Watch for changes in form values
   const bioValue = watch('bio');
   const skills = watch('skills') || [];
-  const photoURLValue = watch('photoURL');
   
-  // When userProfile prop is available or changes, reset the form with the new data.
-  // This ensures the form is always in sync with the data from Firestore.
   useEffect(() => {
     if (userProfile) {
       reset({
         name: userProfile.name || '',
         bio: userProfile.bio || '',
         skills: userProfile.skills || [],
-        photoURL: userProfile.photoURL || '',
       });
     }
   }, [userProfile, reset]);
@@ -95,7 +87,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
       const currentSkills = getValues('skills') || [];
       const newSkill = skillInput.trim();
       if (!currentSkills.includes(newSkill)) {
-        setValue('skills', [...currentSkills, newSkill]);
+        setValue('skills', [...currentSkills, newSkill], { shouldValidate: true, shouldDirty: true });
       }
       setSkillInput('');
     }
@@ -103,7 +95,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
 
   const handleSkillRemove = (skillToRemove: string) => {
     const currentSkills = getValues('skills') || [];
-    setValue('skills', currentSkills.filter((skill) => skill !== skillToRemove));
+    setValue('skills', currentSkills.filter((skill) => skill !== skillToRemove), { shouldValidate: true, shouldDirty: true });
   };
   
   const handleGenerateBio = async () => {
@@ -121,17 +113,18 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
       try {
         const result = await summarizeUserSkills({ profileDescription: bioValue || 'A passionate developer.', skills: currentSkills });
         if (result?.summary) {
-          setValue('bio', result.summary);
+          setValue('bio', result.summary, { shouldValidate: true, shouldDirty: true });
           toast({
             title: 'Bio Generated!',
             description: 'The AI has generated a new bio for you.',
           });
         }
       } catch (error) {
+        console.error("AI Bio generation failed:", error);
         toast({
           variant: 'destructive',
           title: 'AI Generation Failed',
-          description: 'Could not generate a bio at this time.',
+          description: 'Could not generate a bio at this time. Check the console for details.',
         });
       }
     });
@@ -142,17 +135,21 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
     setLoading(true);
     try {
       const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, data);
+      // Exclude photoURL from this form's submission data
+      const { ...updateData } = data;
+      await updateDoc(userRef, updateData);
+      
       if (auth.currentUser) {
         await updateProfile(auth.currentUser, {
           displayName: data.name,
-          photoURL: data.photoURL,
         });
       }
+
       toast({ title: 'Profile updated successfully!' });
-      router.refresh(); 
+      reloadUserProfile(); // Reload user profile to reflect changes everywhere
     } catch (error) {
-      toast({ variant: 'destructive', title: 'An error occurred' });
+      console.error("Profile update error:", error);
+      toast({ variant: 'destructive', title: 'An error occurred', description: 'Please check the console for details.' });
     } finally {
       setLoading(false);
     }
@@ -162,10 +159,12 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
     if (!user) return;
     setLoading(true);
     try {
+      // It's good practice to delete user's data from Firestore as well, though not implemented here.
       await deleteUser(user);
       toast({ title: 'Account deleted successfully' });
       router.push('/');
     } catch (error: any) {
+      console.error("Account deletion error:", error);
       toast({ variant: 'destructive', title: 'Error deleting account', description: error.message });
       setLoading(false);
     }
@@ -174,57 +173,46 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
   return (
     <>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-2 space-y-6">
-                <div className="space-y-2">
-                    <Label htmlFor="name">Name</Label>
-                    <Input id="name" {...register('name')} />
-                    {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="skills">Skills</Label>
-                    <div className="flex flex-wrap gap-2 rounded-md border p-2">
-                    {skills.map((skill) => (
-                        <div key={skill} className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
-                        {skill}
-                        <button type="button" onClick={() => handleSkillRemove(skill)}>
-                            <X className="h-4 w-4" />
-                        </button>
-                        </div>
-                    ))}
-                    <Input
-                        id="skills-input"
-                        value={skillInput}
-                        onChange={(e) => setSkillInput(e.target.value)}
-                        onKeyDown={handleSkillAdd}
-                        placeholder="Type a skill and press Enter"
-                        className="flex-1 border-none shadow-none focus-visible:ring-0"
-                    />
+        <div className="space-y-6">
+            <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input id="name" {...register('name')} />
+                {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="skills">Skills</Label>
+                <div className="flex flex-wrap gap-2 rounded-md border p-2">
+                {skills.map((skill) => (
+                    <div key={skill} className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
+                    {skill}
+                    <button type="button" onClick={() => handleSkillRemove(skill)}>
+                        <X className="h-4 w-4" />
+                    </button>
                     </div>
-                </div>
-                <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                        <Label htmlFor="bio">Bio</Label>
-                        <Button type="button" variant="outline" size="sm" onClick={handleGenerateBio} disabled={isAiPending}>
-                        {isAiPending ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                            <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />
-                        )}
-                        Generate with AI
-                        </Button>
-                    </div>
-                    <Textarea id="bio" {...register('bio')} rows={5} />
+                ))}
+                <Input
+                    id="skills-input"
+                    value={skillInput}
+                    onChange={(e) => setSkillInput(e.target.value)}
+                    onKeyDown={handleSkillAdd}
+                    placeholder="Type a skill and press Enter"
+                    className="flex-1 border-none shadow-none focus-visible:ring-0"
+                />
                 </div>
             </div>
             <div className="space-y-2">
-                <Label>Profile Picture</Label>
-                <ImageUploader
-                    onUpload={(url) => setValue('photoURL', url)}
-                    initialUrl={photoURLValue}
-                    folderPath={`profile-images/${user?.uid}`}
-                    key={photoURLValue}
-                />
+                <div className="flex justify-between items-center">
+                    <Label htmlFor="bio">Bio</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={handleGenerateBio} disabled={isAiPending}>
+                    {isAiPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                        <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />
+                    )}
+                    Generate with AI
+                    </Button>
+                </div>
+                <Textarea id="bio" {...register('bio')} rows={5} />
             </div>
         </div>
         <Button type="submit" disabled={loading}>
