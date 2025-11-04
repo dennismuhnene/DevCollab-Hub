@@ -3,16 +3,19 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Allow public read access to all files
-    allow read;
-
-    // Users can only write to their own `profile-images` folder
+    // Match any files in the profile-images directory
     match /profile-images/{userId}/{allPaths=**} {
+      // Allow public read access
+      allow read;
+      // Allow write access only for the authenticated user who owns the folder
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Users can only write to their own `project-images` folder
+    // Match any files in the project-images directory
     match /project-images/{userId}/{allPaths=**} {
+      // Allow public read access
+      allow read;
+      // Allow write access only for the authenticated user who owns the folder
       allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
