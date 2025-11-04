@@ -9,12 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ProfileForm from '@/components/profile-form';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import { db, storage, auth } from '@/lib/firebase/config';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 import { Camera } from 'lucide-react';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function ProfilePage() {
   const { user, userProfile, loading, reloadUserProfile } = useAuth();
@@ -63,7 +64,6 @@ export default function ProfilePage() {
       'state_changed',
       (snapshot) => {
         const currentProgress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        console.log('Upload is ' + currentProgress + '% done');
         setProgress(currentProgress);
       },
       (error) => {
@@ -76,32 +76,19 @@ export default function ProfilePage() {
         setUploading(false);
       },
       async () => {
-        try {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          console.log('File available at', downloadURL);
+        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
 
-          // Update Firestore
-          const userDocRef = doc(db, 'users', user.uid);
-          await updateDoc(userDocRef, { photoURL: downloadURL });
+        const userDocRef = doc(db, 'users', user.uid);
+        // Use non-blocking update to get contextual errors
+        updateDocumentNonBlocking(userDocRef, { photoURL: downloadURL });
 
-          // Update Auth profile
-          if (auth.currentUser) {
+        if (auth.currentUser) {
             await updateProfile(auth.currentUser, { photoURL: downloadURL });
-          }
-
-          toast({ title: 'Profile picture updated successfully!' });
-          // Force a reload of the user profile data to show the new image
-          reloadUserProfile(); 
-        } catch (error) {
-          console.error('Error updating profile:', error);
-          toast({
-            variant: 'destructive',
-            title: 'Update failed',
-            description: 'Could not save the new profile picture.',
-          });
-        } finally {
-          setUploading(false);
         }
+
+        toast({ title: 'Profile picture updated successfully!' });
+        reloadUserProfile(); 
+        setUploading(false);
       }
     );
   };
