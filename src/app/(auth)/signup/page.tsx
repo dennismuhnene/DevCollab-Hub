@@ -52,7 +52,8 @@ export default function SignupPage() {
       await updateProfile(user, { displayName: data.name });
 
       await setDoc(doc(db, 'users', user.uid), {
-        name: data.name,
+        id: user.uid,
+        displayName: data.name,
         email: data.email,
         createdAt: serverTimestamp(),
         skills: [],
