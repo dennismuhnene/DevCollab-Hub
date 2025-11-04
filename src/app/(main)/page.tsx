@@ -41,8 +41,8 @@ export default function HomePage() {
               </div>
               <div className="flex flex-col gap-2 min-[400px]:flex-row">
                 <Button asChild size="lg">
-                  <Link href="/projects">
-                    Browse Projects
+                  <Link href={user ? "/developers" : "/login"}>
+                    Search Tribe
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
