@@ -43,21 +43,21 @@ export default function Header() {
         </div>
         <nav className="flex items-center space-x-6 text-sm font-medium">
           {user && (
-            <Link href="/dashboard" className="flex items-center gap-1.5 transition-colors hover:text-foreground/80 text-foreground/60">
-              <LayoutDashboard className="h-4 w-4" />
-              Dashboard
-            </Link>
-          )}
-          <Link href="/projects" className="transition-colors hover:text-foreground/80 text-foreground/60">
-            Projects
-          </Link>
-          {user && (
             <>
               <Link href="/developers" className="flex items-center gap-1.5 transition-colors hover:text-foreground/80 text-foreground/60">
                 <Sparkles className="h-4 w-4 text-accent" />
                 Discover
               </Link>
             </>
+          )}
+           <Link href="/projects" className="transition-colors hover:text-foreground/80 text-foreground/60">
+            Projects
+          </Link>
+          {user && (
+            <Link href="/dashboard" className="flex items-center gap-1.5 transition-colors hover:text-foreground/80 text-foreground/60">
+              <LayoutDashboard className="h-4 w-4" />
+              Dashboard
+            </Link>
           )}
         </nav>
         <div className="flex flex-1 items-center justify-end space-x-2">

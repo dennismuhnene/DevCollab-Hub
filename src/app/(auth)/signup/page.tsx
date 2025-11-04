@@ -54,6 +54,7 @@ export default function SignupPage() {
       await setDoc(doc(db, 'users', user.uid), {
         uid: user.uid,
         name: data.name,
+        displayName: data.name,
         email: data.email,
         createdAt: serverTimestamp(),
         skills: [],
@@ -65,7 +66,7 @@ export default function SignupPage() {
         title: 'Account created!',
         description: 'Welcome to DevCollab Hub.',
       });
-      router.push('/dashboard');
+      router.push('/developers');
     } catch (error: any) {
       toast({
         variant: 'destructive',

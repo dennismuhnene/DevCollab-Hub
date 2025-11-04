@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { Project, UserProfile } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,7 @@ export default function DashboardPage() {
       
       // Fetch user's projects
       const projectsCol = collection(db, 'projects');
-      const q = query(projectsCol, where('ownerId', '==', user.uid), limit(3));
+      const q = query(projectsCol, where('ownerId', '==', user.uid), orderBy('createdAt', 'desc'), limit(3));
       const querySnapshot = await getDocs(q);
       setMyProjects(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project)));
 
@@ -59,14 +59,12 @@ export default function DashboardPage() {
   if (authLoading || loadingData || !userProfile) {
     return (
       <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <Skeleton className="h-10 w-72 mb-8" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             <Skeleton className="h-64 w-full" />
             <Skeleton className="h-64 w-full" />
           </div>
           <div className="space-y-8">
-            <Skeleton className="h-48 w-full" />
             <Skeleton className="h-96 w-full" />
           </div>
         </div>
@@ -76,11 +74,6 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-12">
-        <h1 className="text-4xl font-bold tracking-tight font-headline">Welcome back, {userProfile.name}!</h1>
-        <p className="mt-2 text-lg text-muted-foreground">Here&apos;s a quick look at your world on DevCollab Hub.</p>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-12">
@@ -147,20 +140,6 @@ export default function DashboardPage() {
 
         {/* Sidebar */}
         <div className="space-y-8">
-          <Card className="bg-gradient-to-br from-secondary to-background">
-            <CardHeader>
-              <CardTitle>Ready for a new challenge?</CardTitle>
-              <CardDescription>Discover exciting projects that match your skills.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full" asChild>
-                <Link href="/discover">
-                  Discover Projects
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
           <Card>
             <CardHeader>
               <CardTitle>Your Profile</CardTitle>
