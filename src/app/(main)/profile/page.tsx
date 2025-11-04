@@ -41,7 +41,17 @@ export default function ProfilePage() {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !user) return;
+    if (!file || !user) {
+      if (!user) {
+        console.error('Upload error: User is not authenticated.');
+        toast({
+          variant: 'destructive',
+          title: 'Authentication Error',
+          description: 'You must be logged in to upload an image.',
+        });
+      }
+      return;
+    }
 
     setUploading(true);
     setProgress(0);
@@ -52,16 +62,16 @@ export default function ProfilePage() {
     uploadTask.on(
       'state_changed',
       (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        console.log('Upload is ' + progress + '% done');
-        setProgress(progress);
+        const currentProgress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        console.log('Upload is ' + currentProgress + '% done');
+        setProgress(currentProgress);
       },
       (error) => {
         console.error('Upload failed:', error);
         toast({
           variant: 'destructive',
           title: 'Upload failed',
-          description: 'Could not upload your new profile picture. Please check the console for details.',
+          description: `Could not upload profile picture: ${error.message}`,
         });
         setUploading(false);
       },
@@ -87,7 +97,7 @@ export default function ProfilePage() {
           toast({
             variant: 'destructive',
             title: 'Update failed',
-            description: 'Could not save the new profile picture. Please check the console for details.',
+            description: 'Could not save the new profile picture.',
           });
         } finally {
           setUploading(false);
@@ -152,17 +162,6 @@ export default function ProfilePage() {
       </div>
       
       <div className="space-y-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>About Me</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-foreground/80 leading-relaxed">
-              {userProfile.bio || 'No bio provided yet.'}
-            </p>
-          </CardContent>
-        </Card>
-
         <Card>
           <CardHeader>
             <CardTitle>Edit Profile</CardTitle>
