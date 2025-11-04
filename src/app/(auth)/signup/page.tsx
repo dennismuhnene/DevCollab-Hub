@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus, Eye, EyeOff } from 'lucide-react';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const signupSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
@@ -52,7 +53,8 @@ export default function SignupPage() {
       const user = userCredential.user;
       await updateProfile(user, { displayName: data.name });
 
-      await setDoc(doc(db, 'users', user.uid), {
+      const userDocRef = doc(db, 'users', user.uid);
+      const userData = {
         uid: user.uid,
         name: data.name,
         displayName: data.name,
@@ -62,7 +64,9 @@ export default function SignupPage() {
         bio: '',
         photoURL: '',
         openForCollaboration: true,
-      });
+      };
+
+      setDocumentNonBlocking(userDocRef, userData, { merge: false });
 
       toast({
         title: 'Account created!',

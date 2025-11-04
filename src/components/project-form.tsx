@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const projectSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters long' }),
@@ -129,29 +130,25 @@ export default function ProjectForm({ project }: ProjectFormProps) {
       return;
     }
     setLoading(true);
-    try {
-      if (project) {
-        // Update existing project
-        const projectRef = doc(db, 'projects', project.id);
-        await updateDoc(projectRef, { ...data, updatedAt: serverTimestamp() });
-        toast({ title: 'Project updated successfully!' });
-        router.push(`/projects/${project.id}`);
-      } else {
-        // Create new project
-        const newProject = {
-          ...data,
-          ownerId: user.uid,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          interests: [],
-        };
-        const docRef = await addDoc(collection(db, 'projects'), newProject);
-        toast({ title: 'Project created successfully!' });
-        router.push(`/projects/${docRef.id}`);
-      }
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'An error occurred', description: 'Please try again.' });
-      setLoading(false);
+
+    if (project) {
+      // Update existing project
+      const projectRef = doc(db, 'projects', project.id);
+      updateDocumentNonBlocking(projectRef, { ...data, updatedAt: serverTimestamp() });
+      toast({ title: 'Project updated successfully!' });
+      router.push(`/projects/${project.id}`);
+    } else {
+      // Create new project
+      const newProject = {
+        ...data,
+        ownerId: user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        interests: [],
+      };
+      const docRef = await addDocumentNonBlocking(collection(db, 'projects'), newProject);
+      toast({ title: 'Project created successfully!' });
+      router.push(`/projects/${docRef.id}`);
     }
   };
 
@@ -168,7 +165,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
       
       // Delete project document from firestore
       const projectRef = doc(db, 'projects', project.id);
-      await deleteDoc(projectRef);
+      deleteDocumentNonBlocking(projectRef);
 
       toast({ title: 'Project deleted successfully' });
       router.push('/projects');

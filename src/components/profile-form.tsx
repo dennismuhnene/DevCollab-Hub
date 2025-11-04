@@ -29,6 +29,7 @@ import {
 import { summarizeUserSkills } from '@/ai/flows/user-skills-summarizer';
 import { Sparkles, Loader2, X, Trash2 } from 'lucide-react';
 import { Switch } from './ui/switch';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const profileSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters long' }),
@@ -137,24 +138,19 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
   const onSubmit = async (data: ProfileFormData) => {
     if (!user) return;
     setLoading(true);
-    try {
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, data);
-      
-      if (auth.currentUser) {
-        await updateProfile(auth.currentUser, {
-          displayName: data.name,
-        });
-      }
 
-      toast({ title: 'Profile updated successfully!' });
-      reloadUserProfile();
-    } catch (error) {
-      console.error("Profile update error:", error);
-      toast({ variant: 'destructive', title: 'An error occurred', description: 'Please check the console for details.' });
-    } finally {
-      setLoading(false);
+    const userRef = doc(db, 'users', user.uid);
+    updateDocumentNonBlocking(userRef, data);
+    
+    if (auth.currentUser) {
+      await updateProfile(auth.currentUser, {
+        displayName: data.name,
+      });
     }
+
+    toast({ title: 'Profile updated successfully!' });
+    reloadUserProfile();
+    setLoading(false);
   };
 
   const handleDeleteAccount = async () => {

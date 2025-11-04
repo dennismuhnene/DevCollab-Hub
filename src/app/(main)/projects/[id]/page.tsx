@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function ProjectDetailsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -97,24 +98,20 @@ export default function ProjectDetailsPage() {
     
     const projectDocRef = doc(db, 'projects', projectId);
 
-    try {
-      if (interested && existingInterest) {
-        await updateDoc(projectDocRef, {
-          interests: arrayRemove(existingInterest)
-        });
-        setInterests(prev => prev.filter(i => i.userId !== user.uid));
-        toast({ title: 'Interest removed' });
-      } else if (!interested) {
-        await updateDoc(projectDocRef, {
-          interests: arrayUnion(userInterest)
-        });
-        setInterests(prev => [...prev, userInterest]);
-        toast({ title: 'Interest expressed!', description: "The project owner has been notified." });
-      }
-      setInterested(!interested);
-    } catch(error) {
-      toast({ variant: 'destructive', title: 'Something went wrong', description: 'Could not update your interest.' });
+    if (interested && existingInterest) {
+      updateDocumentNonBlocking(projectDocRef, {
+        interests: arrayRemove(existingInterest)
+      });
+      setInterests(prev => prev.filter(i => i.userId !== user.uid));
+      toast({ title: 'Interest removed' });
+    } else if (!interested) {
+      updateDocumentNonBlocking(projectDocRef, {
+        interests: arrayUnion(userInterest)
+      });
+      setInterests(prev => [...prev, userInterest]);
+      toast({ title: 'Interest expressed!', description: "The project owner has been notified." });
     }
+    setInterested(!interested);
   };
 
   const handleDeleteProject = async () => {
@@ -128,7 +125,7 @@ export default function ProjectDetailsPage() {
       }
       
       const projectRef = doc(db, 'projects', project.id);
-      await deleteDoc(projectRef);
+      deleteDocumentNonBlocking(projectRef);
 
       toast({ title: 'Project deleted successfully' });
       router.push('/projects');
