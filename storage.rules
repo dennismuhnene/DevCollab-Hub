@@ -4,7 +4,7 @@ service firebase.storage {
   match /b/{bucket}/o {
     
     // Allow public read access to all files
-    allow read: if true;
+    allow read;
 
     // Users can only write to their own `profile-images` folder
     match /profile-images/{userId}/{allPaths=**} {

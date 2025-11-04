@@ -1,0 +1,18 @@
+{
+  "bindings": [
+    {
+      "members": [
+        "projectEditor:studio-4315631326-4e84c",
+        "projectOwner:studio-4315631326-4e84c"
+      ],
+      "role": "roles/storage.legacyBucketOwner"
+    },
+    {
+      "members": [
+        "projectViewer:studio-4315631326-4e84c"
+      ],
+      "role": "roles/storage.legacyBucketReader"
+    }
+  ],
+  "etag": "CAI="
+}
