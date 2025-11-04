@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import type { Project, UserProfile } from '@/types';
+import type { Project } from '@/types';
 import ProjectCard from '@/components/project-card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -29,7 +29,7 @@ export default function ProjectsPage() {
       const getProjects = async () => {
         setLoading(true);
         const projectsCol = collection(db, 'projects');
-        const q = query(projectsCol, where('ownerId', '==', user.uid), orderBy('createdAt', 'desc'));
+        const q = query(projectsCol, where('ownerId', '==', user.uid));
         const querySnapshot = await getDocs(q);
         setProjects(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project)));
         setLoading(false);
