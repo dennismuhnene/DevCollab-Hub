@@ -7,6 +7,7 @@ import { ArrowRight, Users, Briefcase, Bot, Handshake, Search, Code2 } from 'luc
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { Loader2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function HomePage() {
   const { loading, user } = useAuth();
