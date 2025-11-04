@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Users, Briefcase, Bot, Handshake, Search } from 'lucide-react';
+import { ArrowRight, Users, Briefcase, Bot, Handshake, Search, Code2 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { Loader2 } from 'lucide-react';
