@@ -18,12 +18,14 @@ import { useToast } from '@/hooks/use-toast';
 import type { Project } from '@/types';
 import { generateProjectDescription } from '@/ai/flows/project-description-generator';
 import { Sparkles, Loader2, X } from 'lucide-react';
+import { Switch } from './ui/switch';
 
 const projectSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters long' }),
   description: z.string().min(20, { message: 'Description must be at least 20 characters long' }),
   requiredSkills: z.array(z.string()).min(1, { message: 'At least one skill is required' }),
   imageUrl: z.string().optional(),
+  collaborationOpen: z.boolean().default(true),
 });
 
 type ProjectFormData = z.infer<typeof projectSchema>;
@@ -54,10 +56,12 @@ export default function ProjectForm({ project }: ProjectFormProps) {
       description: project?.description || '',
       requiredSkills: project?.requiredSkills || [],
       imageUrl: project?.imageUrl || '',
+      collaborationOpen: project?.collaborationOpen === false ? false : true,
     },
   });
 
   const titleValue = watch('title');
+  const collaborationOpenValue = watch('collaborationOpen');
 
   useEffect(() => {
     setValue('requiredSkills', skills);
@@ -190,7 +194,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
             <Textarea id="description" {...register('description')} rows={6} placeholder="Describe your project in detail..." />
             {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
           </div>
-
+          
           <div className="space-y-2">
             <Label>Project Image</Label>
             <ImageUploader
@@ -199,6 +203,22 @@ export default function ProjectForm({ project }: ProjectFormProps) {
               folderPath={`project-images/${user?.uid}`}
             />
           </div>
+
+          <div className="flex items-center space-x-3 rounded-md border p-4">
+              <Switch 
+                id="collaborationOpen" 
+                checked={collaborationOpenValue}
+                onCheckedChange={(checked) => setValue('collaborationOpen', checked)}
+              />
+              <div className="space-y-0.5">
+                <Label htmlFor="collaborationOpen" className="text-base">
+                  Open for Collaboration
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Allow other developers to find and show interest in this project.
+                </p>
+              </div>
+            </div>
         </CardContent>
         <CardFooter>
           <Button type="submit" disabled={loading} size="lg">

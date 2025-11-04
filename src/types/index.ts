@@ -24,6 +24,7 @@ export interface Project {
   description: string;
   imageUrl?: string;
   requiredSkills: string[];
+  collaborationOpen?: boolean;
   createdAt?: Timestamp | null;
   updatedAt?: Timestamp | null;
   interests?: Interest[];
