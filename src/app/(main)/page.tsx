@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Users, Briefcase } from 'lucide-react';
+import { ArrowRight, Users, Briefcase, Bot, Handshake, Search } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { Loader2 } from 'lucide-react';
@@ -24,7 +24,8 @@ export default function HomePage() {
   }
 
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
+    <main className="flex-1">
       <section className="w-full py-20 md:py-32 lg:py-40 bg-gradient-to-b from-background to-secondary/50 dark:from-background dark:to-slate-900/50">
         <div className="container mx-auto max-w-7xl px-4 md:px-8">
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
@@ -71,7 +72,41 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="w-full py-20 md:py-32">
+      <section id="how-it-works" className="w-full py-20 md:py-32">
+          <div className="container mx-auto max-w-7xl px-4 md:px-8">
+            <div className="text-center space-y-4 mb-12">
+              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl font-headline">How It Works</h2>
+              <p className="max-w-2xl mx-auto text-muted-foreground md:text-xl">
+                Connecting with collaborators is as easy as 1, 2, 3.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="bg-primary/10 p-4 rounded-full">
+                  <Search className="h-10 w-10 text-primary" />
+                </div>
+                <h3 className="text-2xl font-bold">1. Discover</h3>
+                <p className="text-muted-foreground">Browse through a diverse range of developer profiles and exciting projects seeking collaboration.</p>
+              </div>
+              <div className="flex flex-col items-center space-y-4">
+                <div className="bg-primary/10 p-4 rounded-full">
+                  <Handshake className="h-10 w-10 text-primary" />
+                </div>
+                <h3 className="text-2xl font-bold">2. Connect</h3>
+                <p className="text-muted-foreground">Show interest in projects or reach out to developers whose skills match your needs.</p>
+              </div>
+              <div className="flex flex-col items-center space-y-4">
+                <div className="bg-primary/10 p-4 rounded-full">
+                  <Bot className="h-10 w-10 text-primary" />
+                </div>
+                <h3 className="text-2xl font-bold">3. Build</h3>
+                <p className="text-muted-foreground">Use our AI-powered tools to streamline your workflow and bring your shared vision to life.</p>
+              </div>
+            </div>
+          </div>
+      </section>
+
+      <section id="features" className="w-full py-20 md:py-32 bg-secondary/50">
         <div className="container mx-auto max-w-7xl px-4 md:px-8">
           <div className="flex flex-col items-center justify-center space-y-4 text-center">
             <div className="space-y-2">
@@ -179,6 +214,51 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-    </>
+
+      <section id="about" className="w-full py-20 md:py-32">
+        <div className="container mx-auto max-w-7xl px-4 md:px-8">
+            <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
+                <div>
+                    <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl font-headline">About DevCollab Hub</h2>
+                    <p className="mt-4 max-w-3xl text-muted-foreground md:text-xl">
+                        DevCollab Hub was born from a simple idea: developers are stronger together. We believe that the best-in-class products are built by teams with diverse skills and a shared passion. Our mission is to break down the barriers to collaboration, making it easier than ever for developers to find each other, share ideas, and build the future of technology.
+                    </p>
+                    <p className="mt-4 max-w-3xl text-muted-foreground md:text-xl">
+                        Whether you're a student looking for a project partner, a professional seeking a new challenge, or a hobbyist with a brilliant idea, DevCollab Hub is your launchpad.
+                    </p>
+                </div>
+                <div className="hidden lg:flex items-center justify-center">
+                    <Image
+                        src="https://picsum.photos/seed/about/1200/800"
+                        alt="A team of developers collaborating"
+                        width={1200}
+                        height={800}
+                        className="rounded-xl shadow-2xl aspect-video object-cover"
+                        data-ai-hint="team collaboration"
+                    />
+                </div>
+            </div>
+        </div>
+      </section>
+
+      </main>
+      <footer className="bg-background border-t">
+        <div className="container mx-auto max-w-7xl px-4 md:px-8 py-8">
+            <div className="flex flex-col md:flex-row justify-between items-center">
+                <div className="flex items-center space-x-2">
+                    <Code2 className="h-6 w-6 text-primary" />
+                    <span className="font-bold">DevCollab Hub</span>
+                </div>
+                <p className="text-muted-foreground text-sm mt-4 md:mt-0">
+                    &copy; {new Date().getFullYear()} DevCollab Hub. All rights reserved.
+                </p>
+                <div className="flex space-x-4 mt-4 md:mt-0">
+                    <Link href="#" className="text-muted-foreground hover:text-primary">Privacy Policy</Link>
+                    <Link href="#" className="text-muted-foreground hover:text-primary">Terms of Service</Link>
+                </div>
+            </div>
+        </div>
+      </footer>
+    </div>
   );
 }
