@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { Project, UserProfile } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,7 @@ export default function DashboardPage() {
       
       // Fetch user's projects
       const projectsCol = collection(db, 'projects');
-      const q = query(projectsCol, where('ownerId', '==', user.uid), orderBy('createdAt', 'desc'), limit(3));
+      const q = query(projectsCol, where('ownerId', '==', user.uid), limit(3));
       const querySnapshot = await getDocs(q);
       setMyProjects(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project)));
 
@@ -75,6 +75,61 @@ export default function DashboardPage() {
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+        
+        {/* Sidebar */}
+        <div className="space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Profile</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center text-center">
+              <Avatar className="w-24 h-24 mb-4 border-4 border-background shadow-md">
+                <AvatarImage src={userProfile.photoURL} alt={userProfile.name} />
+                <AvatarFallback className="text-4xl">{getInitials(userProfile.name)}</AvatarFallback>
+              </Avatar>
+              <p className="font-bold text-xl">{userProfile.name}</p>
+              <p className="text-muted-foreground mb-4">{userProfile.email}</p>
+              <p className="text-sm text-foreground/80 mb-6 line-clamp-3">
+                {userProfile.bio || "You haven't added a bio yet."}
+              </p>
+              <Button variant="outline" className="w-full" asChild>
+                <Link href="/profile">
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Profile
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+           <section>
+             <div className="flex items-center mb-6">
+                <Users className="h-7 w-7 text-primary mr-3" />
+                <h2 className="text-3xl font-bold tracking-tight">Connect with Developers</h2>
+              </div>
+              <div className="grid grid-cols-1 gap-6">
+                {recommendedDevelopers.map(dev => (
+                  <Card key={dev.uid} className="flex items-center p-4 gap-4 transition-all hover:shadow-md">
+                     <Avatar className="h-12 w-12">
+                        <AvatarImage src={dev.photoURL} alt={dev.name} />
+                        <AvatarFallback>{getInitials(dev.name)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="font-semibold">{dev.name}</p>
+                        <p className="text-sm text-muted-foreground truncate">{dev.skills?.join(', ') || 'No skills listed'}</p>
+                      </div>
+                      <Button size="sm" variant="outline" asChild>
+                        <Link href={`/developers/${dev.uid}`}>Profile</Link>
+                      </Button>
+                  </Card>
+                ))}
+              </div>
+              <div className="mt-6 text-center">
+                 <Button variant="secondary" asChild>
+                  <Link href="/developers">Browse All Developers</Link>
+                </Button>
+              </div>
+          </section>
+        </div>
+
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-12">
           <section>
@@ -106,63 +161,8 @@ export default function DashboardPage() {
               </div>
             )}
           </section>
-
-          <section>
-             <div className="flex items-center mb-6">
-                <Users className="h-7 w-7 text-primary mr-3" />
-                <h2 className="text-3xl font-bold tracking-tight">Connect with Developers</h2>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {recommendedDevelopers.map(dev => (
-                  <Card key={dev.uid} className="flex items-center p-4 gap-4 transition-all hover:shadow-md">
-                     <Avatar className="h-12 w-12">
-                        <AvatarImage src={dev.photoURL} alt={dev.name} />
-                        <AvatarFallback>{getInitials(dev.name)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="font-semibold">{dev.name}</p>
-                        <p className="text-sm text-muted-foreground truncate">{dev.skills?.join(', ') || 'No skills listed'}</p>
-                      </div>
-                      <Button size="sm" variant="outline" asChild>
-                        <Link href={`/developers/${dev.uid}`}>Profile</Link>
-                      </Button>
-                  </Card>
-                ))}
-              </div>
-              <div className="mt-6 text-center">
-                 <Button variant="secondary" asChild>
-                  <Link href="/developers">Browse All Developers</Link>
-                </Button>
-              </div>
-          </section>
-
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Profile</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center text-center">
-              <Avatar className="w-24 h-24 mb-4 border-4 border-background shadow-md">
-                <AvatarImage src={userProfile.photoURL} alt={userProfile.name} />
-                <AvatarFallback className="text-4xl">{getInitials(userProfile.name)}</AvatarFallback>
-              </Avatar>
-              <p className="font-bold text-xl">{userProfile.name}</p>
-              <p className="text-muted-foreground mb-4">{userProfile.email}</p>
-              <p className="text-sm text-foreground/80 mb-6 line-clamp-3">
-                {userProfile.bio || "You haven't added a bio yet."}
-              </p>
-              <Button variant="outline" className="w-full" asChild>
-                <Link href="/profile">
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit Profile
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   );
