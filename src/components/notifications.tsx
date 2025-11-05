@@ -50,6 +50,8 @@ export default function Notifications() {
       );
       setNotifications(notifsData);
       setUnreadCount(notifsData.filter((n) => !n.read).length);
+    }, (err) => {
+      console.error("Notification listener error:", err);
     });
 
     return () => unsubscribe();
@@ -142,7 +144,7 @@ export default function Notifications() {
                 <div className="flex-1">
                     {getNotificationText(notif)}
                     <p className="text-xs text-muted-foreground mt-1">
-                        {notif.timestamp ? formatDistanceToNow(notif.timestamp.toDate(), { addSuffix: true }) : ''}
+                        {notif.timestamp && notif.timestamp.toDate ? formatDistanceToNow(notif.timestamp.toDate(), { addSuffix: true }) : ''}
                     </p>
                 </div>
             </DropdownMenuItem>
@@ -156,5 +158,3 @@ export default function Notifications() {
     </DropdownMenu>
   );
 }
-
-    

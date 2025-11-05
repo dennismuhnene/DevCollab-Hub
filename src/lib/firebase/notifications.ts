@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/firebase/config';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 // Note: This is a server action. It can be called from client components.
 export async function addNotification(userId: string, notification: any) {
@@ -11,10 +11,12 @@ export async function addNotification(userId: string, notification: any) {
   }
   
   try {
-    await addDoc(collection(db, 'users', userId, 'notifications'), notification);
+    const notificationData = {
+        ...notification,
+        timestamp: serverTimestamp(),
+    };
+    await addDoc(collection(db, 'users', userId, 'notifications'), notificationData);
   } catch (error) {
     console.error('Error adding notification:', error);
   }
 }
-
-    
