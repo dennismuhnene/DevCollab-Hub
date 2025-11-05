@@ -88,13 +88,13 @@ service cloud.firestore {
      * @path /matches/{matchId}
      */
     match /matches/{matchId} {
-      // Allow create only if the user is included as a participant
+      // Allow create only if the user is included as a participant in the new document
       allow create: if isSignedIn() && request.auth.uid in request.resource.data.participants;
 
-      // Allow read and update only if user is in the participants array
+      // Allow get, update, delete only if the user is in the participants array of the existing document
       allow get, update, delete: if isSignedIn() && request.auth.uid in resource.data.participants;
 
-      // Allow list ONLY if the query filters by participants array
+      // Allow list ONLY if the query filters by the participants array containing the user's ID
       allow list: if isSignedIn() && request.query.where['participants']['array-contains'] == request.auth.uid;
 
       /**
