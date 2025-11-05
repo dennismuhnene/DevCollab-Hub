@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -103,14 +103,6 @@ export default function ProjectForm({ project }: ProjectFormProps) {
   const techStack = watch('requiredTechStack') || [];
   const skills = watch('requiredSkills') || [];
   const collaborationOpenValue = watch('collaborationOpen');
-
-  useEffect(() => {
-    setValue('requiredTechStack', techStack);
-  }, [techStack, setValue]);
-
-  useEffect(() => {
-    setValue('requiredSkills', skills);
-  }, [skills, setValue]);
 
   const handleTechStackAdd = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && techStackInput.trim()) {
@@ -362,7 +354,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
                 <Switch 
                   id="collaborationOpen" 
                   checked={collaborationOpenValue}
-                  onCheckedChange={(checked) => setValue('collaborationOpen', checked)}
+                  onCheckedChange={(checked) => setValue('collaborationOpen', checked, { shouldValidate: true, shouldDirty: true })}
                 />
                 <div className="space-y-0.5">
                   <Label htmlFor="collaborationOpen" className="text-base">
