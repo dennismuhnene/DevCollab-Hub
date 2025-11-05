@@ -46,16 +46,28 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
     const matchesCollectionRef = collection(db, 'matches');
     const matchRef = await addDoc(matchesCollectionRef, matchData);
     
-    // The notifications will be handled by a separate mechanism or in a future step
-    // to avoid security rule conflicts within this server action.
+    // Add notifications for both users
+    addNotification(ownerId, {
+      type: 'match',
+      fromUserId: matchedUserId,
+      fromUserName: matchedUserData.name || 'A user',
+      matchId: matchRef.id,
+      projectTitle: projectData.title,
+      read: false,
+    });
+    addNotification(matchedUserId, {
+      type: 'match',
+      fromUserId: ownerId,
+      fromUserName: ownerData.name || 'A user',
+      matchId: matchRef.id,
+      projectTitle: projectData.title,
+      read: false,
+    });
 
     return matchRef.id;
 
   } catch (error) {
     console.error("Error in createMatch Server Action:", error);
-    if (error instanceof Error) {
-        throw new Error(error.message || 'An unknown error occurred while creating the match.');
-    }
-    throw new Error('An unknown error occurred while creating the match.');
+    throw error;
   }
 }
