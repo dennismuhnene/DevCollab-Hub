@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc, writeBatch } from 'firebase/firestore';
 import type { UserProfile, Project } from '@/types';
 import { addNotification } from './notifications';
 
@@ -28,6 +28,11 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
     const ownerData = ownerDoc.data() as UserProfile;
     const matchedUserData = matchedUserDoc.data() as UserProfile;
     const projectData = projectDoc.data() as Project;
+    
+    const batch = writeBatch(db);
+
+    const matchCollectionRef = collection(db, 'matches');
+    const newMatchRef = doc(matchCollectionRef);
 
     const matchData = {
       projectId,
@@ -43,31 +48,40 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
       timestamp: serverTimestamp(),
     };
 
-    const matchesCollectionRef = collection(db, 'matches');
-    const matchRef = await addDoc(matchesCollectionRef, matchData);
-    
-    // Add notifications for both users
-    addNotification(ownerId, {
+    batch.set(newMatchRef, matchData);
+
+    const ownerNotificationRef = doc(collection(db, 'users', ownerId, 'notifications'));
+    batch.set(ownerNotificationRef, {
       type: 'match',
       fromUserId: matchedUserId,
       fromUserName: matchedUserData.name || 'A user',
-      matchId: matchRef.id,
+      matchId: newMatchRef.id,
       projectTitle: projectData.title,
       read: false,
+      timestamp: serverTimestamp(),
     });
-    addNotification(matchedUserId, {
+
+    const matchedUserNotificationRef = doc(collection(db, 'users', matchedUserId, 'notifications'));
+    batch.set(matchedUserNotificationRef, {
       type: 'match',
       fromUserId: ownerId,
       fromUserName: ownerData.name || 'A user',
-      matchId: matchRef.id,
+      matchId: newMatchRef.id,
       projectTitle: projectData.title,
       read: false,
+      timestamp: serverTimestamp(),
     });
+    
+    await batch.commit();
 
-    return matchRef.id;
+    return newMatchRef.id;
 
   } catch (error) {
     console.error("Error in createMatch Server Action:", error);
-    throw error;
+    // Re-throwing the error to be caught by the client-side caller
+    if (error instanceof Error) {
+        throw new Error(error.message || 'An unknown error occurred while creating the match.');
+    }
+    throw new Error('An unknown error occurred while creating the match.');
   }
 }
