@@ -63,7 +63,7 @@ service cloud.firestore {
 
       // Allow list (queries) ONLY IF the query explicitly filters for the user's UID in the 'participants' array.
       // This is the key rule that secures collection-level reads.
-      allow list: if isSignedIn() && request.query.where('participants', 'array-contains', uid());
+      allow list: if isSignedIn() && request.query.where[0] == ['participants', 'array-contains', uid()];
 
       // -----------------------
       // messages subcollection
