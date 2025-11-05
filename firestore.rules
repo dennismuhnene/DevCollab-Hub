@@ -14,10 +14,10 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create, update, delete: if isSignedIn() && uid() == userId;
 
-      // Allow anyone who is signed in to create a notification for another user
-      // But only the user can read, update or delete their own notifications.
       match /notifications/{notificationId} {
+        // Allow anyone signed-in to create a notification for another user
         allow create: if isSignedIn();
+        // Only the user can read, update, or delete their own notifications
         allow read, update, delete: if isSignedIn() && uid() == userId;
       }
     }
