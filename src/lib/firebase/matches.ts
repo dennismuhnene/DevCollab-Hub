@@ -2,16 +2,25 @@
 'use server';
 
 import { db } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc, writeBatch } from 'firebase/firestore';
 import type { UserProfile } from '@/types';
 import { addNotification } from './notifications';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 export async function createMatch(projectId: string, ownerId: string, matchedUserId: string): Promise<string> {
+  if (!projectId || !ownerId || !matchedUserId) {
+    throw new Error("Invalid arguments for creating a match.");
+  }
+  
+  const ownerDocRef = doc(db, 'users', ownerId);
+  const matchedUserDocRef = doc(db, 'users', matchedUserId);
+  const projectDocRef = doc(db, 'projects', projectId);
+
   try {
-    const ownerDoc = await getDoc(doc(db, 'users', ownerId));
-    const matchedUserDoc = await getDoc(doc(db, 'users', matchedUserId));
-    const projectDoc = await getDoc(doc(db, 'projects', projectId));
+    const [ownerDoc, matchedUserDoc, projectDoc] = await Promise.all([
+      getDoc(ownerDocRef),
+      getDoc(matchedUserDocRef),
+      getDoc(projectDocRef)
+    ]);
 
     if (!ownerDoc.exists() || !matchedUserDoc.exists() || !projectDoc.exists()) {
       throw new Error("Invalid user or project provided for match.");
@@ -26,54 +35,44 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
       projectTitle: projectData.title,
       ownerId,
       matchedUserId,
-      participants: [ownerId, matchedUserId],
+      participants: [ownerId, matchedUserId], // CRITICAL for security rules
       participantsDetails: [
-        { uid: ownerId, name: ownerData.name, photoURL: ownerData.photoURL || '' },
-        { uid: matchedUserId, name: matchedUserData.name, photoURL: matchedUserData.photoURL || '' },
+        { uid: ownerId, name: ownerData.name || 'Owner', photoURL: ownerData.photoURL || '' },
+        { uid: matchedUserId, name: matchedUserData.name || 'Developer', photoURL: matchedUserData.photoURL || '' },
       ],
-      timestamp: serverTimestamp(), // Correctly add timestamp here
       status: 'active',
-      lastMessageTimestamp: serverTimestamp(), // Add field for sorting conversations
+      timestamp: serverTimestamp(), // For sorting conversations
     };
 
-    const matchesCollection = collection(db, 'matches');
-    const matchRef = await addDoc(matchesCollection, matchData);
-    
-    // Notify both users on success
-    addNotification(ownerId, {
-      type: 'match',
-      fromUserId: matchedUserId,
-      fromUserName: matchedUserData.name,
-      projectId,
-      projectTitle: projectData.title,
-      matchId: matchRef.id,
-      read: false,
-    });
+    const matchesCollectionRef = collection(db, 'matches');
+    const matchRef = await addDoc(matchesCollectionRef, matchData);
 
-    addNotification(matchedUserId, {
-      type: 'match',
-      fromUserId: ownerId,
-      fromUserName: ownerData.name,
-      projectId,
-      projectTitle: projectData.title,
-      matchId: matchRef.id,
-      read: false,
-    });
+    // Notify both users about the new match
+    await Promise.all([
+      addNotification(ownerId, {
+        type: 'match',
+        fromUserId: matchedUserId,
+        fromUserName: matchedUserData.name || 'A Developer',
+        projectId,
+        projectTitle: projectData.title,
+        matchId: matchRef.id,
+        read: false,
+      }),
+      addNotification(matchedUserId, {
+        type: 'match',
+        fromUserId: ownerId,
+        fromUserName: ownerData.name || 'A Project Owner',
+        projectId,
+        projectTitle: projectData.title,
+        matchId: matchRef.id,
+        read: false,
+      })
+    ]);
     
     return matchRef.id;
   } catch (error) {
-    if (error instanceof Error && error.message.includes('permission-denied')) {
-        const permissionError = new FirestorePermissionError({
-            path: 'matches',
-            operation: 'create',
-            requestResourceData: { projectId, ownerId, matchedUserId },
-        });
-        // This is a server action, logging the rich error here is the best we can do.
-        console.error("Firestore Permission Error:", permissionError.message);
-        throw permissionError; // Re-throw the rich error
-    }
-    
-    console.error("Failed to create match:", error);
+    console.error("Error in createMatch Server Action:", error);
+    // Re-throwing the error to be caught by the client-side caller
     if (error instanceof Error) {
         throw new Error(error.message || 'An unknown error occurred while creating the match.');
     }

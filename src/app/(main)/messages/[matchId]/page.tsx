@@ -31,24 +31,23 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sortedMatches, setSortedMatches] = useState<Match[]>([]);
 
+  // This query now perfectly matches the security rule for 'list'
   const matchesQuery = useMemoFirebase(
     () => {
       if (!user) return null;
-      // This query now perfectly matches the security rule for 'list'
-      const q = query(
+      return query(
             collection(db, 'matches'),
             where('participants', 'array-contains', user.uid)
           );
-      return q;
     },
     [user]
   );
 
   const { data: matches, isLoading: matchesLoading, error: matchesError } = useCollection<Match>(matchesQuery);
   
+  // Sorting is now done on the client-side to avoid complex indexed queries
    useEffect(() => {
     if (matches) {
-        // Sorting is now done on the client-side
         const sorted = [...matches].sort((a, b) => {
             const timeA = a.timestamp?.toMillis() || 0;
             const timeB = b.timestamp?.toMillis() || 0;
@@ -60,6 +59,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (matchesError) {
+      // The useCollection hook will throw a contextual error which is caught by the FirebaseErrorListener
       console.error("ChatPage Matches Error:", matchesError);
     }
   }, [matchesError]);
