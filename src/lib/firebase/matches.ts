@@ -40,7 +40,7 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
     const matchRef = await addDoc(matchesCollection, matchData);
     
     // Notify both users on success
-    await addNotification(ownerId, {
+    addNotification(ownerId, {
       type: 'match',
       fromUserId: matchedUserId,
       fromUserName: matchedUserData.name,
@@ -50,7 +50,7 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
       read: false,
     });
 
-    await addNotification(matchedUserId, {
+    addNotification(matchedUserId, {
       type: 'match',
       fromUserId: ownerId,
       fromUserName: ownerData.name,
@@ -68,8 +68,12 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
       operation: 'create',
       requestResourceData: matchData,
     });
+    
+    // Emit the detailed error for the listener
     errorEmitter.emit('permission-error', permissionError);
-    // Re-throw the original error to ensure the client promise rejects
-    throw serverError;
+
+    // IMPORTANT: Throw the NEW, detailed error, not the original one.
+    // This ensures the detailed error is what appears in the Next.js overlay.
+    throw permissionError;
   }
 }
