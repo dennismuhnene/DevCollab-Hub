@@ -80,10 +80,12 @@ service cloud.firestore {
      * @path /matches/{matchId}
      */
     match /matches/{matchId} {
-        // Allow read/write access if the requesting user's UID is in the `participants` array.
-        // This rule implicitly secures `list` queries that filter on the `participants` array.
-        allow read, write: if request.auth.uid in resource.data.participants;
+        // Allow reading/writing a single document if the user is a participant.
+        allow get, write: if request.auth.uid in resource.data.participants;
         
+        // Allow querying the collection ONLY if the query filters for the user's UID.
+        allow list: if request.auth.uid != null && request.query.where.participants.hasAny([request.auth.uid]);
+
         /**
          * @description Controls access to messages within a match. Only participants can read/write.
          * @path /matches/{matchId}/messages/{messageId}
