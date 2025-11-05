@@ -2,20 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase/config';
 import { ref, deleteObject } from 'firebase/storage';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import type { Project, UserProfile, Interest } from '@/types';
+import type { Project, UserProfile } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Hand, Undo, Edit, Trash2, Code, BrainCircuit, Clock, UserCheck } from 'lucide-react';
+import { Hand, Undo, Edit, Trash2, Code, BrainCircuit, Clock, UserCheck, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import {
@@ -29,9 +29,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { createMatch } from '@/lib/firebase/matches';
 import { addNotification } from '@/lib/firebase/notifications';
+
+interface InterestedUser extends UserProfile {
+  // extends to ensure type safety
+}
 
 export default function ProjectDetailsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -41,9 +45,12 @@ export default function ProjectDetailsPage() {
 
   const [project, setProject] = useState<Project | null>(null);
   const [owner, setOwner] = useState<UserProfile | null>(null);
+  const [interestedUsers, setInterestedUsers] = useState<InterestedUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [interested, setInterested] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  const [isInterested, setIsInterested] = useState(false);
+  const [showMatchModal, setShowMatchModal] = useState(false);
+  const [matchedInfo, setMatchedInfo] = useState<{ projectName: string; devName: string; matchId: string } | null>(null);
   
   const { toast } = useToast();
 
@@ -56,7 +63,7 @@ export default function ProjectDetailsPage() {
   useEffect(() => {
     if (!projectId) return;
 
-    const fetchProject = async () => {
+    const fetchProjectData = async () => {
       setLoading(true);
       const projectDocRef = doc(db, 'projects', projectId);
       const projectDoc = await getDoc(projectDocRef);
@@ -64,7 +71,7 @@ export default function ProjectDetailsPage() {
       if (projectDoc.exists()) {
         const projectData = { id: projectDoc.id, ...projectDoc.data() } as Project;
         setProject(projectData);
-        
+
         const ownerDocRef = doc(db, 'users', projectData.ownerId);
         const ownerDoc = await getDoc(ownerDocRef);
         if (ownerDoc.exists()) {
@@ -72,8 +79,15 @@ export default function ProjectDetailsPage() {
         }
         
         if (user) {
-          setInterested(projectData.interestedUsers?.some(uid => uid === user.uid));
           setIsOwner(projectData.ownerId === user.uid);
+          setIsInterested(projectData.interestedUsers?.includes(user.uid) || false);
+        }
+
+        // If the user is the owner, fetch the full profiles of interested users
+        if (projectData.ownerId === user?.uid && projectData.interestedUsers && projectData.interestedUsers.length > 0) {
+          const interestedQuery = query(collection(db, 'users'), where('uid', 'in', projectData.interestedUsers));
+          const interestedSnapshot = await getDocs(interestedQuery);
+          setInterestedUsers(interestedSnapshot.docs.map(d => d.data() as InterestedUser));
         }
 
       } else {
@@ -83,7 +97,7 @@ export default function ProjectDetailsPage() {
       setLoading(false);
     };
 
-    fetchProject();
+    fetchProjectData();
   }, [projectId, user, toast, router]);
 
   const handleInterest = async () => {
@@ -92,16 +106,12 @@ export default function ProjectDetailsPage() {
     const projectDocRef = doc(db, 'projects', projectId);
 
     try {
-      if (interested) {
-        await updateDoc(projectDocRef, {
-          interestedUsers: arrayRemove(user.uid)
-        });
+      if (isInterested) {
+        await updateDoc(projectDocRef, { interestedUsers: arrayRemove(user.uid) });
         setProject(prev => prev ? ({ ...prev, interestedUsers: prev.interestedUsers?.filter(uid => uid !== user.uid) }) : null);
         toast({ title: 'Interest removed' });
       } else {
-        await updateDoc(projectDocRef, {
-          interestedUsers: arrayUnion(user.uid)
-        });
+        await updateDoc(projectDocRef, { interestedUsers: arrayUnion(user.uid) });
         setProject(prev => prev ? ({ ...prev, interestedUsers: [...(prev.interestedUsers || []), user.uid] }) : null);
         addNotification(project.ownerId, {
           type: 'interest',
@@ -114,13 +124,35 @@ export default function ProjectDetailsPage() {
         });
         toast({ title: 'Interest expressed!', description: "The project owner has been notified." });
       }
-      setInterested(!interested);
+      setIsInterested(!isInterested);
     } catch(e: any) {
        toast({
         variant: 'destructive',
         title: 'Error updating interest',
         description: e.message,
       });
+    }
+  };
+
+  const handleMatch = async (interestedUser: InterestedUser) => {
+    if (!user || !project) return;
+    try {
+      const matchId = await createMatch(project.id, project.ownerId, interestedUser.uid);
+      setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId });
+      setShowMatchModal(true);
+
+      const projectRef = doc(db, 'projects', project.id);
+      await updateDoc(projectRef, {
+        matchedUsers: arrayUnion(interestedUser.uid),
+        interestedUsers: arrayRemove(interestedUser.uid),
+      });
+
+      setInterestedUsers(prev => prev.filter(u => u.uid !== interestedUser.uid));
+      setProject(prev => prev ? ({ ...prev, matchedUsers: [...(prev.matchedUsers || []), interestedUser.uid] }) : null);
+
+    } catch (error) {
+       console.error("Failed to create match:", error);
+       toast({ variant: 'destructive', title: 'Matching Failed' });
     }
   };
 
@@ -157,6 +189,12 @@ export default function ProjectDetailsPage() {
     }
     return `${years} year${years !== 1 ? 's' : ''}`;
   };
+
+  const getInitials = (name?: string) => {
+    if (!name) return 'U';
+    return name.split(' ').map((n) => n[0]).join('');
+  };
+
 
   if (loading || authLoading || !user) {
     return (
@@ -205,36 +243,35 @@ export default function ProjectDetailsPage() {
           <h2 className="text-2xl font-semibold">About this project</h2>
           <p className="text-lg leading-relaxed text-foreground/80">{project.description}</p>
           
-          {isOwner && (project.interests || project.matchedUsers) && (
+          {isOwner && (
             <Card>
               <CardHeader>
-                <CardTitle>Collaboration Status</CardTitle>
+                <CardTitle>Collaboration Hub</CardTitle>
               </CardHeader>
               <CardContent>
-                {project.interests && project.interests.length > 0 && (
+                {interestedUsers.length > 0 ? (
                   <div className="mb-6">
-                    <h3 className="font-semibold mb-4 flex items-center gap-2"><Hand className="h-5 w-5"/>Interested Developers</h3>
+                    <h3 className="font-semibold mb-4 flex items-center gap-2"><Hand className="h-5 w-5 text-yellow-500"/>Interested Developers</h3>
                     <ul className="space-y-4">
-                      {project.interests.map(interest => (
-                        <li key={interest.userId} className="flex items-center justify-between">
+                      {interestedUsers.map(interested => (
+                        <li key={interested.uid} className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
-                            <Avatar>
-                              <AvatarImage src={interest.photoURL} />
-                              <AvatarFallback>{interest.name.charAt(0)}</AvatarFallback>
+                             <Avatar>
+                              <AvatarImage src={interested.photoURL} />
+                              <AvatarFallback>{getInitials(interested.name)}</AvatarFallback>
                             </Avatar>
-                            <span>{interest.name}</span>
+                            <Link href={`/developers/${interested.uid}`} className="font-medium hover:underline">{interested.name}</Link>
                           </div>
-                          <Button variant="outline" size="sm" asChild>
-                            <Link href={`/developers/${interest.userId}`}>View Profile</Link>
-                          </Button>
+                          <Button size="sm" onClick={() => handleMatch(interested)}>Match</Button>
                         </li>
                       ))}
                     </ul>
                   </div>
-                )}
+                ) : <p className="text-muted-foreground text-sm mb-6">No one has shown interest yet.</p>}
+
                  {project.matchedUsers && project.matchedUsers.length > 0 && (
                   <div>
-                    <h3 className="font-semibold mb-4 flex items-center gap-2"><UserCheck className="h-5 w-5"/>Matched Developers</h3>
+                    <h3 className="font-semibold mb-4 flex items-center gap-2"><UserCheck className="h-5 w-5 text-green-500"/>Matched Developers</h3>
                      <ul className="space-y-4">
                       {project.matchedUsers.map(userId => (
                         <li key={userId} className="flex items-center justify-between">
@@ -265,7 +302,7 @@ export default function ProjectDetailsPage() {
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button size="lg" variant="destructive">
+                    <Button size="icon" variant="destructive">
                       <Trash2 className="h-4 w-4"/>
                     </Button>
                   </AlertDialogTrigger>
@@ -288,7 +325,7 @@ export default function ProjectDetailsPage() {
             ) : (
               <Button size="lg" className="w-full" onClick={handleInterest} disabled={!project.collaborationOpen}>
                 {project.collaborationOpen ? (
-                  interested ? (
+                  isInterested ? (
                     <>
                       <Undo className="mr-2 h-4 w-4" />
                       Remove Interest
@@ -338,8 +375,26 @@ export default function ProjectDetailsPage() {
           </Card>
         </div>
       </div>
+       <AlertDialog open={showMatchModal} onOpenChange={setShowMatchModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-center text-2xl">It's a Match!</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              You and <span className="font-bold">{matchedInfo?.devName}</span> have matched for the project: <span className="font-bold">{matchedInfo?.projectName}</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-center py-4">
+            <UserCheck className="h-16 w-16 text-green-500" />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+            <AlertDialogAction onClick={() => router.push(`/messages/${matchedInfo?.matchId}`)}>
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Send a Message
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
-
-    

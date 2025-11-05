@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { collection, query, where, getDocs, limit, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import type { Project, UserProfile, Interest } from '@/types';
+import type { Project, UserProfile } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -27,12 +27,16 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+interface InterestedUser extends UserProfile {
+  // No additional fields needed, just to type the array
+}
 
 export default function DashboardPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
   const router = useRouter();
   const [myProjects, setMyProjects] = useState<Project[]>([]);
   const [recommendedDevelopers, setRecommendedDevelopers] = useState<UserProfile[]>([]);
+  const [interestedUsersByProject, setInterestedUsersByProject] = useState<Record<string, InterestedUser[]>>({});
   const [loadingData, setLoadingData] = useState(true);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedInfo, setMatchedInfo] = useState<{ projectName: string; devName: string; matchId: string } | null>(null);
@@ -50,11 +54,25 @@ export default function DashboardPage() {
     const fetchData = async () => {
       setLoadingData(true);
       
+      // Fetch user's projects
       const projectsCol = collection(db, 'projects');
       const q = query(projectsCol, where('ownerId', '==', user.uid));
       const querySnapshot = await getDocs(q);
-      setMyProjects(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project)));
+      const projects = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+      setMyProjects(projects);
 
+      // Fetch interested users for each project
+      const interestedUsersData: Record<string, InterestedUser[]> = {};
+      for (const project of projects) {
+        if (project.interestedUsers && project.interestedUsers.length > 0) {
+          const usersQuery = query(collection(db, 'users'), where('uid', 'in', project.interestedUsers));
+          const usersSnapshot = await getDocs(usersQuery);
+          interestedUsersData[project.id] = usersSnapshot.docs.map(d => d.data() as InterestedUser);
+        }
+      }
+      setInterestedUsersByProject(interestedUsersData);
+
+      // Fetch recommended developers
       const usersCol = collection(db, 'users');
       const usersQuery = query(usersCol, where('uid', '!=', user.uid), limit(4));
       const usersSnapshot = await getDocs(usersQuery);
@@ -66,25 +84,30 @@ export default function DashboardPage() {
     fetchData();
   }, [user]);
 
-  const handleMatch = async (project: Project, interestedUser: Interest) => {
+  const handleMatch = async (project: Project, interestedUser: InterestedUser) => {
     if (!user) return;
     try {
-      const matchId = await createMatch(project.id, project.ownerId, interestedUser.userId);
+      const matchId = await createMatch(project.id, project.ownerId, interestedUser.uid);
       setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId });
       setShowMatchModal(true);
 
       const projectRef = doc(db, 'projects', project.id);
       await updateDoc(projectRef, {
-        matchedUsers: arrayUnion(interestedUser.userId)
+        matchedUsers: arrayUnion(interestedUser.uid),
+        interestedUsers: arrayRemove(interestedUser.uid),
       });
       
       // Update local state to reflect the match
+      setInterestedUsersByProject(prev => ({
+        ...prev,
+        [project.id]: prev[project.id]?.filter(u => u.uid !== interestedUser.uid)
+      }));
       setMyProjects(prevProjects => prevProjects.map(p => {
         if (p.id === project.id) {
           return {
             ...p,
-            interests: p.interests?.filter(i => i.userId !== interestedUser.userId),
-            matchedUsers: [...(p.matchedUsers || []), interestedUser.userId]
+            interestedUsers: p.interestedUsers?.filter(uid => uid !== interestedUser.uid),
+            matchedUsers: [...(p.matchedUsers || []), interestedUser.uid]
           };
         }
         return p;
@@ -189,12 +212,12 @@ export default function DashboardPage() {
             )}
           </section>
 
-          {myProjects.some(p => (p.interests && p.interests.length > 0) || (p.matchedUsers && p.matchedUsers.length > 0)) && (
+          {myProjects.some(p => interestedUsersByProject[p.id]?.length > 0 || (p.matchedUsers && p.matchedUsers.length > 0)) && (
             <section>
               <h2 className="text-3xl font-bold tracking-tight mb-6 flex items-center"><UserCheck className="mr-3 h-7 w-7 text-primary"/>Collaboration Hub</h2>
               {myProjects.map(project => (
                 <div key={project.id}>
-                  {(project.interests && project.interests.length > 0) && (
+                  {interestedUsersByProject[project.id]?.length > 0 && (
                     <Card className="mb-6">
                       <CardHeader>
                         <CardTitle className="flex items-center gap-3">
@@ -204,20 +227,20 @@ export default function DashboardPage() {
                       </CardHeader>
                       <CardContent>
                         <ul className="space-y-4">
-                          {project.interests?.map(interest => (
-                            <li key={interest.userId} className="flex items-center justify-between">
+                          {interestedUsersByProject[project.id]?.map(interestedUser => (
+                            <li key={interestedUser.uid} className="flex items-center justify-between">
                               <div className="flex items-center space-x-3">
                                 <Avatar>
-                                  <AvatarImage src={interest.photoURL} />
-                                  <AvatarFallback>{getInitials(interest.name)}</AvatarFallback>
+                                  <AvatarImage src={interestedUser.photoURL} />
+                                  <AvatarFallback>{getInitials(interestedUser.name)}</AvatarFallback>
                                 </Avatar>
-                                <span>{interest.name}</span>
+                                <span>{interestedUser.name}</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <Button variant="outline" size="sm" asChild>
-                                  <Link href={`/developers/${interest.userId}`}>View Profile</Link>
+                                  <Link href={`/developers/${interestedUser.uid}`}>View Profile</Link>
                                 </Button>
-                                <Button size="sm" onClick={() => handleMatch(project, interest)}>Match</Button>
+                                <Button size="sm" onClick={() => handleMatch(project, interestedUser)}>Match</Button>
                               </div>
                             </li>
                           ))}
@@ -380,5 +403,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
