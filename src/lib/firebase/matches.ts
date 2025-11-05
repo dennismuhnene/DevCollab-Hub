@@ -36,8 +36,9 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
 
   const matchesCollection = collection(db, 'matches');
 
-  // Return the promise here so we can still get the ID on success
-  return addDoc(matchesCollection, matchData).then(async (matchRef) => {
+  try {
+    const matchRef = await addDoc(matchesCollection, matchData);
+    
     // Notify both users on success
     await addNotification(ownerId, {
       type: 'match',
@@ -47,7 +48,6 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
       projectTitle: projectData.title,
       matchId: matchRef.id,
       read: false,
-      timestamp: new Date(),
     });
 
     await addNotification(matchedUserId, {
@@ -58,11 +58,10 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
       projectTitle: projectData.title,
       matchId: matchRef.id,
       read: false,
-      timestamp: new Date(),
     });
     
     return matchRef.id;
-  }).catch((serverError) => {
+  } catch (serverError) {
     // On failure, create and emit a contextual error
     const permissionError = new FirestorePermissionError({
       path: matchesCollection.path,
@@ -72,5 +71,5 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
     errorEmitter.emit('permission-error', permissionError);
     // Re-throw the original error to ensure the client promise rejects
     throw serverError;
-  });
+  }
 }

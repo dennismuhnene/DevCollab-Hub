@@ -13,7 +13,7 @@ export async function addNotification(userId: string, notification: any) {
   try {
     const notificationData = {
         ...notification,
-        timestamp: serverTimestamp(),
+        timestamp: serverTimestamp(), // Use serverTimestamp for consistency
     };
     await addDoc(collection(db, 'users', userId, 'notifications'), notificationData);
   } catch (error) {

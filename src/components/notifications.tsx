@@ -4,7 +4,6 @@ import { useAuth } from '@/lib/hooks/use-auth';
 import {
   collection,
   query,
-  where,
   orderBy,
   limit,
   onSnapshot,
@@ -58,7 +57,7 @@ export default function Notifications() {
   }, [user]);
 
   const handleNotificationClick = async (notification: Notification) => {
-    if (notification.id && user) {
+    if (notification.id && user && !notification.read) {
         const notifRef = doc(db, 'users', user.uid, 'notifications', notification.id);
         await updateDoc(notifRef, { read: true });
     }
@@ -137,7 +136,7 @@ export default function Notifications() {
           notifications.map((notif) => (
             <DropdownMenuItem
               key={notif.id}
-              className={`flex items-start gap-3 py-2 px-3 whitespace-normal ${!notif.read ? 'bg-blue-500/10' : ''}`}
+              className={`flex items-start gap-3 py-2 px-3 whitespace-normal ${!notif.read ? 'bg-primary/10' : ''}`}
               onSelect={() => handleNotificationClick(notif)}
             >
                 <div className="mt-1">{getNotificationIcon(notif.type)}</div>

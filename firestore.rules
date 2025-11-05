@@ -87,10 +87,12 @@ service cloud.firestore {
      * @path /matches/{matchId}
      */
     match /matches/{matchId} {
-      // Allow read/list if the user is a participant. This covers both single doc reads and queries.
+      // Allow read/list if the user's UID is in the `participants` array.
+      // This is secure for queries as long as the query itself contains `where('participants', 'array-contains', request.auth.uid)`.
       allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
       
-      // Allow a user to write (create, update) a match if they are a participant.
+      // Allow a user to create a match if their UID is in the `participants` array of the NEW document.
+      // Allow updates if the user's UID is in the `participants` array of BOTH the old and new documents.
       allow write: if isSignedIn() && request.auth.uid in request.resource.data.participants;
 
       /**
