@@ -89,7 +89,10 @@ service cloud.firestore {
             return request.auth.uid in request.resource.data.participants;
         }
 
-        allow get, list: if isSignedIn() && isParticipant();
+        // Allow reading a single match document if the user is a participant.
+        allow get: if isSignedIn() && isParticipant();
+        // Allow querying the collection only if filtering by the user's own uid.
+        allow list: if isSignedIn() && request.query.where.get('participants', ['array-contains', '']).to_list()[1] == request.auth.uid;
         allow create: if isSignedIn() && isCreatingWithSelf();
         allow update: if isSignedIn() && isParticipant();
         allow delete: if isSignedIn() && isParticipant();
@@ -116,5 +119,4 @@ service cloud.firestore {
     }
   }
 }
-
     
