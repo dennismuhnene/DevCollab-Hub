@@ -14,8 +14,11 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create, update, delete: if isSignedIn() && uid() == userId;
 
+      // Allow anyone who is signed in to create a notification for another user
+      // But only the user can read, update or delete their own notifications.
       match /notifications/{notificationId} {
-        allow read, write, delete: if isSignedIn() && uid() == userId;
+        allow create: if isSignedIn();
+        allow read, update, delete: if isSignedIn() && uid() == userId;
       }
     }
 
@@ -36,8 +39,7 @@ service cloud.firestore {
       allow create: if isSignedIn() && uid() in request.resource.data.participants;
       
       // Allow a list operation (query) ONLY if the client is filtering by the 'participants' array.
-      // This is the key rule to fix the "Missing or insufficient permissions" error for queries.
-      allow list: if isSignedIn() && request.query.where[0] == ['participants', 'array-contains', uid()];
+      allow list: if isSignedIn() && request.query.where[0][0] == 'participants' && request.query.where[0][1] == 'array-contains' && request.query.where[0][2] == uid();
 
       // MESSAGES SUBCOLLECTION
       match /messages/{messageId} {

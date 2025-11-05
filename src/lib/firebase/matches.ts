@@ -3,7 +3,6 @@
 import { db } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, doc, getDoc, writeBatch } from 'firebase/firestore';
 import type { UserProfile, Project } from '@/types';
-import { addNotification } from './notifications';
 
 export async function createMatch(projectId: string, ownerId: string, matchedUserId: string): Promise<string> {
   if (!projectId || !ownerId || !matchedUserId) {
@@ -32,7 +31,7 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
     const batch = writeBatch(db);
 
     const matchCollectionRef = collection(db, 'matches');
-    const newMatchRef = doc(matchCollectionRef);
+    const newMatchRef = doc(matchCollectionRef); // Create a new ref with a unique ID
 
     const matchData = {
       projectId,
@@ -48,19 +47,18 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
       timestamp: serverTimestamp(),
     };
 
+    // 1. Create the match document
     batch.set(newMatchRef, matchData);
-
-    const ownerNotificationRef = doc(collection(db, 'users', ownerId, 'notifications'));
-    batch.set(ownerNotificationRef, {
-      type: 'match',
-      fromUserId: matchedUserId,
-      fromUserName: matchedUserData.name || 'A user',
-      matchId: newMatchRef.id,
-      projectTitle: projectData.title,
-      read: false,
-      timestamp: serverTimestamp(),
+    
+    // 2. Update the project document
+    batch.update(projectDocRef, {
+        matchedUsers: arrayUnion(matchedUserId),
+        interestedUsers: arrayRemove(matchedUserId),
     });
 
+    // 3. Create a notification for the USER WHO WAS MATCHED (not the owner making the call)
+    // This is allowed because anyone can create a notification in another user's subcollection
+    // as long as the rule allows it (which it will). The owner gets instant feedback from the UI.
     const matchedUserNotificationRef = doc(collection(db, 'users', matchedUserId, 'notifications'));
     batch.set(matchedUserNotificationRef, {
       type: 'match',

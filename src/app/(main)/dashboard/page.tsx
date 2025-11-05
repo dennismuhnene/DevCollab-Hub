@@ -90,12 +90,6 @@ export default function DashboardPage() {
       const matchId = await createMatch(project.id, project.ownerId, interestedUser.uid);
       setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId });
       setShowMatchModal(true);
-
-      const projectRef = doc(db, 'projects', project.id);
-      await updateDoc(projectRef, {
-        matchedUsers: arrayUnion(interestedUser.uid),
-        interestedUsers: arrayRemove(interestedUser.uid),
-      });
       
       // Update local state to reflect the match
       setInterestedUsersByProject(prev => ({

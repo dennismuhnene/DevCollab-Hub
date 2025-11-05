@@ -31,7 +31,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { createMatch } from '@/lib/firebase/matches';
-import { addNotification } from '@/lib/firebase/notifications';
 
 interface InterestedUser extends UserProfile {
   // extends to ensure type safety
@@ -113,14 +112,24 @@ export default function ProjectDetailsPage() {
       } else {
         await updateDoc(projectDocRef, { interestedUsers: arrayUnion(user.uid) });
         setProject(prev => prev ? ({ ...prev, interestedUsers: [...(prev.interestedUsers || []), user.uid] }) : null);
-        addNotification(project.ownerId, {
-          type: 'interest',
-          fromUserId: user.uid,
-          fromUserName: user.displayName || 'A user',
-          projectId: project.id,
-          projectTitle: project.title,
-          read: false,
+        
+        // This is a client-side call to a server action. The rule needs to allow this.
+        await fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: project.ownerId,
+            notification: {
+              type: 'interest',
+              fromUserId: user.uid,
+              fromUserName: user.displayName || 'A user',
+              projectId: project.id,
+              projectTitle: project.title,
+              read: false,
+            }
+          }),
         });
+
         toast({ title: 'Interest expressed!', description: "The project owner has been notified." });
       }
       setIsInterested(!isInterested);
@@ -139,13 +148,8 @@ export default function ProjectDetailsPage() {
       const matchId = await createMatch(project.id, project.ownerId, interestedUser.uid);
       setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId });
       setShowMatchModal(true);
-
-      const projectRef = doc(db, 'projects', project.id);
-      await updateDoc(projectRef, {
-        matchedUsers: arrayUnion(interestedUser.uid),
-        interestedUsers: arrayRemove(interestedUser.uid),
-      });
-
+      
+      // Optimistically update the UI
       setInterestedUsers(prev => prev.filter(u => u.uid !== interestedUser.uid));
       setProject(prev => prev ? ({ ...prev, matchedUsers: [...(prev.matchedUsers || []), interestedUser.uid] }) : null);
 
