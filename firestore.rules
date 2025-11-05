@@ -80,11 +80,14 @@ service cloud.firestore {
      * @path /matches/{matchId}
      */
     match /matches/{matchId} {
-        // Allow reading/writing a single document if the user is a participant.
-        allow get, write: if isSignedIn() && request.auth.uid in resource.data.participants;
+        // A user can read a match if they are a participant.
+        // This rule also implicitly secures 'list' (query) operations, as long as
+        // the query from the client (`where('participants', 'array-contains', uid)`)
+        // ensures only documents readable by this rule are requested.
+        allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
         
-        // Allow querying the collection ONLY if the query filters for the user's UID.
-        allow list: if isSignedIn() && request.query.where.participants.hasAny([request.auth.uid]);
+        // A user can write to a match (e.g., create it, update status) if they are a participant.
+        allow write: if isSignedIn() && request.auth.uid in request.resource.data.participants;
 
         /**
          * @description Controls access to messages within a match. Only participants can read/write.
