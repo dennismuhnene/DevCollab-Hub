@@ -100,9 +100,9 @@ export default function ProjectForm({ project }: ProjectFormProps) {
   });
 
   const titleValue = watch('title');
-  const collaborationOpenValue = watch('collaborationOpen');
   const techStack = watch('requiredTechStack') || [];
   const skills = watch('requiredSkills') || [];
+  const collaborationOpenValue = watch('collaborationOpen');
 
   useEffect(() => {
     setValue('requiredTechStack', techStack);
