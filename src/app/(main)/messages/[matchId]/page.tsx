@@ -31,19 +31,28 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const matchesQuery = useMemoFirebase(
-    () =>
-      user
-        ? query(
+    () => {
+      if (!user) return null;
+      console.log('ChatPage: Building query for user:', user.uid);
+      const q = query(
             collection(db, 'matches'),
             where('participants', 'array-contains', user.uid),
             orderBy('timestamp', 'desc')
-          )
-        : null,
+          );
+      console.log('ChatPage: Query created:', q);
+      return q;
+    },
     [user]
   );
 
-  const { data: matches, isLoading: matchesLoading } = useCollection<Match>(matchesQuery);
+  const { data: matches, isLoading: matchesLoading, error: matchesError } = useCollection<Match>(matchesQuery);
   
+  useEffect(() => {
+    if (matchesError) {
+      console.error("ChatPage Matches Error:", matchesError);
+    }
+  }, [matchesError]);
+
   useEffect(() => {
     if (!matchId || !user) return;
 
@@ -79,6 +88,8 @@ export default function ChatPage() {
     const messagesQuery = query(collection(db, 'matches', matchId, 'messages'), orderBy('timestamp', 'asc'));
     const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
       setMessages(snapshot.docs.map(doc => doc.data() as Message));
+    }, (err) => {
+        console.error("ChatPage Messages Snapshot Error:", err);
     });
 
     return () => unsubscribe();

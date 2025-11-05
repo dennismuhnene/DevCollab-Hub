@@ -9,23 +9,34 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { MessageSquare, Users } from 'lucide-react';
 import MatchList from '@/components/match-list';
 import { useMemoFirebase } from '@/firebase';
+import { useEffect } from 'react';
 
 export default function MessagesPage() {
   const { user } = useAuth();
 
   const matchesQuery = useMemoFirebase(
-    () =>
-      user
-        ? query(
-            collection(db, 'matches'),
-            where('participants', 'array-contains', user.uid),
-            orderBy('timestamp', 'desc')
-          )
-        : null,
+    () => {
+      if (!user) return null;
+      
+      console.log('MessagesPage: Building query for user:', user.uid);
+      const q = query(
+        collection(db, 'matches'),
+        where('participants', 'array-contains', user.uid),
+        orderBy('timestamp', 'desc')
+      );
+      console.log('MessagesPage: Query created:', q);
+      return q;
+    },
     [user]
   );
 
-  const { data: matches, isLoading } = useCollection<Match>(matchesQuery);
+  const { data: matches, isLoading, error } = useCollection<Match>(matchesQuery);
+
+  useEffect(() => {
+    if (error) {
+      console.error("MessagesPage Firestore Error:", error);
+    }
+  }, [error]);
 
   return (
     <div className="flex h-full border-t">
