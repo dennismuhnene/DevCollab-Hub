@@ -68,34 +68,17 @@ service cloud.firestore {
       function isCreatingAsSelf() {
         return request.auth.uid == request.resource.data.ownerId;
       }
-      
+
       // Anyone signed in can read or list projects.
       allow get, list: if isSignedIn();
-      
+
       // Anyone can create a project if they set themselves as the owner.
       allow create: if isSignedIn() && isCreatingAsSelf();
-      
-      // Rules for updating a project.
-      allow update: if isSignedIn() && 
-                      (
-                        // Case 1: The user is the owner, they can change anything.
-                        isOwner() ||
-                        // Case 2: A non-owner is updating ONLY the interestedUsers list.
-                        (
-                          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers']) &&
-                          (
-                            // They are adding themselves (size increases by 1)
-                            request.resource.data.interestedUsers.size() == resource.data.interestedUsers.size() + 1 &&
-                            request.auth.uid in request.resource.data.interestedUsers
-                          ) ||
-                          (
-                            // They are removing themselves (size decreases by 1)
-                            request.resource.data.interestedUsers.size() == resource.data.interestedUsers.size() - 1 &&
-                            request.auth.uid in resource.data.interestedUsers
-                          )
-                        )
-                      );
-      
+
+      // Allow updates if the user is the owner OR if they are only modifying the interestedUsers list.
+      allow update: if isSignedIn() &&
+                      (isOwner() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers']));
+
       // Only the owner can delete.
       allow delete: if isSignedIn() && isOwner();
     }
