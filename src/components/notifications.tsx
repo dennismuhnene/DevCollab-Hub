@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/lib/hooks/use-auth';
@@ -10,6 +11,7 @@ import {
   doc,
   updateDoc,
   writeBatch,
+  Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useEffect, useState } from 'react';
@@ -108,6 +110,12 @@ export default function Notifications() {
         return <p>You have a new notification.</p>;
     }
   }
+  
+  const formatTimestamp = (timestamp: Timestamp | Date | undefined) => {
+    if (!timestamp) return '';
+    const date = timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
+    return formatDistanceToNow(date, { addSuffix: true });
+  }
 
   return (
     <DropdownMenu>
@@ -143,7 +151,7 @@ export default function Notifications() {
                 <div className="flex-1">
                     {getNotificationText(notif)}
                     <p className="text-xs text-muted-foreground mt-1">
-                        {notif.timestamp && notif.timestamp.toDate ? formatDistanceToNow(notif.timestamp.toDate(), { addSuffix: true }) : ''}
+                        {formatTimestamp(notif.timestamp)}
                     </p>
                 </div>
             </DropdownMenuItem>

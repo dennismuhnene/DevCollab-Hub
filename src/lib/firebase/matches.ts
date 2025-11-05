@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/types';
 import { addNotification } from './notifications';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export async function createMatch(projectId: string, ownerId: string, matchedUserId: string): Promise<string> {
   try {
@@ -30,8 +31,9 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
         { uid: ownerId, name: ownerData.name, photoURL: ownerData.photoURL || '' },
         { uid: matchedUserId, name: matchedUserData.name, photoURL: matchedUserData.photoURL || '' },
       ],
-      timestamp: serverTimestamp(),
+      timestamp: serverTimestamp(), // Correctly add timestamp here
       status: 'active',
+      lastMessageTimestamp: serverTimestamp(), // Add field for sorting conversations
     };
 
     const matchesCollection = collection(db, 'matches');
@@ -60,8 +62,18 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
     
     return matchRef.id;
   } catch (error) {
+    if (error instanceof Error && error.message.includes('permission-denied')) {
+        const permissionError = new FirestorePermissionError({
+            path: 'matches',
+            operation: 'create',
+            requestResourceData: { projectId, ownerId, matchedUserId },
+        });
+        // This is a server action, logging the rich error here is the best we can do.
+        console.error("Firestore Permission Error:", permissionError.message);
+        throw permissionError; // Re-throw the rich error
+    }
+    
     console.error("Failed to create match:", error);
-    // Re-throw the error to be caught by the client-side caller
     if (error instanceof Error) {
         throw new Error(error.message || 'An unknown error occurred while creating the match.');
     }
