@@ -7,7 +7,9 @@ export interface UserProfile {
   displayName: string;
   photoURL?: string;
   bio?: string;
+  techStack?: string[];
   skills?: string[];
+  yearsOfExperience?: number;
   createdAt: Timestamp;
   openForCollaboration?: boolean;
 }

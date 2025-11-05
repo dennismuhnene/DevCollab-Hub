@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ProjectCard from '@/components/project-card';
-import { Briefcase, BadgeCheck, BadgeX } from 'lucide-react';
+import { Briefcase, BadgeCheck, BadgeX, Clock, BrainCircuit, Code } from 'lucide-react';
 
 export default function DeveloperProfilePage() {
   const { user, loading: authLoading } = useAuth();
@@ -64,6 +64,16 @@ export default function DeveloperProfilePage() {
     if (!name) return 'U';
     return name.split(' ').map((n) => n[0]).join('');
   };
+  
+  const formatExperience = (years?: number) => {
+    if (years === undefined) return 'Not specified';
+    if (years < 1) {
+      const months = Math.round(years * 12);
+      return `${months} month${months !== 1 ? 's' : ''}`;
+    }
+    return `${years} year${years !== 1 ? 's' : ''}`;
+  };
+
 
   if (loading || authLoading) {
     return (
@@ -105,19 +115,21 @@ export default function DeveloperProfilePage() {
           <AvatarFallback className="text-5xl">{getInitials(developer.name)}</AvatarFallback>
         </Avatar>
         <div className="flex-1 pt-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-4xl font-bold">{developer.name}</h1>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-4xl font-bold">{developer.name}</h1>
+              <div className="flex items-center gap-4 mt-2 text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      <span>{formatExperience(developer.yearsOfExperience)}</span>
+                  </div>
+              </div>
+            </div>
             {developer.openForCollaboration ? (
               <Badge variant="default"><BadgeCheck className="mr-2 h-4 w-4"/>Open to Collab</Badge>
             ) : (
               <Badge variant="secondary"><BadgeX className="mr-2 h-4 w-4"/>Not seeking colabs</Badge>
             )}
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {developer.skills?.map((skill) => (
-              <Badge key={skill} variant="secondary" className="text-sm">{skill}</Badge>
-            ))}
           </div>
         </div>
       </div>
@@ -133,6 +145,38 @@ export default function DeveloperProfilePage() {
             </p>
           </CardContent>
         </Card>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center"><BrainCircuit className="mr-2 h-5 w-5 text-primary" /> Skills</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {developer.skills && developer.skills.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                        {developer.skills.map((skill) => (
+                            <Badge key={skill} variant="secondary">{skill}</Badge>
+                        ))}
+                        </div>
+                    ) : <p className="text-muted-foreground text-sm">No professional skills listed.</p>}
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center"><Code className="mr-2 h-5 w-5 text-primary" /> Tech Stack</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {developer.techStack && developer.techStack.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                        {developer.techStack.map((tech) => (
+                            <Badge key={tech} variant="outline">{tech}</Badge>
+                        ))}
+                        </div>
+                    ) : <p className="text-muted-foreground text-sm">No technologies listed.</p>}
+                </CardContent>
+            </Card>
+        </div>
+
 
         <section>
           <div className="flex items-center mb-6">

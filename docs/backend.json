@@ -6,7 +6,7 @@
       "type": "object",
       "description": "Represents a user within the DevCollab Hub application.",
       "properties": {
-        "id": {
+        "uid": {
           "type": "string",
           "description": "Unique identifier for the User entity."
         },
@@ -26,7 +26,7 @@
         },
         "skills": {
           "type": "array",
-          "description": "List of skills possessed by the user.",
+          "description": "List of professional skills possessed by the user.",
           "items": {
             "type": "string"
           }
@@ -49,7 +49,7 @@
         }
       },
       "required": [
-        "id",
+        "uid",
         "email",
         "displayName",
         "createdAt"

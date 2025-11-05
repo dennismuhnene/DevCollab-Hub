@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
@@ -39,13 +38,13 @@ export default function DeveloperCard({ developer }: DeveloperCardProps) {
             {developer.bio || 'This developer has not added a bio yet.'}
           </p>
           <div className="mb-4">
-            <h4 className="font-semibold text-sm mb-2">Skills</h4>
+            <h4 className="font-semibold text-sm mb-2">Tech Stack</h4>
             <div className="flex flex-wrap gap-2">
-              {developer.skills?.slice(0, 4).map((skill) => (
-                <Badge key={skill} variant="secondary">{skill}</Badge>
+              {developer.techStack?.slice(0, 4).map((tech) => (
+                <Badge key={tech} variant="secondary">{tech}</Badge>
               ))}
-              {developer.skills && developer.skills.length > 4 && (
-                <Badge variant="outline">+{developer.skills.length - 4} more</Badge>
+              {developer.techStack && developer.techStack.length > 4 && (
+                <Badge variant="outline">+{developer.techStack.length - 4} more</Badge>
               )}
             </div>
           </div>

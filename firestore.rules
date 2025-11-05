@@ -30,7 +30,8 @@ service cloud.firestore {
      * @description Controls access to user profiles. Only the authenticated user can read/write their own profile.
      * @path /users/{userId}
      * @allow (create) - Authenticated user creates their profile with a matching userId.
-     * @allow (get, list, update, delete) - Authenticated user reads/writes their own profile.
+     * @allow (get, list) - Any authenticated user can read public profile information.
+     * @allow (update, delete) - Authenticated user writes/deletes their own profile.
      * @deny (create, get, list, update, delete) - Any other user attempts to access another user's profile.
      * @principle Enforces document ownership for writes.
      */
@@ -40,7 +41,7 @@ service cloud.firestore {
       }
 
       function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+        return isOwner(userId) && exists(/databases/$(database)/documents/users/$(userId));
       }
 
       allow get, list: if isSignedIn();

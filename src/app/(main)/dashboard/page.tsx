@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import ProjectCard from '@/components/project-card';
-import { PlusCircle, ArrowRight, Briefcase, Users, Edit, Eye, BadgeCheck, BadgeX } from 'lucide-react';
+import { PlusCircle, ArrowRight, Briefcase, Users, Edit, Eye, BadgeCheck, BadgeX, BrainCircuit, Code, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 export default function DashboardPage() {
@@ -55,6 +55,15 @@ export default function DashboardPage() {
   const getInitials = (name?: string) => {
     if (!name) return 'U';
     return name.split(' ').map((n) => n[0]).join('');
+  };
+
+  const formatExperience = (years?: number) => {
+    if (years === undefined) return 'Not specified';
+    if (years < 1) {
+      const months = Math.round(years * 12);
+      return `${months} month${months !== 1 ? 's' : ''}`;
+    }
+    return `${years} year${years !== 1 ? 's' : ''}`;
   };
 
   if (authLoading || loadingData || !userProfile) {
@@ -150,10 +159,11 @@ export default function DashboardPage() {
                       </Avatar>
                       <div className="flex-1 pt-4">
                         <h1 className="text-4xl font-bold">{userProfile.name}</h1>
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          {userProfile.skills?.map((skill) => (
-                            <Badge key={skill} variant="secondary" className="text-sm">{skill}</Badge>
-                          ))}
+                        <div className="flex items-center gap-4 mt-2 text-muted-foreground">
+                            <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4" />
+                                <span>{formatExperience(userProfile.yearsOfExperience)}</span>
+                            </div>
                         </div>
                       </div>
                       <div>
@@ -172,6 +182,29 @@ export default function DashboardPage() {
                           {userProfile.bio || 'No bio provided yet. Add one to attract collaborators!'}
                         </p>
                       </div>
+
+                       <div>
+                          <h3 className="flex items-center text-xl font-semibold mb-4"><BrainCircuit className="mr-2 h-5 w-5" /> Skills</h3>
+                          {userProfile.skills && userProfile.skills.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {userProfile.skills.map((skill) => (
+                                <Badge key={skill} variant="secondary">{skill}</Badge>
+                              ))}
+                            </div>
+                          ) : <p className="text-muted-foreground text-sm">No professional skills listed.</p>}
+                        </div>
+
+                      <div>
+                        <h3 className="flex items-center text-xl font-semibold mb-4"><Code className="mr-2 h-5 w-5" /> Tech Stack</h3>
+                        {userProfile.techStack && userProfile.techStack.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {userProfile.techStack.map((tech) => (
+                              <Badge key={tech} variant="outline">{tech}</Badge>
+                            ))}
+                          </div>
+                        ) : <p className="text-muted-foreground text-sm">No technologies listed in the tech stack.</p>}
+                      </div>
+
                        <div>
                           <h3 className="text-xl font-semibold mb-4">Projects</h3>
                           {myProjects.length > 0 ? (
@@ -209,15 +242,15 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">
                   {recommendedDevelopers.map(dev => (
                     <Card key={dev.uid} className="transition-all hover:shadow-md overflow-hidden">
-                      <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-4">
+                      <CardContent className="p-4 flex items-center justify-start gap-4">
                         <Avatar className="h-12 w-12 flex-shrink-0">
                           <AvatarImage src={dev.photoURL} alt={dev.name} />
                           <AvatarFallback>{getInitials(dev.name)}</AvatarFallback>
                         </Avatar>
-                        <div className="flex-1 text-center sm:text-left overflow-hidden">
+                        <div className="flex-1 overflow-hidden">
                           <p className="font-semibold truncate" title={dev.name}>{dev.name}</p>
                         </div>
-                        <Button size="sm" variant="outline" asChild className="flex-shrink-0 mt-2 sm:mt-0">
+                        <Button size="sm" variant="outline" asChild className="flex-shrink-0">
                           <Link href={`/developers/${dev.uid}`}>Profile</Link>
                         </Button>
                       </CardContent>

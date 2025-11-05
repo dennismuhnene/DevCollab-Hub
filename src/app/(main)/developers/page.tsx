@@ -49,6 +49,7 @@ export default function DiscoverDevelopersPage() {
           displayName: data.displayName || 'Unnamed User',
           bio: data.bio || '',
           skills: data.skills || [],
+          techStack: data.techStack || [],
           photoURL: data.photoURL || '',
           openForCollaboration: data.openForCollaboration === false ? false : true,
           ...data,
@@ -73,7 +74,8 @@ export default function DiscoverDevelopersPage() {
       const results = allDevelopers.filter(dev => 
         dev.name?.toLowerCase().includes(lowercasedTerm) ||
         (dev.bio || '').toLowerCase().includes(lowercasedTerm) ||
-        (dev.skills || []).some(skill => skill.toLowerCase().includes(lowercasedTerm))
+        (dev.skills || []).some(skill => skill.toLowerCase().includes(lowercasedTerm)) ||
+        (dev.techStack || []).some(tech => tech.toLowerCase().includes(lowercasedTerm))
       );
       setFilteredDevelopers(results);
     };
@@ -93,7 +95,7 @@ export default function DiscoverDevelopersPage() {
     startAiSortTransition(async () => {
       try {
         const projectDescriptions = allDevelopers.map(dev => 
-          `Name: ${dev.name}, Bio: ${dev.bio || 'Not provided'}, Skills: ${(dev.skills || []).join(', ') || 'None'}`
+          `Name: ${dev.name}, Bio: ${dev.bio || 'Not provided'}, Skills: ${(dev.skills || []).join(', ') || 'None'}, Tech Stack: ${(dev.techStack || []).join(', ')}`
         );
 
         const recommendedOrder = await getUserRecommendations({
@@ -104,7 +106,7 @@ export default function DiscoverDevelopersPage() {
         const sortedDevelopers = recommendedOrder.map(rec => {
           // Find the developer that matches the recommended description
           return allDevelopers.find(dev => {
-            const devDescription = `Name: ${dev.name}, Bio: ${dev.bio || 'Not provided'}, Skills: ${(dev.skills || []).join(', ') || 'None'}`;
+            const devDescription = `Name: ${dev.name}, Bio: ${dev.bio || 'Not provided'}, Skills: ${(dev.skills || []).join(', ') || 'None'}, Tech Stack: ${(dev.techStack || []).join(', ')}`;
             return devDescription === rec;
           });
         }).filter((dev): dev is UserProfile => dev !== undefined);
@@ -164,7 +166,7 @@ export default function DiscoverDevelopersPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search by name, skill, or bio..."
+            placeholder="Search by name, skill, or tech..."
             className="pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
