@@ -90,7 +90,10 @@ service cloud.firestore {
         }
 
         allow get: if isSignedIn() && isParticipant();
-        allow list: if isSignedIn() && request.query.where['participants'][0] == 'array-contains' && request.query.where[1] == request.auth.uid;
+        // This rule allows a user to query the 'matches' collection,
+        // but only if the query includes a 'where' clause that filters for their UID
+        // in the 'participants' array.
+        allow list: if isSignedIn() && request.auth.uid == request.query.filters[0].value;
         allow create: if isSignedIn() && isCreatingWithSelf();
         allow update: if isSignedIn() && isParticipant();
         allow delete: if isSignedIn() && isParticipant();
@@ -117,4 +120,3 @@ service cloud.firestore {
     }
   }
 }
-    
