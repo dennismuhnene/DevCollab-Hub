@@ -8,6 +8,7 @@ import type { Project } from '@/types';
 import ProjectForm from '@/components/project-form';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 export default function EditProjectPage() {
   const { user, loading: authLoading } = useAuth();
@@ -16,6 +17,7 @@ export default function EditProjectPage() {
   const projectId = params.id as string;
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (authLoading) return;
@@ -46,7 +48,7 @@ export default function EditProjectPage() {
     if (projectId && user) {
       fetchProject();
     }
-  }, [projectId, user, authLoading, router]);
+  }, [projectId, user, authLoading, router, toast]);
 
   if (loading || authLoading) {
     return (

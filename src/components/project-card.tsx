@@ -5,6 +5,7 @@ import { Badge } from './ui/badge';
 import type { Project, UserProfile } from '@/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { BrainCircuit, Code } from 'lucide-react';
 
 type ProjectCardProps = {
   project: Project;
@@ -39,13 +40,26 @@ export default function ProjectCard({ project, owner }: ProjectCardProps) {
           <CardDescription className="mb-4 line-clamp-2 flex-grow text-muted-foreground">
             {project.description}
           </CardDescription>
-          <div className="flex flex-wrap gap-2 pt-2">
-            {project.requiredSkills?.slice(0, 4).map((skill) => (
-              <Badge key={skill} variant="secondary">{skill}</Badge>
-            ))}
-             {project.requiredSkills && project.requiredSkills.length > 4 && (
-                <Badge variant="outline">+{project.requiredSkills.length - 4} more</Badge>
-              )}
+          <div className="space-y-3 pt-2">
+            <div>
+              <h4 className="font-semibold text-xs mb-2 flex items-center gap-1.5"><Code className="w-3.5 h-3.5" /> Tech Stack</h4>
+              <div className="flex flex-wrap gap-1.5">
+                {project.requiredTechStack?.slice(0, 4).map((tech) => (
+                  <Badge key={tech} variant="secondary">{tech}</Badge>
+                ))}
+                {project.requiredTechStack && project.requiredTechStack.length > 4 && (
+                    <Badge variant="outline">+{project.requiredTechStack.length - 4} more</Badge>
+                )}
+              </div>
+            </div>
+            <div>
+              <h4 className="font-semibold text-xs mb-2 flex items-center gap-1.5"><BrainCircuit className="w-3.5 h-3.5" /> Skills</h4>
+              <div className="flex flex-wrap gap-1.5">
+                {project.requiredSkills?.slice(0, 3).map((skill) => (
+                  <Badge key={skill} variant="outline">{skill}</Badge>
+                ))}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Link>

@@ -18,7 +18,7 @@ import ImageUploader from './image-uploader';
 import { useToast } from '@/hooks/use-toast';
 import type { Project } from '@/types';
 import { generateProjectDescription } from '@/ai/flows/project-description-generator';
-import { Sparkles, Loader2, X, Trash2 } from 'lucide-react';
+import { Sparkles, Loader2, X, Trash2, Check, ChevronsUpDown } from 'lucide-react';
 import { Switch } from './ui/switch';
 import {
   AlertDialog,
@@ -32,11 +32,35 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
+import { Badge } from './ui/badge';
+import { cn } from '@/lib/utils';
+
+const professionalSkills = [
+  'Problem Solving',
+  'Debugging',
+  'System Design',
+  'Communication',
+  'Team Collaboration',
+  'Agile Development',
+  'API Design',
+  'Version Control (Git)',
+  'Project Management',
+  'Code Review',
+  'Testing & QA',
+  'Algorithmic Thinking',
+  'Security Best Practices',
+  'Time Management',
+  'Documentation Writing',
+];
 
 const projectSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters long' }),
   description: z.string().min(20, { message: 'Description must be at least 20 characters long' }),
-  requiredSkills: z.array(z.string()).min(1, { message: 'At least one skill is required' }),
+  requiredTechStack: z.array(z.string()).min(1, { message: 'At least one technology is required' }),
+  requiredSkills: z.array(z.string()).max(3, { message: 'You can select up to 3 skills.' }).min(1, {message: 'At least one skill is required.'}),
+  requiredYearsOfExperience: z.coerce.number().min(0, { message: "Years of experience can't be negative."}).optional(),
   imageUrl: z.string().optional(),
   collaborationOpen: z.boolean().default(true),
 });
@@ -52,8 +76,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [skillInput, setSkillInput] = useState('');
-  const [skills, setSkills] = useState<string[]>(project?.requiredSkills || []);
+  const [techStackInput, setTechStackInput] = useState('');
   const [isAiPending, startAiTransition] = useTransition();
 
   const {
@@ -61,13 +84,16 @@ export default function ProjectForm({ project }: ProjectFormProps) {
     handleSubmit,
     setValue,
     watch,
+    getValues,
     formState: { errors },
   } = useForm<ProjectFormData>({
     resolver: zodResolver(projectSchema),
     defaultValues: {
       title: project?.title || '',
       description: project?.description || '',
+      requiredTechStack: project?.requiredTechStack || [],
       requiredSkills: project?.requiredSkills || [],
+      requiredYearsOfExperience: project?.requiredYearsOfExperience || 0,
       imageUrl: project?.imageUrl || '',
       collaborationOpen: project?.collaborationOpen === false ? false : true,
     },
@@ -75,38 +101,45 @@ export default function ProjectForm({ project }: ProjectFormProps) {
 
   const titleValue = watch('title');
   const collaborationOpenValue = watch('collaborationOpen');
+  const techStack = watch('requiredTechStack') || [];
+  const skills = watch('requiredSkills') || [];
+
+  useEffect(() => {
+    setValue('requiredTechStack', techStack);
+  }, [techStack, setValue]);
 
   useEffect(() => {
     setValue('requiredSkills', skills);
   }, [skills, setValue]);
 
-  const handleSkillAdd = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && skillInput.trim()) {
+  const handleTechStackAdd = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && techStackInput.trim()) {
       e.preventDefault();
-      if (!skills.includes(skillInput.trim())) {
-        setSkills([...skills, skillInput.trim()]);
+      const currentTechStack = getValues('requiredTechStack') || [];
+      if (!currentTechStack.includes(techStackInput.trim())) {
+        setValue('requiredTechStack', [...currentTechStack, techStackInput.trim()]);
       }
-      setSkillInput('');
+      setTechStackInput('');
     }
   };
 
-  const handleSkillRemove = (skillToRemove: string) => {
-    setSkills(skills.filter((skill) => skill !== skillToRemove));
+  const handleTechStackRemove = (techToRemove: string) => {
+    setValue('requiredTechStack', (getValues('requiredTechStack') || []).filter((tech) => tech !== techToRemove));
   };
 
   const handleGenerateDescription = async () => {
-    if (!titleValue || skills.length === 0) {
+    if (!titleValue || (getValues('requiredTechStack') || []).length === 0) {
       toast({
         variant: 'destructive',
-        title: 'Title and Skills Required',
-        description: 'Please provide a project title and at least one skill to generate a description.',
+        title: 'Title and Tech Stack Required',
+        description: 'Please provide a project title and at least one technology to generate a description.',
       });
       return;
     }
     
     startAiTransition(async () => {
       try {
-        const result = await generateProjectDescription({ title: titleValue, keywords: skills });
+        const result = await generateProjectDescription({ title: titleValue, keywords: getValues('requiredTechStack') });
         if (result?.description) {
           setValue('description', result.description);
           toast({
@@ -195,27 +228,110 @@ export default function ProjectForm({ project }: ProjectFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="requiredSkills">Required Skills</Label>
+              <Label htmlFor="requiredTechStack">Required Tech Stack</Label>
               <div className="flex flex-wrap gap-2 rounded-md border p-2">
-                {skills.map((skill) => (
-                  <div key={skill} className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
-                    {skill}
-                    <button type="button" onClick={() => handleSkillRemove(skill)}>
+                {techStack.map((tech) => (
+                  <div key={tech} className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
+                    {tech}
+                    <button type="button" onClick={() => handleTechStackRemove(tech)}>
                       <X className="h-4 w-4" />
                     </button>
                   </div>
                 ))}
                 <Input
-                  id="requiredSkills"
-                  value={skillInput}
-                  onChange={(e) => setSkillInput(e.target.value)}
-                  onKeyDown={handleSkillAdd}
-                  placeholder="Type a skill and press Enter"
+                  id="requiredTechStack"
+                  value={techStackInput}
+                  onChange={(e) => setTechStackInput(e.target.value)}
+                  onKeyDown={handleTechStackAdd}
+                  placeholder="Type a technology and press Enter"
                   className="flex-1 border-none shadow-none focus-visible:ring-0"
                 />
               </div>
+              {errors.requiredTechStack && <p className="text-sm text-destructive">{errors.requiredTechStack.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Required Skills</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between"
+                  >
+                    <span className="truncate">
+                      {skills.length > 0 ? skills.join(', ') : 'Select up to 3 skills...'}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search skills..." />
+                    <CommandEmpty>No skill found.</CommandEmpty>
+                    <CommandList>
+                      <CommandGroup>
+                        {professionalSkills.map((skill) => (
+                          <CommandItem
+                            key={skill}
+                            value={skill}
+                            onSelect={() => {
+                              const currentSkills = getValues('requiredSkills') || [];
+                              if (currentSkills.includes(skill)) {
+                                setValue('requiredSkills', currentSkills.filter((s) => s !== skill), { shouldDirty: true, shouldValidate: true });
+                              } else if(currentSkills.length < 3) {
+                                setValue('requiredSkills', [...currentSkills, skill], { shouldDirty: true, shouldValidate: true });
+                              } else {
+                                toast({
+                                  variant: "destructive",
+                                  title: "Skill limit reached",
+                                  description: "You can only select up to 3 skills."
+                                })
+                              }
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                (getValues('requiredSkills') || []).includes(skill)
+                                  ? 'opacity-100'
+                                  : 'opacity-0'
+                              )}
+                            />
+                            {skill}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+               <div className="flex flex-wrap gap-1 pt-2">
+                {skills.map((skill) => (
+                  <Badge key={skill} variant="secondary" className="flex items-center gap-1">
+                    {skill}
+                    <button
+                      type="button"
+                      onClick={() => setValue('requiredSkills', skills.filter((s) => s !== skill), { shouldDirty: true })}
+                      className="rounded-full hover:bg-muted-foreground/20"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
               {errors.requiredSkills && <p className="text-sm text-destructive">{errors.requiredSkills.message}</p>}
             </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="requiredYearsOfExperience">Required Years of Experience</Label>
+                <Input id="requiredYearsOfExperience" type="number" step="0.5" {...register('requiredYearsOfExperience')} />
+                <p className="text-sm text-muted-foreground pt-1">
+                    Use decimals for half-year increments (e.g., 2.5). For less than a year, use decimals (e.g. 0.5 for 6 months).
+                </p>
+                {errors.requiredYearsOfExperience && <p className="text-sm text-destructive">{errors.requiredYearsOfExperience.message}</p>}
+            </div>
+
 
             <div className="space-y-2">
               <div className="flex justify-between items-center">

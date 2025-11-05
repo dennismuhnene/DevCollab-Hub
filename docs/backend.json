@@ -77,12 +77,23 @@
           "type": "string",
           "description": "Detailed description of the project."
         },
-        "techStack": {
+        "requiredTechStack": {
           "type": "array",
-          "description": "List of technologies used in the project.",
+          "description": "List of technologies required for the project.",
           "items": {
             "type": "string"
           }
+        },
+        "requiredSkills": {
+          "type": "array",
+          "description": "List of professional skills required for the project.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "requiredYearsOfExperience": {
+          "type": "number",
+          "description": "The minimum years of experience required for collaborators."
         },
         "collaborationOpen": {
           "type": "boolean",
@@ -105,7 +116,9 @@
         "title",
         "description",
         "collaborationOpen",
-        "createdAt"
+        "createdAt",
+        "requiredTechStack",
+        "requiredSkills"
       ]
     },
     "Match": {

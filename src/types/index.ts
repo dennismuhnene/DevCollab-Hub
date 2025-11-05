@@ -26,7 +26,9 @@ export interface Project {
   title: string;
   description: string;
   imageUrl?: string;
+  requiredTechStack: string[];
   requiredSkills: string[];
+  requiredYearsOfExperience?: number;
   collaborationOpen?: boolean;
   createdAt?: Timestamp | null;
   updatedAt?: Timestamp | null;

@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Hand, Undo, Edit, Trash2 } from 'lucide-react';
+import { Hand, Undo, Edit, Trash2, Code, BrainCircuit, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import {
@@ -138,6 +138,15 @@ export default function ProjectDetailsPage() {
   };
   
   const defaultProjectImage = PlaceHolderImages.find(p => p.id === 'project-1')?.imageUrl || "https://picsum.photos/seed/default/1200/800";
+  
+  const formatExperience = (years?: number) => {
+    if (years === undefined) return 'Not specified';
+    if (years < 1) {
+      const months = Math.round(years * 12);
+      return `${months} month${months !== 1 ? 's' : ''}`;
+    }
+    return `${years} year${years !== 1 ? 's' : ''}`;
+  };
 
   if (loading || authLoading || !user) {
     return (
@@ -203,7 +212,9 @@ export default function ProjectDetailsPage() {
                           </Avatar>
                           <span>{interest.name}</span>
                         </div>
-                        <Button variant="outline" size="sm">View Profile</Button>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/developers/${interest.userId}`}>View Profile</Link>
+                        </Button>
                       </li>
                     ))}
                   </ul>
@@ -267,11 +278,31 @@ export default function ProjectDetailsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Required Skills</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" /> Required Experience</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="font-semibold text-lg">{formatExperience(project.requiredYearsOfExperience)}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><Code className="h-4 w-4"/>Required Tech Stack</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              {project.requiredTechStack?.map((tech) => (
+                <Badge key={tech} variant="secondary">{tech}</Badge>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><BrainCircuit className="h-4 w-4"/>Required Skills</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
               {project.requiredSkills?.map((skill) => (
-                <Badge key={skill} variant="default">{skill}</Badge>
+                <Badge key={skill} variant="outline">{skill}</Badge>
               ))}
             </CardContent>
           </Card>
