@@ -76,8 +76,7 @@ service cloud.firestore {
       allow create: if isSignedIn() && isCreatingAsSelf();
 
       // Allow updates if the user is the owner OR if they are only modifying the interestedUsers list.
-      allow update: if isSignedIn() &&
-                      (isOwner() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers']));
+      allow update: if isSignedIn() && (isOwner() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers']));
 
       // Only the owner can delete.
       allow delete: if isSignedIn() && isOwner();
@@ -88,7 +87,7 @@ service cloud.firestore {
      * @path /matches/{matchId}
      */
     match /matches/{matchId} {
-      // Allow a user to read a match document if their UID is in the participants list.
+      // Allow read/list if the user is a participant. This covers both single doc reads and queries.
       allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
       
       // Allow a user to write (create, update) a match if they are a participant.
