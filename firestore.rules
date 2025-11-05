@@ -1,121 +1,142 @@
-
-/**
- * @fileoverview Firestore Security Rules for DevCollab Hub.
- *
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for user profiles and projects.
- * It uses denormalization to avoid costly `get()` calls and ensures authorization independence.
- *
- * Data Structure:
- * - /users/{userId}: Stores user profiles. User's can only read/write their own profile.
- * - /projects/{projectId}: Stores project information. Only authenticated users can read/write.
- * - /users/{userId}/projects/{projectId}: Subcollection for projects owned by a specific user.
- * - /matches/{matchId}: Stores match data between users and projects.
- * - /projects/{projectId}/matches/{matchId}: Subcollection for matches related to a specific project.
- *
- * Key Security Decisions:
- * - Users can only access their own profile data.
- * - Project modifications are restricted to the project owner.
- * - Denormalization of ownerId and userId ensures authorization independence.
- * - All write operations validate the existence of the document being modified/deleted.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Simple helpers
     function isSignedIn() {
       return request.auth != null;
     }
+    function uid() {
+      return request.auth.uid;
+    }
 
-    /**
-     * @description Controls access to user profiles and their subcollections.
-     */
+    // -----------------------
+    // USERS
+    // -----------------------
     match /users/{userId} {
-      function isOwner() {
-        return request.auth.uid == userId;
-      }
+      // Any signed-in user may read user profiles (public). If you want to restrict reads,
+      // change `allow get: if isSignedIn();` to a more restrictive check.
+      allow get: if isSignedIn();
+      allow list: if isSignedIn(); // If you prefer to restrict listing, tighten this.
 
-      // Profile document
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isOwner();
+      // Only the owner can create/update/delete their profile document
+      allow create, update, delete: if isSignedIn() && uid() == userId;
 
-      /**
-       * @description Controls access to user notifications. Only the owner can access them.
-       * @path /users/{userId}/notifications/{notificationId}
-       */
+      // Notifications: only the user can access their own notifications subcollection
       match /notifications/{notificationId} {
-        allow read, write, delete: if isOwner();
+        allow read, write, delete: if isSignedIn() && uid() == userId;
       }
 
-      /**
-       * @description Controls access to projects nested under users. Enforces strict user ownership.
-       * @path- /users/{userId}/projects/{projectId}
-       */
+      // Optional per-user projects subcollection (if you use it)
       match /projects/{projectId} {
-          allow get, list: if isOwner();
-          allow create: if isOwner() && request.resource.data.ownerId == userId;
-          allow update, delete: if isOwner() && resource.data.ownerId == userId;
+        allow get: if isSignedIn() && uid() == userId;
+        allow list: if isSignedIn() && uid() == userId;
+        allow create: if isSignedIn() && uid() == userId && request.resource.data.ownerId == userId;
+        allow update, delete: if isSignedIn() && uid() == userId && resource.data.ownerId == userId;
       }
     }
 
-    /**
-     * @description Controls access to top-level projects.
-     */
+    // -----------------------
+    // PROJECTS (top-level)
+    // -----------------------
     match /projects/{projectId} {
-      function isOwner() {
-        return request.auth.uid == resource.data.ownerId;
-      }
-
-      function isCreatingAsSelf() {
-        return request.auth.uid == request.resource.data.ownerId;
-      }
-
-      // Anyone signed in can read or list projects.
+      // Anyone signed in can read public projects (change if you want public read access)
       allow get, list: if isSignedIn();
 
-      // Anyone can create a project if they set themselves as the owner.
-      allow create: if isSignedIn() && isCreatingAsSelf();
+      // Creation requires the authenticated user to set themselves as the owner
+      allow create: if isSignedIn() && request.resource.data.ownerId == uid();
 
-      // Allow updates if the user is the owner OR if they are only modifying the interestedUsers list.
-      allow update: if isSignedIn() && (isOwner() || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers', 'matchedUsers'])));
+      // Allow update if the user is the owner OR if the update only affects 
+      // the interestedUsers/matchedUsers arrays (so others can express interest)
+      allow update: if isSignedIn() &&
+        (
+          // Owner may update any field
+          (resource.data.ownerId == uid())
+          ||
+          // Non-owner may update only allowed fields (express/withdraw interest)
+          (
+            // Only allow changes that only affect the specified safe keys
+            request.resource.data.keys().hasAll(resource.data.keys()) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers','matchedUsers'])
+          )
+        );
 
-      // Only the owner can delete.
-      allow delete: if isSignedIn() && isOwner();
+      // Only owner may delete
+      allow delete: if isSignedIn() && resource.data.ownerId == uid();
     }
-    
-    /**
-     * @description Controls access to matches. A user must be a participant to interact.
-     * @path /matches/{matchId}
-     */
+
+    // -----------------------
+    // MATCHES (top-level)
+    // -----------------------
     match /matches/{matchId} {
-      // Allow create only if the user is included as a participant in the new document
-      allow create: if isSignedIn() && request.auth.uid in request.resource.data.participants;
-
-      // Allow get, update, delete only if the user is in the participants array of the existing document
-      allow get, update, delete: if isSignedIn() && request.auth.uid in resource.data.participants;
-
-      // Allow list ONLY if the query filters by the participants array containing the user's ID
-      allow list: if isSignedIn() && request.query.where['participants']['array-contains'] == request.auth.uid;
 
       /**
-       * @description Controls access to messages within a match. Only participants can read/write.
-       * @path /matches/{matchId}/messages/{messageId}
+       * Create:
+       * - Allowed only if caller is signed in AND the request resource includes
+       *   a participants array that contains the caller's uid. This prevents
+       *   someone from creating a match that doesn't involve themselves.
        */
+      allow create: if isSignedIn()
+        && request.resource.data.participants is list
+        && uid() in request.resource.data.participants
+        && request.resource.data.projectId is string
+        && request.resource.data.status in ['active','closed']
+        && request.resource.data.ownerId is string
+        && request.resource.data.matchedUserId is string;
+
+      /**
+       * get, update, delete:
+       * - Allowed only if the requesting user is one of the participants stored
+       *   in the match document already (document-level check).
+       */
+      allow get, update, delete: if isSignedIn()
+        && resource.data.participants is list
+        && uid() in resource.data.participants;
+
+      /**
+       * list:
+       * - Listing the whole collection is sensitive. Only allow client list operations
+       *   that include an explicit filter where('participants', 'array-contains', uid()).
+       * - Also enforce a reasonable limit (protects against huge scans).
+       *
+       * Note: The client MUST query with a where('participants', 'array-contains', currentUser.uid)
+       * for this rule to permit the listing operation.
+       */
+      allow list: if isSignedIn()
+        && request.query.limit <= 100
+        && request.query.where('participants', 'array-contains', uid());
+
+      // -----------------------
+      // messages subcollection
+      // -----------------------
       match /messages/{messageId} {
+        /**
+         * For messages, we check the parent match document to determine participation.
+         * get(..).data.participants is used to restrict access to participants only.
+         */
         function isMatchParticipant() {
-          // Check against the parent `match` document's data
-          return request.auth.uid in get(/databases/$(database)/documents/matches/$(matchId)).data.participants;
+          return exists(/databases/$(database)/documents/matches/$(matchId))
+            && uid() in get(/databases/$(database)/documents/matches/$(matchId)).data.participants;
         }
 
-        function isMessageSender() {
-          return request.auth.uid == request.resource.data.senderId;
-        }
-    
-        allow read, list: if isSignedIn() && isMatchParticipant();
-        allow create: if isSignedIn() && isMatchParticipant() && isMessageSender();
-        // Disallow updates and deletes for message history integrity
+        // Reading/listing messages: only participants
+        allow get, list: if isSignedIn() && isMatchParticipant();
+
+        // Creating messages: only participants and the senderId must match caller
+        allow create: if isSignedIn()
+          && isMatchParticipant()
+          && request.resource.data.senderId == uid()
+          && request.resource.data.text is string
+          && request.resource.data.timestamp != null;
+
+        // Disallow update/delete of messages (preserve message history integrity)
         allow update, delete: if false;
       }
     }
+
+    // -----------------------
+    // Catch-all: deny by default (implicit)
+    // -----------------------
+    // All other documents/paths are denied unless a rule above allows them.
   }
 }
