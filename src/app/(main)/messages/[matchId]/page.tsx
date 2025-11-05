@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Send, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { addNotification } from '@/lib/firebase/notifications';
+import { useMemoFirebase } from '@/firebase';
 
 export default function ChatPage() {
   const { user, loading: authLoading } = useAuth();
@@ -29,13 +30,17 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const matchesQuery = user
-    ? query(
-        collection(db, 'matches'),
-        where('participants', 'array-contains', user.uid),
-        orderBy('timestamp', 'desc')
-      )
-    : null;
+  const matchesQuery = useMemoFirebase(
+    () =>
+      user
+        ? query(
+            collection(db, 'matches'),
+            where('participants', 'array-contains', user.uid),
+            orderBy('timestamp', 'desc')
+          )
+        : null,
+    [user]
+  );
 
   const { data: matches, isLoading: matchesLoading } = useCollection<Match>(matchesQuery);
   
@@ -195,5 +200,3 @@ export default function ChatPage() {
     </div>
   );
 }
-
-    

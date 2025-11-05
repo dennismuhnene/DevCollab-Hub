@@ -8,17 +8,22 @@ import type { Match } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MessageSquare, Users } from 'lucide-react';
 import MatchList from '@/components/match-list';
+import { useMemoFirebase } from '@/firebase';
 
 export default function MessagesPage() {
   const { user } = useAuth();
-  
-  const matchesQuery = user
-    ? query(
-        collection(db, 'matches'),
-        where('participants', 'array-contains', user.uid),
-        orderBy('timestamp', 'desc')
-      )
-    : null;
+
+  const matchesQuery = useMemoFirebase(
+    () =>
+      user
+        ? query(
+            collection(db, 'matches'),
+            where('participants', 'array-contains', user.uid),
+            orderBy('timestamp', 'desc')
+          )
+        : null,
+    [user]
+  );
 
   const { data: matches, isLoading } = useCollection<Match>(matchesQuery);
 
@@ -47,5 +52,3 @@ export default function MessagesPage() {
     </div>
   );
 }
-
-    
