@@ -59,7 +59,6 @@ service cloud.firestore {
 
     /**
      * @description Controls access to top-level projects.
-     * @path /projects/{projectId}
      */
     match /projects/{projectId} {
       function isOwner() {
@@ -81,22 +80,14 @@ service cloud.firestore {
      * @path /matches/{matchId}
      */
     match /matches/{matchId} {
-        function isParticipant() {
-            return request.auth.uid in resource.data.participants;
-        }
+        // Allow get/read access if the requesting user's UID is in the `participants` array.
+        allow get: if request.auth.uid in resource.data.participants;
+        
+        // Allow a user to LIST matches only if their query constrains it to matches they are a participant in.
+        allow list: if request.auth.uid != null && request.query.where.participants.hasAny([request.auth.uid]);
 
-        function isCreatingWithSelf() {
-            return request.auth.uid in request.resource.data.participants;
-        }
-
-        allow get: if isSignedIn() && isParticipant();
-        // This rule allows a user to query the 'matches' collection,
-        // but only if the query includes a 'where' clause that filters for their UID
-        // in the 'participants' array. This is required for fetching the match list.
-        allow list: if isSignedIn() && request.query.where.participants.hasAny([request.auth.uid]);
-        allow create: if isSignedIn() && isCreatingWithSelf();
-        allow update: if isSignedIn() && isParticipant();
-        allow delete: if isSignedIn() && isParticipant();
+        // Allow create/update/delete access if the user is a participant.
+        allow create, update, delete: if request.auth.uid in request.resource.data.participants;
         
         /**
          * @description Controls access to messages within a match. Only participants can read/write.
