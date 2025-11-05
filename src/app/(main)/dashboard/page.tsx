@@ -4,16 +4,29 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import type { Project, UserProfile } from '@/types';
+import type { Project, UserProfile, Interest } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import ProjectCard from '@/components/project-card';
-import { PlusCircle, ArrowRight, Briefcase, Users, Edit, Eye, BadgeCheck, BadgeX, BrainCircuit, Code, Clock } from 'lucide-react';
+import { PlusCircle, ArrowRight, Briefcase, Users, Edit, Eye, BadgeCheck, BadgeX, BrainCircuit, Code, Clock, UserCheck, MessageSquare, Hand } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { createMatch } from '@/lib/firebase/matches';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
 
 export default function DashboardPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
@@ -21,6 +34,9 @@ export default function DashboardPage() {
   const [myProjects, setMyProjects] = useState<Project[]>([]);
   const [recommendedDevelopers, setRecommendedDevelopers] = useState<UserProfile[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [showMatchModal, setShowMatchModal] = useState(false);
+  const [matchedInfo, setMatchedInfo] = useState<{ projectName: string; devName: string; matchId: string } | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -34,13 +50,11 @@ export default function DashboardPage() {
     const fetchData = async () => {
       setLoadingData(true);
       
-      // Fetch user's projects
       const projectsCol = collection(db, 'projects');
       const q = query(projectsCol, where('ownerId', '==', user.uid));
       const querySnapshot = await getDocs(q);
       setMyProjects(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project)));
 
-      // Fetch recommended developers
       const usersCol = collection(db, 'users');
       const usersQuery = query(usersCol, where('uid', '!=', user.uid), limit(4));
       const usersSnapshot = await getDocs(usersQuery);
@@ -51,6 +65,41 @@ export default function DashboardPage() {
 
     fetchData();
   }, [user]);
+
+  const handleMatch = async (project: Project, interestedUser: Interest) => {
+    if (!user) return;
+    try {
+      const matchId = await createMatch(project.id, project.ownerId, interestedUser.userId);
+      setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId });
+      setShowMatchModal(true);
+
+      const projectRef = doc(db, 'projects', project.id);
+      await updateDoc(projectRef, {
+        matchedUsers: arrayUnion(interestedUser.userId)
+      });
+      
+      // Update local state to reflect the match
+      setMyProjects(prevProjects => prevProjects.map(p => {
+        if (p.id === project.id) {
+          return {
+            ...p,
+            interests: p.interests?.filter(i => i.userId !== interestedUser.userId),
+            matchedUsers: [...(p.matchedUsers || []), interestedUser.userId]
+          };
+        }
+        return p;
+      }));
+
+    } catch (error) {
+      console.error("Failed to create match:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Matching Failed',
+        description: 'Could not create a match. Please try again.',
+      });
+    }
+  };
+
 
   const getInitials = (name?: string) => {
     if (!name) return 'U';
@@ -139,6 +188,48 @@ export default function DashboardPage() {
               </div>
             )}
           </section>
+
+          {myProjects.some(p => (p.interests && p.interests.length > 0) || (p.matchedUsers && p.matchedUsers.length > 0)) && (
+            <section>
+              <h2 className="text-3xl font-bold tracking-tight mb-6 flex items-center"><UserCheck className="mr-3 h-7 w-7 text-primary"/>Collaboration Hub</h2>
+              {myProjects.map(project => (
+                <div key={project.id}>
+                  {(project.interests && project.interests.length > 0) && (
+                    <Card className="mb-6">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-3">
+                          <Hand className="h-5 w-5"/>
+                          <span>Interested Developers for: <Link href={`/projects/${project.id}`} className="text-primary hover:underline">{project.title}</Link></span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ul className="space-y-4">
+                          {project.interests?.map(interest => (
+                            <li key={interest.userId} className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <Avatar>
+                                  <AvatarImage src={interest.photoURL} />
+                                  <AvatarFallback>{getInitials(interest.name)}</AvatarFallback>
+                                </Avatar>
+                                <span>{interest.name}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" asChild>
+                                  <Link href={`/developers/${interest.userId}`}>View Profile</Link>
+                                </Button>
+                                <Button size="sm" onClick={() => handleMatch(project, interest)}>Match</Button>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              ))}
+            </section>
+          )}
+
         </div>
 
         {/* Bottom Section: Preview and Connect */}
@@ -265,8 +356,29 @@ export default function DashboardPage() {
             </section>
           </div>
         </div>
-
       </div>
+      <AlertDialog open={showMatchModal} onOpenChange={setShowMatchModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-center text-2xl">It's a Match!</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              You and <span className="font-bold">{matchedInfo?.devName}</span> have matched for the project: <span className="font-bold">{matchedInfo?.projectName}</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-center py-4">
+            <UserCheck className="h-16 w-16 text-green-500" />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+            <AlertDialogAction onClick={() => router.push(`/messages/${matchedInfo?.matchId}`)}>
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Send a Message
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+
+    

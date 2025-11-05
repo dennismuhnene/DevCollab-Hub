@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Hand, Undo, Edit, Trash2, Code, BrainCircuit, Clock } from 'lucide-react';
+import { Hand, Undo, Edit, Trash2, Code, BrainCircuit, Clock, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import {
@@ -30,6 +30,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { createMatch } from '@/lib/firebase/matches';
+import { addNotification } from '@/lib/firebase/notifications';
 
 export default function ProjectDetailsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -41,7 +43,7 @@ export default function ProjectDetailsPage() {
   const [owner, setOwner] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [interested, setInterested] = useState(false);
-  const [interests, setInterests] = useState<Interest[]>([]);
+  const [isOwner, setIsOwner] = useState(false);
   
   const { toast } = useToast();
 
@@ -52,7 +54,7 @@ export default function ProjectDetailsPage() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (!projectId || !user) return;
+    if (!projectId) return;
 
     const fetchProject = async () => {
       setLoading(true);
@@ -63,65 +65,73 @@ export default function ProjectDetailsPage() {
         const projectData = { id: projectDoc.id, ...projectDoc.data() } as Project;
         setProject(projectData);
         
-        if (projectData.ownerId) {
-          const ownerDocRef = doc(db, 'users', projectData.ownerId);
-          const ownerDoc = await getDoc(ownerDocRef);
-          if (ownerDoc.exists()) {
-            setOwner({ uid: ownerDoc.id, ...ownerDoc.data() } as UserProfile);
-          }
+        const ownerDocRef = doc(db, 'users', projectData.ownerId);
+        const ownerDoc = await getDoc(ownerDocRef);
+        if (ownerDoc.exists()) {
+          setOwner({ uid: ownerDoc.id, ...ownerDoc.data() } as UserProfile);
         }
         
-        const currentInterests: Interest[] = projectDoc.data().interests || [];
-        setInterests(currentInterests);
         if (user) {
-          setInterested(currentInterests.some(i => i.userId === user.uid));
+          setInterested(projectData.interestedUsers?.some(uid => uid === user.uid));
+          setIsOwner(projectData.ownerId === user.uid);
         }
 
+      } else {
+        toast({ variant: 'destructive', title: 'Project not found' });
+        router.push('/projects');
       }
       setLoading(false);
     };
 
     fetchProject();
-  }, [projectId, user]);
+  }, [projectId, user, toast, router]);
 
   const handleInterest = async () => {
     if (!user || !project) return;
     
-    // Find the existing interest object to remove it correctly
-    const existingInterest = project.interests?.find(i => i.userId === user.uid);
-
-    const userInterest: Interest = {
-      userId: user.uid,
-      name: user.displayName || 'Anonymous',
-      photoURL: user.photoURL || '',
-    };
-    
     const projectDocRef = doc(db, 'projects', projectId);
 
-    if (interested && existingInterest) {
-      updateDocumentNonBlocking(projectDocRef, {
-        interests: arrayRemove(existingInterest)
+    try {
+      if (interested) {
+        await updateDoc(projectDocRef, {
+          interestedUsers: arrayRemove(user.uid)
+        });
+        setProject(prev => prev ? ({ ...prev, interestedUsers: prev.interestedUsers?.filter(uid => uid !== user.uid) }) : null);
+        toast({ title: 'Interest removed' });
+      } else {
+        await updateDoc(projectDocRef, {
+          interestedUsers: arrayUnion(user.uid)
+        });
+        setProject(prev => prev ? ({ ...prev, interestedUsers: [...(prev.interestedUsers || []), user.uid] }) : null);
+        addNotification(project.ownerId, {
+          type: 'interest',
+          fromUserId: user.uid,
+          fromUserName: user.displayName || 'A user',
+          projectId: project.id,
+          projectTitle: project.title,
+          read: false,
+          timestamp: new Date(),
+        });
+        toast({ title: 'Interest expressed!', description: "The project owner has been notified." });
+      }
+      setInterested(!interested);
+    } catch(e: any) {
+       toast({
+        variant: 'destructive',
+        title: 'Error updating interest',
+        description: e.message,
       });
-      setInterests(prev => prev.filter(i => i.userId !== user.uid));
-      toast({ title: 'Interest removed' });
-    } else if (!interested) {
-      updateDocumentNonBlocking(projectDocRef, {
-        interests: arrayUnion(userInterest)
-      });
-      setInterests(prev => [...prev, userInterest]);
-      toast({ title: 'Interest expressed!', description: "The project owner has been notified." });
     }
-    setInterested(!interested);
   };
 
   const handleDeleteProject = async () => {
-    if (!project || !user) return;
+    if (!project || !user || !isOwner) return;
     setLoading(true);
 
     try {
       if (project.imageUrl) {
         const imageRef = ref(storage, project.imageUrl);
-        await deleteObject(imageRef);
+        await deleteObject(imageRef).catch(err => console.warn("Image deletion failed, may not exist", err));
       }
       
       const projectRef = doc(db, 'projects', project.id);
@@ -195,31 +205,47 @@ export default function ProjectDetailsPage() {
           <h2 className="text-2xl font-semibold">About this project</h2>
           <p className="text-lg leading-relaxed text-foreground/80">{project.description}</p>
           
-          {user && user.uid === project.ownerId && (
+          {isOwner && (project.interests || project.matchedUsers) && (
             <Card>
               <CardHeader>
-                <CardTitle>Interested Developers</CardTitle>
+                <CardTitle>Collaboration Status</CardTitle>
               </CardHeader>
               <CardContent>
-                {interests.length > 0 ? (
-                  <ul className="space-y-4">
-                    {interests.map(interest => (
-                      <li key={interest.userId} className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <Avatar>
-                            <AvatarImage src={interest.photoURL} />
-                            <AvatarFallback>{interest.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <span>{interest.name}</span>
-                        </div>
-                        <Button variant="outline" size="sm" asChild>
-                          <Link href={`/developers/${interest.userId}`}>View Profile</Link>
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-muted-foreground">No one has expressed interest yet.</p>
+                {project.interests && project.interests.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="font-semibold mb-4 flex items-center gap-2"><Hand className="h-5 w-5"/>Interested Developers</h3>
+                    <ul className="space-y-4">
+                      {project.interests.map(interest => (
+                        <li key={interest.userId} className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <Avatar>
+                              <AvatarImage src={interest.photoURL} />
+                              <AvatarFallback>{interest.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <span>{interest.name}</span>
+                          </div>
+                          <Button variant="outline" size="sm" asChild>
+                            <Link href={`/developers/${interest.userId}`}>View Profile</Link>
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                 {project.matchedUsers && project.matchedUsers.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-4 flex items-center gap-2"><UserCheck className="h-5 w-5"/>Matched Developers</h3>
+                     <ul className="space-y-4">
+                      {project.matchedUsers.map(userId => (
+                        <li key={userId} className="flex items-center justify-between">
+                          <p>A developer is matched</p>
+                          <Button variant="outline" size="sm" asChild>
+                            <Link href={`/developers/${userId}`}>View Profile</Link>
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -229,7 +255,7 @@ export default function ProjectDetailsPage() {
         
         <div className="space-y-6">
           <div className="flex flex-col space-y-2">
-            {user && user.uid === project.ownerId ? (
+            {isOwner ? (
               <div className="flex gap-2">
                 <Button size="lg" className="w-full" asChild>
                     <Link href={`/projects/${project.id}/edit`}>
@@ -259,18 +285,22 @@ export default function ProjectDetailsPage() {
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
-            ) : user && (
-              <Button size="lg" className="w-full" onClick={handleInterest}>
-                {interested ? (
-                  <>
-                    <Undo className="mr-2 h-4 w-4" />
-                    Remove Interest
-                  </>
+            ) : (
+              <Button size="lg" className="w-full" onClick={handleInterest} disabled={!project.collaborationOpen}>
+                {project.collaborationOpen ? (
+                  interested ? (
+                    <>
+                      <Undo className="mr-2 h-4 w-4" />
+                      Remove Interest
+                    </>
+                  ) : (
+                    <>
+                      <Hand className="mr-2 h-4 w-4" />
+                      I&apos;m interested
+                    </>
+                  )
                 ) : (
-                  <>
-                    <Hand className="mr-2 h-4 w-4" />
-                    I&apos;m interested
-                  </>
+                  "Collaboration Closed"
                 )}
               </Button>
             )}
@@ -311,3 +341,5 @@ export default function ProjectDetailsPage() {
     </div>
   );
 }
+
+    

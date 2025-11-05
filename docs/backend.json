@@ -108,6 +108,20 @@
           "type": "string",
           "description": "URL of the project's image.",
           "format": "uri"
+        },
+        "interestedUsers": {
+          "type": "array",
+          "description": "List of user IDs who have shown interest in the project.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "matchedUsers": {
+          "type": "array",
+          "description": "List of user IDs who have matched with the project.",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [
@@ -131,13 +145,24 @@
           "type": "string",
           "description": "Unique identifier for the Match entity."
         },
-        "userId": {
-          "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N Match). The ID of the user involved in the match."
-        },
         "projectId": {
           "type": "string",
-          "description": "Reference to Project. (Relationship: Project 1:N Match). The ID of the project involved in the match."
+          "description": "Reference to Project. The ID of the project involved in the match."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The ID of the project owner."
+        },
+        "matchedUserId": {
+          "type": "string",
+          "description": "The ID of the user who was matched."
+        },
+        "participants": {
+            "type": "array",
+            "description": "An array containing the UIDs of both participants for easy querying.",
+            "items": {
+                "type": "string"
+            }
         },
         "createdAt": {
           "type": "string",
@@ -146,16 +171,76 @@
         },
         "status": {
           "type": "string",
-          "description": "Status of the match (e.g., pending, accepted, rejected)."
+          "description": "Status of the match (e.g., active, closed).",
+          "enum": ["active", "closed"]
         }
       },
       "required": [
         "id",
-        "userId",
         "projectId",
+        "ownerId",
+        "matchedUserId",
+        "participants",
         "createdAt",
         "status"
       ]
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a single chat message within a match.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the message."
+        },
+        "text": {
+          "type": "string",
+          "description": "The content of the message."
+        },
+        "senderId": {
+          "type": "string",
+          "description": "The UID of the user who sent the message."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp indicating when the message was sent.",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "text", "senderId", "timestamp"]
+    },
+    "Notification": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents a notification for a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the notification."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of notification.",
+          "enum": ["interest", "match", "message"]
+        },
+        "fromUserId": {
+          "type": "string",
+          "description": "The UID of the user who triggered the notification."
+        },
+        "read": {
+          "type": "boolean",
+          "description": "Indicates whether the notification has been read."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of the notification.",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "type", "fromUserId", "read", "timestamp"]
     }
   },
   "auth": {
@@ -171,15 +256,17 @@
         "definition": {
           "entityName": "User",
           "schema": {
-            "$ref": "#/backend/entities/User"
+            "$ref": "#/entities/User"
           },
-          "description": "Stores user profiles. Uses path-based ownership for private data. Includes denormalized 'userId' for authorization independence.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            }
-          ]
+          "description": "Stores user profiles."
+        }
+      },
+      {
+        "path": "/users/{userId}/notifications/{notificationId}",
+        "definition": {
+            "entityName": "Notification",
+            "schema": { "$ref": "#/entities/Notification"},
+            "description": "Subcollection for user-specific notifications."
         }
       },
       {
@@ -187,35 +274,9 @@
         "definition": {
           "entityName": "Project",
           "schema": {
-            "$ref": "#/backend/entities/Project"
+            "$ref": "#/entities/Project"
           },
-          "description": "Stores project information. Includes 'ownerId' for authorization independence.",
-          "params": [
-            {
-              "name": "projectId",
-              "description": "The unique identifier for the project."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/projects/{projectId}",
-        "definition": {
-          "entityName": "Project",
-          "schema": {
-            "$ref": "#/backend/entities/Project"
-          },
-          "description": "Subcollection representing projects owned by a specific user. Includes denormalized 'ownerId' and 'userId' for authorization independence.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "projectId",
-              "description": "The unique identifier for the project."
-            }
-          ]
+          "description": "Stores project information."
         }
       },
       {
@@ -223,38 +284,20 @@
         "definition": {
           "entityName": "Match",
           "schema": {
-            "$ref": "#/backend/entities/Match"
+            "$ref": "#/entities/Match"
           },
-          "description": "Stores match data between users and projects. Includes 'userId' and 'projectId' for authorization independence.",
-          "params": [
-            {
-              "name": "matchId",
-              "description": "The unique identifier for the match."
-            }
-          ]
+          "description": "Stores match data between users and projects."
         }
       },
       {
-        "path": "/projects/{projectId}/matches/{matchId}",
+        "path": "/matches/{matchId}/messages/{messageId}",
         "definition": {
-          "entityName": "Match",
-          "schema": {
-            "$ref": "#/backend/entities/Match"
-          },
-          "description": "Subcollection to store matches related to a specific project. Includes denormalized 'projectId' and 'userId' for authorization independence.",
-          "params": [
-            {
-              "name": "projectId",
-              "description": "The unique identifier for the project."
-            },
-            {
-              "name": "matchId",
-              "description": "The unique identifier for the match."
-            }
-          ]
+            "entityName": "Message",
+            "schema": { "$ref": "#/entities/Message" },
+            "description": "Subcollection for chat messages within a match."
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to ensure security, scalability, and ease of debugging, adhering to the principles of Authorization Independence, Clarity of Intent, DBAC, and QAPs. Authorization Independence is achieved through denormalization, specifically by including relevant authorization data within each document, eliminating the need for `get()` calls in security rules. Structural Segregation is applied by keeping data with different access requirements in separate collections. Access Modeling utilizes path-based ownership and membership maps for clear and consistent authorization patterns.\n\nSpecifically:\n\n*   `/users/{userId}`: Stores user profiles. This collection uses path-based ownership for private data. Security rules will ensure that only the user can read/write their own profile.\n*   `/projects/{projectId}`: Stores project information. The `ownerId` field in each project document is crucial for authorization, ensuring only the project owner can modify it.\n*   `/users/{userId}/projects/{projectId}`: A subcollection representing projects owned by a specific user. This nested structure reinforces the 1:N relationship between users and their projects, providing path-based authorization. The `ownerId` field is denormalized into this subcollection for authorization independence.\n*   `/matches/{matchId}`: Stores match data between users and projects. Security rules will control who can create or modify match documents based on user roles or project ownership.\n*   `/projects/{projectId}/matches/{matchId}`: A subcollection to store matches related to a specific project, further clarifying relationships. This structure improves query performance for finding matches associated with a given project. The `projectId` and `userId` are denormalized for authorization independence.\n\nQAPs (Rules are not Filters) are supported by the structural segregation. List operations can be securely performed on `/projects` with rules that filter based on `collaborationOpen` without risking unintended access to private project data. The path-based ownership for user data enables secure listing of user-owned projects under `/users/{userId}/projects`.\n\nThis structure facilitates simple, robust, and debuggable security rules. For example, a rule can easily check if `request.auth.uid == resource.data.ownerId` for project updates, or if a user is attempting to access their own profile via the `/users/{userId}` path."
+    ]
   }
 }
+    

@@ -27,123 +27,94 @@ service cloud.firestore {
     }
 
     /**
-     * @description Controls access to user profiles. Only the authenticated user can read/write their own profile.
-     * @path /users/{userId}
-     * @allow (create) - Authenticated user creates their profile with a matching userId.
-     * @allow (get, list) - Any authenticated user can read public profile information.
-     * @allow (update, delete) - Authenticated user writes/deletes their own profile.
-     * @deny (create, get, list, update, delete) - Any other user attempts to access another user's profile.
-     * @principle Enforces document ownership for writes.
+     * @description Controls access to user profiles and their subcollections.
      */
     match /users/{userId} {
-      function isOwner(userId) {
+      function isOwner() {
         return request.auth.uid == userId;
       }
 
-      function isExistingOwner(userId) {
-        return isOwner(userId) && exists(/databases/$(database)/documents/users/$(userId));
+      // Profile document
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isOwner();
+
+      /**
+       * @description Controls access to user notifications. Only the owner can access them.
+       * @path /users/{userId}/notifications/{notificationId}
+       */
+      match /notifications/{notificationId} {
+        allow read, write, delete: if isOwner();
       }
 
-      allow get, list: if isSignedIn();
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      /**
+       * @description Controls access to projects nested under users. Enforces strict user ownership.
+       * @path /users/{userId}/projects/{projectId}
+       */
+      match /projects/{projectId} {
+          allow get, list: if isOwner();
+          allow create: if isOwner() && request.resource.data.ownerId == userId;
+          allow update, delete: if isOwner() && resource.data.ownerId == userId;
+      }
     }
 
     /**
-     * @description Controls access to projects. Only authenticated users can read/write.
+     * @description Controls access to top-level projects.
      * @path /projects/{projectId}
-     * @allow (create) - Authenticated user creates a project with their userId as ownerId.
-     * @allow (get, list) - Any authenticated user can read project information.
-     * @allow (update, delete) - Only the project owner can modify or delete the project.
-     * @deny (create, update, delete) - Any user tries to create a project as another user, or modify/delete a project they don't own.
-     * @principle Enforces document ownership for writes.
      */
     match /projects/{projectId} {
-      function isOwner(ownerId) {
-        return request.auth.uid == ownerId;
+      function isOwner() {
+        return request.auth.uid == resource.data.ownerId;
       }
 
-      function isExistingOwner(ownerId) {
-        return isOwner(ownerId) && resource != null;
+      function isCreatingAsSelf() {
+        return request.auth.uid == request.resource.data.ownerId;
       }
 
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && isOwner(request.resource.data.ownerId) && request.resource.data.ownerId == request.auth.uid;
-      allow update: if isExistingOwner(resource.data.ownerId);
-      allow delete: if isExistingOwner(resource.data.ownerId);
+      allow create: if isSignedIn() && isCreatingAsSelf();
+      allow update: if isSignedIn() && isOwner();
+      allow delete: if isSignedIn() && isOwner();
     }
-
+    
     /**
-     * @description Controls access to projects nested under users. Enforces strict user ownership.
-     * @path /users/{userId}/projects/{projectId}
-     * @allow (create) - User creates a project under their own userId.
-     * @allow (get, list, update, delete) - Only the project owner can access.
-     * @deny (create, get, list, update, delete) - Any other user attempts to access.
-     * @principle Enforces strict document ownership.
-     */
-    match /users/{userId}/projects/{projectId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if isSignedIn() && isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.ownerId == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.ownerId == userId;
-      allow delete: if isExistingOwner(userId) && request.resource.data.ownerId == userId;
-    }
-
-    /**
-     * @description Controls access to matches. Checks that the user is creating/modifying matches related to their projects.
+     * @description Controls access to matches. A user must be a participant to interact.
      * @path /matches/{matchId}
-     * @allow (create) - Authenticated user can create match if they are related to the project or user involved.
-     * @allow (get, list) - Any authenticated user can read match information.
-     * @allow (update, delete) - Only the project owner or user involved can modify.
-     * @deny (create, update, delete) - Any user tries to create a match for another user's project.
-     * @principle Controls access based on user and project relationship.
      */
     match /matches/{matchId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
+        function isParticipant() {
+            return request.auth.uid in resource.data.participants;
+        }
 
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
+        function isCreatingWithSelf() {
+            return request.auth.uid in request.resource.data.participants;
+        }
 
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
-    }
+        allow get, list: if isSignedIn() && isParticipant();
+        allow create: if isSignedIn() && isCreatingWithSelf();
+        allow update: if isSignedIn() && isParticipant();
+        allow delete: if isSignedIn() && isParticipant();
+        
+        /**
+         * @description Controls access to messages within a match. Only participants can read/write.
+         * @path /matches/{matchId}/messages/{messageId}
+         */
+        match /messages/{messageId} {
+            function isMatchParticipant() {
+                // Check against the parent `match` document's data
+                return request.auth.uid in get(/databases/$(database)/documents/matches/$(matchId)).data.participants;
+            }
 
-    /**
-     * @description Controls access to matches nested under projects.
-     * @path /projects/{projectId}/matches/{matchId}
-     * @allow (create) - Authenticated user can create matches under the project.
-     * @allow (get, list) - Any authenticated user can read matches related to the project.
-     * @allow (update, delete) - Project owner and user involved can modify.
-     * @deny (create, update, delete) - Other users cannot create or modify matches.
-     * @principle Controls access based on project ownership.
-     */
-    match /projects/{projectId}/matches/{matchId} {
-      function isProjectOwner(projectId) {
-        return get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
-      }
-
-      function isExistingProjectOwner(projectId) {
-          return isProjectOwner(projectId) && resource != null;
-      }
-
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
+            function isMessageSender() {
+                return request.auth.uid == request.resource.data.senderId;
+            }
+        
+            allow read, list: if isSignedIn() && isMatchParticipant();
+            allow create: if isSignedIn() && isMatchParticipant() && isMessageSender();
+            // Disallow updates and deletes for message history integrity
+            allow update, delete: if false;
+        }
     }
   }
 }
+
+    
