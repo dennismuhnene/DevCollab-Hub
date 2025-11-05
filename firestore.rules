@@ -89,7 +89,7 @@ service cloud.firestore {
      */
     match /matches/{matchId} {
       // Allow read (get, list) if the user is a participant.
-      // For queries (list), the client MUST use a `where('participants', 'array-contains', request.auth.uid)` clause.
+      // This rule requires that any 'list' (query) operation MUST include a `where('participants', 'array-contains', request.auth.uid)` clause.
       allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
       
       // Allow a user to create a match if their UID is in the `participants` array of the NEW document.
