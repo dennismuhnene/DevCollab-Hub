@@ -106,7 +106,6 @@ service cloud.firestore {
      */
     match /matches/{matchId} {
       // Allow a user to read a match document if their UID is in the participants list.
-      // This single rule also secures 'list' queries that use an 'array-contains' filter.
       allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
       
       // Allow a user to write (create, update) a match if they are a participant.
