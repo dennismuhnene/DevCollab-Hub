@@ -93,7 +93,7 @@ service cloud.firestore {
         // This rule allows a user to query the 'matches' collection,
         // but only if the query includes a 'where' clause that filters for their UID
         // in the 'participants' array. This is required for fetching the match list.
-        allow list: if isSignedIn() && request.query.where.get("participants", ["array-contains", ""]).size() == 1 && request.query.where.get("participants", ["array-contains", ""])[0] == request.auth.uid;
+        allow list: if isSignedIn() && request.query.where.participants.hasAny([request.auth.uid]);
         allow create: if isSignedIn() && isCreatingWithSelf();
         allow update: if isSignedIn() && isParticipant();
         allow delete: if isSignedIn() && isParticipant();
