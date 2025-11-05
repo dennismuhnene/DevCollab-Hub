@@ -29,17 +29,15 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [sortedMatches, setSortedMatches] = useState<Match[]>([]);
 
   const matchesQuery = useMemoFirebase(
     () => {
       if (!user) return null;
-      console.log('ChatPage: Building query for user:', user.uid);
       const q = query(
             collection(db, 'matches'),
-            where('participants', 'array-contains', user.uid),
-            orderBy('timestamp', 'desc')
+            where('participants', 'array-contains', user.uid)
           );
-      console.log('ChatPage: Query created:', q);
       return q;
     },
     [user]
@@ -47,6 +45,17 @@ export default function ChatPage() {
 
   const { data: matches, isLoading: matchesLoading, error: matchesError } = useCollection<Match>(matchesQuery);
   
+   useEffect(() => {
+    if (matches) {
+        const sorted = [...matches].sort((a, b) => {
+            const timeA = a.timestamp?.toMillis() || 0;
+            const timeB = b.timestamp?.toMillis() || 0;
+            return timeB - timeA;
+        });
+        setSortedMatches(sorted);
+    }
+  }, [matches]);
+
   useEffect(() => {
     if (matchesError) {
       console.error("ChatPage Matches Error:", matchesError);
@@ -159,7 +168,7 @@ export default function ChatPage() {
             {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
           </div>
         ) : (
-          <MatchList matches={matches || []} activeMatchId={matchId} />
+          <MatchList matches={sortedMatches} activeMatchId={matchId} />
         )}
       </aside>
       <main className="flex-1 flex flex-col">

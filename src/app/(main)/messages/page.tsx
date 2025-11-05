@@ -1,6 +1,6 @@
 'use client';
 
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { db } from '@/lib/firebase/config';
@@ -9,28 +9,38 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { MessageSquare, Users } from 'lucide-react';
 import MatchList from '@/components/match-list';
 import { useMemoFirebase } from '@/firebase';
-import { useEffect } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 export default function MessagesPage() {
   const { user } = useAuth();
+  const [sortedMatches, setSortedMatches] = useState<Match[]>([]);
 
   const matchesQuery = useMemoFirebase(
     () => {
       if (!user) return null;
       
-      console.log('MessagesPage: Building query for user:', user.uid);
       const q = query(
         collection(db, 'matches'),
-        where('participants', 'array-contains', user.uid),
-        orderBy('timestamp', 'desc')
+        where('participants', 'array-contains', user.uid)
       );
-      console.log('MessagesPage: Query created:', q);
       return q;
     },
     [user]
   );
 
   const { data: matches, isLoading, error } = useCollection<Match>(matchesQuery);
+  
+  useEffect(() => {
+    if (matches) {
+        const sorted = [...matches].sort((a, b) => {
+            const timeA = a.timestamp?.toMillis() || 0;
+            const timeB = b.timestamp?.toMillis() || 0;
+            return timeB - timeA;
+        });
+        setSortedMatches(sorted);
+    }
+  }, [matches]);
+
 
   useEffect(() => {
     if (error) {
@@ -52,7 +62,7 @@ export default function MessagesPage() {
             {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
           </div>
         ) : (
-          <MatchList matches={matches || []} />
+          <MatchList matches={sortedMatches} />
         )}
       </aside>
       <main className="flex-1 hidden md:flex flex-col items-center justify-center text-center bg-background">
