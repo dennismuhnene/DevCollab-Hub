@@ -120,7 +120,6 @@ export default function ProjectDetailsPage() {
           projectId: project.id,
           projectTitle: project.title,
           read: false,
-          timestamp: new Date(),
         });
         toast({ title: 'Interest expressed!', description: "The project owner has been notified." });
       }

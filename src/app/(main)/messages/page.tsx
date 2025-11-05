@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { MessageSquare, Users } from 'lucide-react';
 import MatchList from '@/components/match-list';
 import { useMemoFirebase } from '@/firebase';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function MessagesPage() {
   const { user } = useAuth();

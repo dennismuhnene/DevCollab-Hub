@@ -54,15 +54,12 @@ service cloud.firestore {
     match /matches/{matchId} {
 
       // Allow create only if the user is included as a participant in the new document.
-      // This rule is granular and checks the incoming data.
       allow create: if isSignedIn() && uid() in request.resource.data.participants;
 
       // Allow get, update, and delete only if the user is a participant in the existing document.
-      // This rule checks the already-stored data.
       allow get, update, delete: if isSignedIn() && uid() in resource.data.participants;
 
       // Allow list (queries) ONLY IF the query explicitly filters for the user's UID in the 'participants' array.
-      // This is the key rule that secures collection-level reads.
       allow list: if isSignedIn() && request.query.where[0] == ['participants', 'array-contains', uid()];
 
       // -----------------------
