@@ -90,7 +90,7 @@ service cloud.firestore {
         }
 
         allow get: if isSignedIn() && isParticipant();
-        allow list: if isSignedIn() && request.query.where.get('participants', 'array-contains', '') == request.auth.uid;
+        allow list: if isSignedIn() && request.query.where['participants'][0] == 'array-contains' && request.query.where[1] == request.auth.uid;
         allow create: if isSignedIn() && isCreatingWithSelf();
         allow update: if isSignedIn() && isParticipant();
         allow delete: if isSignedIn() && isParticipant();
