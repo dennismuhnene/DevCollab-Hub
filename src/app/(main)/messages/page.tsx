@@ -1,6 +1,6 @@
 'use client';
 
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { db } from '@/lib/firebase/config';
@@ -19,6 +19,7 @@ export default function MessagesPage() {
     () => {
       if (!user) return null;
       
+      // This query now perfectly matches the security rule for 'list'
       const q = query(
         collection(db, 'matches'),
         where('participants', 'array-contains', user.uid)
@@ -32,6 +33,7 @@ export default function MessagesPage() {
   
   useEffect(() => {
     if (matches) {
+        // Sorting is now done on the client-side
         const sorted = [...matches].sort((a, b) => {
             const timeA = a.timestamp?.toMillis() || 0;
             const timeB = b.timestamp?.toMillis() || 0;

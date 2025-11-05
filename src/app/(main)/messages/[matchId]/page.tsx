@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { db } from '@/lib/firebase/config';
 import type { Match, Message, UserProfile } from '@/types';
@@ -34,6 +34,7 @@ export default function ChatPage() {
   const matchesQuery = useMemoFirebase(
     () => {
       if (!user) return null;
+      // This query now perfectly matches the security rule for 'list'
       const q = query(
             collection(db, 'matches'),
             where('participants', 'array-contains', user.uid)
@@ -47,6 +48,7 @@ export default function ChatPage() {
   
    useEffect(() => {
     if (matches) {
+        // Sorting is now done on the client-side
         const sorted = [...matches].sort((a, b) => {
             const timeA = a.timestamp?.toMillis() || 0;
             const timeB = b.timestamp?.toMillis() || 0;
@@ -119,7 +121,12 @@ export default function ChatPage() {
       timestamp: serverTimestamp(),
     };
     
-    await addDoc(collection(db, 'matches', matchId, 'messages'), messageData);
+    const messagesCollectionRef = collection(db, 'matches', matchId, 'messages');
+    await addDoc(messagesCollectionRef, messageData);
+    
+    // Also update the parent match document to reflect the latest message time for sorting
+    const matchDocRef = doc(db, 'matches', matchId);
+    await updateDoc(matchDocRef, { timestamp: serverTimestamp() });
 
     addNotification(otherUser.uid, {
         type: 'message',
@@ -127,7 +134,6 @@ export default function ChatPage() {
         fromUserName: user.displayName || 'A user',
         matchId: matchId,
         read: false,
-        timestamp: new Date(),
         messageSnippet: newMessage,
     });
 

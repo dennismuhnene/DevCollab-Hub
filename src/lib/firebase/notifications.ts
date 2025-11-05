@@ -20,5 +20,6 @@ export async function addNotification(userId: string, notification: Omit<Notific
     await addDoc(collection(db, 'users', userId, 'notifications'), notificationData);
   } catch (error) {
     console.error('Error adding notification:', error);
+    // In a real app, you might want to handle this more gracefully
   }
 }
