@@ -29,8 +29,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { createMatch } from '@/lib/firebase/matches';
+import { addNotification } from '@/lib/firebase/notifications';
 
 interface InterestedUser extends UserProfile {
   // extends to ensure type safety
@@ -110,24 +111,17 @@ export default function ProjectDetailsPage() {
         setProject(prev => prev ? ({ ...prev, interestedUsers: prev.interestedUsers?.filter(uid => uid !== user.uid) }) : null);
         toast({ title: 'Interest removed' });
       } else {
-        await updateDoc(projectDocRef, { interestedUsers: arrayUnion(user.uid) });
+        await updateDocumentNonBlocking(projectDocRef, { interestedUsers: arrayUnion(user.uid) });
         setProject(prev => prev ? ({ ...prev, interestedUsers: [...(prev.interestedUsers || []), user.uid] }) : null);
         
-        // This is a client-side call to a server action. The rule needs to allow this.
-        await fetch('/api/notifications', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: project.ownerId,
-            notification: {
-              type: 'interest',
-              fromUserId: user.uid,
-              fromUserName: user.displayName || 'A user',
-              projectId: project.id,
-              projectTitle: project.title,
-              read: false,
-            }
-          }),
+        // This is a direct call to the server action.
+        await addNotification(project.ownerId, {
+            type: 'interest',
+            fromUserId: user.uid,
+            fromUserName: user.displayName || 'A user',
+            projectId: project.id,
+            projectTitle: project.title,
+            read: false,
         });
 
         toast({ title: 'Interest expressed!', description: "The project owner has been notified." });
@@ -401,3 +395,5 @@ export default function ProjectDetailsPage() {
     </div>
   );
 }
+
+    
