@@ -69,7 +69,7 @@ export default function ProjectDetailsPage() {
       const projectDoc = await getDoc(projectDocRef);
 
       if (projectDoc.exists()) {
-        const projectData = { id: projectDoc.id, ...doc.data() } as Project;
+        const projectData = { id: projectDoc.id, ...projectDoc.data() } as Project;
         setProject(projectData);
 
         const ownerDocRef = doc(db, 'users', projectData.ownerId);
