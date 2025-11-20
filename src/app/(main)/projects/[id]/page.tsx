@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { createMatch } from '@/lib/firebase/matches';
+import { addNotification } from '@/lib/firebase/notifications';
 
 interface InterestedUser extends UserProfile {
   // extends to ensure type safety
@@ -113,7 +114,7 @@ export default function ProjectDetailsPage() {
         updateDocumentNonBlocking(projectDocRef, { interestedUsers: arrayUnion(user.uid) });
         setProject(prev => prev ? ({ ...prev, interestedUsers: [...(prev.interestedUsers || []), user.uid] }) : null);
         
-        // Directly call the server action, no need for fetch
+        // This is now a server action.
         await addNotification(project.ownerId, {
             type: 'interest',
             fromUserId: user.uid,
@@ -138,10 +139,8 @@ export default function ProjectDetailsPage() {
   const handleMatch = async (interestedUser: InterestedUser) => {
     if (!user || !project) return;
     try {
-      // The server action now handles everything atomically.
       const matchId = await createMatch(project.id, project.ownerId, interestedUser.uid);
       
-      // Update UI
       setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId });
       setShowMatchModal(true);
       setInterestedUsers(prev => prev.filter(u => u.uid !== interestedUser.uid));
