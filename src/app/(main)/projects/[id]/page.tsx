@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db, storage } from '@/lib/firebase/config';
-import { ref, deleteObject } from 'firebase/storage';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
@@ -29,9 +28,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { createMatch } from '@/lib/firebase/matches';
-import { addNotification } from '@/lib/firebase/notifications';
+import { expressInterest } from '@/lib/firebase/notifications';
 
 interface InterestedUser extends UserProfile {
   // extends to ensure type safety
@@ -101,50 +100,72 @@ export default function ProjectDetailsPage() {
   }, [projectId, user, toast, router]);
 
   const handleInterest = async () => {
-    if (!user || !project) return;
+    if (!user || !userProfile || !project) return;
     
-    const projectDocRef = doc(db, 'projects', projectId);
-
+    const wasInterested = isInterested;
+    // Optimistically update the UI
+    setIsInterested(!wasInterested);
+    
     try {
-      if (isInterested) {
-        updateDocumentNonBlocking(projectDocRef, { interestedUsers: arrayRemove(user.uid) });
-        setProject(prev => prev ? ({ ...prev, interestedUsers: prev.interestedUsers?.filter(uid => uid !== user.uid) }) : null);
-        toast({ title: 'Interest removed' });
-      } else {
-        updateDocumentNonBlocking(projectDocRef, { interestedUsers: arrayUnion(user.uid) });
-        setProject(prev => prev ? ({ ...prev, interestedUsers: [...(prev.interestedUsers || []), user.uid] }) : null);
-        
-        await addNotification(project.ownerId, {
-            type: 'interest',
-            fromUserId: user.uid,
-            fromUserName: user.displayName || 'A user',
-            projectId: project.id,
-            projectTitle: project.title,
-            read: false,
-        });
+      const result = await expressInterest({
+        projectId: project.id,
+        projectTitle: project.title,
+        projectOwnerId: project.ownerId,
+        interestedUserId: user.uid,
+        interestedUserName: userProfile.name,
+        remove: wasInterested, // Pass true to remove interest
+      });
 
-        toast({ title: 'Interest expressed!', description: "The project owner has been notified." });
+      if (!result.success) {
+        throw new Error(result.error || 'An unknown error occurred.');
       }
-      setIsInterested(!isInterested);
-    } catch(e: any) {
+      
+      toast({
+        title: wasInterested ? 'Interest removed' : 'Interest expressed!',
+        description: wasInterested ? undefined : 'The project owner has been notified.',
+      });
+
+      // Update local project state to match backend
+      setProject(prev => prev ? ({ 
+        ...prev, 
+        interestedUsers: wasInterested 
+          ? prev.interestedUsers?.filter(uid => uid !== user.uid)
+          : [...(prev.interestedUsers || []), user.uid]
+      }) : null);
+
+    } catch (e: any) {
+      // Revert optimistic UI update on failure
+       setIsInterested(wasInterested);
        toast({
         variant: 'destructive',
         title: 'Error updating interest',
-        description: e.message || 'An unknown error occurred.',
+        description: e.message,
       });
     }
   };
   
   const handleMatch = async (interestedUser: InterestedUser) => {
-    if (!user || !project) return;
+    if (!user || !userProfile || !project) return;
     try {
-      const matchId = await createMatch(project.id, project.ownerId, interestedUser.uid);
+      const matchResult = await createMatch({
+        projectId: project.id,
+        projectTitle: project.title,
+        ownerId: project.ownerId,
+        ownerName: userProfile.name,
+        ownerPhotoURL: userProfile.photoURL || '',
+        matchedUserId: interestedUser.uid,
+        matchedUserName: interestedUser.name,
+        matchedUserPhotoURL: interestedUser.photoURL || '',
+      });
       
-      setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId });
-      setShowMatchModal(true);
-      setInterestedUsers(prev => prev.filter(u => u.uid !== interestedUser.uid));
-      setProject(prev => prev ? ({ ...prev, matchedUsers: [...(prev.matchedUsers || []), interestedUser.uid], interestedUsers: prev.interestedUsers?.filter(uid => uid !== interestedUser.uid) }) : null);
-
+      if (matchResult.success && matchResult.matchId) {
+        setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId: matchResult.matchId });
+        setShowMatchModal(true);
+        setInterestedUsers(prev => prev.filter(u => u.uid !== interestedUser.uid));
+        setProject(prev => prev ? ({ ...prev, matchedUsers: [...(prev.matchedUsers || []), interestedUser.uid], interestedUsers: prev.interestedUsers?.filter(uid => uid !== interestedUser.uid) }) : null);
+      } else {
+        throw new Error(matchResult.error || 'Failed to create match.');
+      }
     } catch (error) {
        console.error("Failed to create match:", error);
        toast({ variant: 'destructive', title: 'Matching Failed', description: error instanceof Error ? error.message : 'An unknown error occurred.' });
@@ -157,6 +178,8 @@ export default function ProjectDetailsPage() {
 
     try {
       if (project.imageUrl) {
+        // We can attempt to delete the image, but don't block if it fails
+        const { ref, deleteObject } = await import('firebase/storage');
         const imageRef = ref(storage, project.imageUrl);
         await deleteObject(imageRef).catch(err => console.warn("Image deletion failed, may not exist", err));
       }

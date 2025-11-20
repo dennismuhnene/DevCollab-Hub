@@ -14,12 +14,6 @@ export interface UserProfile {
   openForCollaboration?: boolean;
 }
 
-export interface Interest {
-  userId: string;
-  name: string;
-  photoURL?: string;
-}
-
 export interface Project {
   id: string;
   ownerId: string;
@@ -30,10 +24,9 @@ export interface Project {
   requiredSkills: string[];
   requiredYearsOfExperience?: number;
   collaborationOpen?: boolean;
-  createdAt?: Timestamp | null;
-  updatedAt?: Timestamp | null;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
   interestedUsers?: string[];
-  interests?: Interest[]; // Keep for backwards compatibility or specific use cases
   matchedUsers?: string[];
 }
 
@@ -63,14 +56,15 @@ export interface Message {
 export interface Notification {
     id?: string;
     type: 'interest' | 'match' | 'message';
+    // from who
     fromUserId: string;
     fromUserName: string;
+    // related to what
     projectId?: string;
     projectTitle?: string;
     matchId?: string;
     messageSnippet?: string;
+    // state
     read: boolean;
-    timestamp: Timestamp | Date;
+    timestamp: Timestamp | object; // object for serverTimestamp
 }
-
-    

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { collection, query, where, getDocs, limit, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { Project, UserProfile } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -49,7 +49,7 @@ export default function DashboardPage() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !userProfile) return;
     
     const fetchData = async () => {
       setLoadingData(true);
@@ -82,37 +82,50 @@ export default function DashboardPage() {
     };
 
     fetchData();
-  }, [user]);
+  }, [user, userProfile]);
 
   const handleMatch = async (project: Project, interestedUser: InterestedUser) => {
-    if (!user) return;
+    if (!user || !userProfile) return;
     try {
-      const matchId = await createMatch(project.id, project.ownerId, interestedUser.uid);
-      setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId });
-      setShowMatchModal(true);
+      const matchResult = await createMatch({
+        projectId: project.id,
+        projectTitle: project.title,
+        ownerId: project.ownerId,
+        ownerName: userProfile.name,
+        ownerPhotoURL: userProfile.photoURL || '',
+        matchedUserId: interestedUser.uid,
+        matchedUserName: interestedUser.name,
+        matchedUserPhotoURL: interestedUser.photoURL || '',
+      });
       
-      // Update local state to reflect the match
-      setInterestedUsersByProject(prev => ({
-        ...prev,
-        [project.id]: prev[project.id]?.filter(u => u.uid !== interestedUser.uid)
-      }));
-      setMyProjects(prevProjects => prevProjects.map(p => {
-        if (p.id === project.id) {
-          return {
-            ...p,
-            interestedUsers: p.interestedUsers?.filter(uid => uid !== interestedUser.uid),
-            matchedUsers: [...(p.matchedUsers || []), interestedUser.uid]
-          };
-        }
-        return p;
-      }));
-
+      if (matchResult.success && matchResult.matchId) {
+        setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId: matchResult.matchId });
+        setShowMatchModal(true);
+        
+        // Update local state to reflect the match
+        setInterestedUsersByProject(prev => ({
+          ...prev,
+          [project.id]: prev[project.id]?.filter(u => u.uid !== interestedUser.uid)
+        }));
+        setMyProjects(prevProjects => prevProjects.map(p => {
+          if (p.id === project.id) {
+            return {
+              ...p,
+              interestedUsers: p.interestedUsers?.filter(uid => uid !== interestedUser.uid),
+              matchedUsers: [...(p.matchedUsers || []), interestedUser.uid]
+            };
+          }
+          return p;
+        }));
+      } else {
+         throw new Error(matchResult.error || 'Failed to create match.');
+      }
     } catch (error) {
       console.error("Failed to create match:", error);
       toast({
         variant: 'destructive',
         title: 'Matching Failed',
-        description: 'Could not create a match. Please try again.',
+        description: error instanceof Error ? error.message : 'Could not create a match. Please try again.',
       });
     }
   };

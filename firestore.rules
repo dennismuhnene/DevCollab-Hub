@@ -28,8 +28,8 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.ownerId == uid();
       
       // Allow the owner to make any update to their own project.
-      // This rule is critical for the `createMatch` batch write to succeed.
-      // Using request.resource.data is more reliable inside transactions.
+      // This is the CRITICAL rule for the `createMatch` batch write to succeed.
+      // Using request.resource.data is more reliable inside transactions than resource.data.
       allow update: if isSignedIn() && request.resource.data.ownerId == uid();
 
       // ALSO allow any signed-in user to update ONLY the 'interestedUsers' field.
