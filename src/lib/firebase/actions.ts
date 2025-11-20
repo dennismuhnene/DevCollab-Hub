@@ -104,3 +104,21 @@ export async function createMatch(args: CreateMatchArgs): Promise<MatchResult> {
     throw error;
   }
 }
+
+// This action is being kept in case it's needed elsewhere, but the primary interest logic
+// is now handled on the client with non-blocking updates for better error reporting.
+export async function toggleInterest(projectId: string, userId: string, isInterested: boolean) {
+  if (!projectId || !userId) {
+    throw new Error('Project ID and User ID must be provided');
+  }
+  const projectRef = doc(db, 'projects', projectId);
+  try {
+    await updateDoc(projectRef, {
+      interestedUsers: isInterested ? arrayRemove(userId) : arrayUnion(userId),
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error toggling interest:', error);
+    throw error;
+  }
+}

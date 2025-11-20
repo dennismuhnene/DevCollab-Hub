@@ -91,10 +91,10 @@ export default function DashboardPage() {
         projectId: project.id,
         projectTitle: project.title,
         ownerId: project.ownerId,
-        ownerName: userProfile.name,
+        ownerName: userProfile.displayName || 'Project Owner',
         ownerPhotoURL: userProfile.photoURL || '',
         matchedUserId: interestedUser.uid,
-        matchedUserName: interestedUser.name,
+        matchedUserName: interestedUser.name || 'A Developer',
         matchedUserPhotoURL: interestedUser.photoURL || '',
       });
       

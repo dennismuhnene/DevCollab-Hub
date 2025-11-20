@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, getDocs, arrayRemove, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, arrayRemove, arrayUnion, updateDoc } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useParams } from 'next/navigation';
@@ -28,7 +28,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { createMatch } from '@/lib/firebase/actions';
 import { addNotification } from '@/lib/firebase/notifications';
 
@@ -48,6 +48,7 @@ export default function ProjectDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
+  const [isInterestLoading, setIsInterestLoading] = useState(false);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedInfo, setMatchedInfo] = useState<{ projectName: string; devName: string; matchId: string } | null>(null);
   
@@ -101,45 +102,44 @@ export default function ProjectDetailsPage() {
   const handleInterest = async () => {
     if (!user || !userProfile || !project) return;
     
+    setIsInterestLoading(true);
     const wasInterested = isInterested;
     // Optimistically update the UI
     setIsInterested(!wasInterested);
     
-    try {
-        const projectRef = doc(db, 'projects', project.id);
-        const updateData = {
-            interestedUsers: wasInterested ? arrayRemove(user.uid) : arrayUnion(user.uid)
-        };
+    const projectRef = doc(db, 'projects', project.id);
+    const updateData = {
+        interestedUsers: wasInterested ? arrayRemove(user.uid) : arrayUnion(user.uid)
+    };
+    
+    // Use non-blocking update with contextual error handling
+    updateDocumentNonBlocking(projectRef, updateData);
 
-        // Use the non-blocking update function which has built-in contextual error handling
-        updateDocumentNonBlocking(projectRef, updateData);
-        
-        if (!wasInterested) {
-             addNotification(project.ownerId, {
+    // Show toast immediately based on optimistic update
+    toast({
+        title: wasInterested ? 'Interest removed' : 'Interest expressed!',
+        description: wasInterested ? undefined : 'The project owner has been notified.',
+    });
+
+    if (!wasInterested) {
+        // Send notification non-blockingly as well
+        try {
+            await addNotification(project.ownerId, {
                 type: 'interest',
                 fromUserId: user.uid,
-                fromUserName: userProfile.name,
+                fromUserName: userProfile.displayName,
                 projectId: project.id,
                 projectTitle: project.title,
                 read: false,
             });
+        } catch (e) {
+             // If notification fails, it's not critical. Log it but don't bother the user.
+            console.error("Failed to send interest notification:", e);
         }
-      
-        toast({
-            title: wasInterested ? 'Interest removed' : 'Interest expressed!',
-            description: wasInterested ? undefined : 'The project owner has been notified.',
-        });
-
-    } catch (e: any) {
-       // Rollback optimistic UI update on failure
-       setIsInterested(wasInterested);
-       console.error("Full error from handleInterest:", e);
-       toast({
-        variant: 'destructive',
-        title: 'Error updating interest',
-        description: e.message || 'An unknown error occurred.',
-      });
     }
+    
+    // This is primarily for UI feedback, the actual write is happening in the background
+    setIsInterestLoading(false);
   };
   
   const handleMatch = async (interestedUser: InterestedUser) => {
@@ -149,10 +149,10 @@ export default function ProjectDetailsPage() {
         projectId: project.id,
         projectTitle: project.title,
         ownerId: project.ownerId,
-        ownerName: userProfile.name,
+        ownerName: userProfile.displayName || 'Project Owner',
         ownerPhotoURL: userProfile.photoURL || '',
         matchedUserId: interestedUser.uid,
-        matchedUserName: interestedUser.name,
+        matchedUserName: interestedUser.name || 'A Developer',
         matchedUserPhotoURL: interestedUser.photoURL || '',
       });
       
@@ -338,7 +338,7 @@ export default function ProjectDetailsPage() {
                 </AlertDialog>
               </div>
             ) : (
-              <Button size="lg" className="w-full" onClick={handleInterest} disabled={!project.collaborationOpen}>
+              <Button size="lg" className="w-full" onClick={handleInterest} disabled={!project.collaborationOpen || isInterestLoading}>
                 {project.collaborationOpen ? (
                   isInterested ? (
                     <>
