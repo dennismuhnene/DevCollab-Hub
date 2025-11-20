@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useParams } from 'next/navigation';
@@ -28,8 +28,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { toggleInterest, createMatch } from '@/lib/firebase/actions';
+import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { createMatch } from '@/lib/firebase/actions';
+import { addNotification } from '@/lib/firebase/notifications';
 
 interface InterestedUser extends UserProfile {
   // extends to ensure type safety
@@ -105,26 +106,29 @@ export default function ProjectDetailsPage() {
     setIsInterested(!wasInterested);
     
     try {
-      await toggleInterest({
-        projectId: project.id,
-        projectTitle: project.title,
-        projectOwnerId: project.ownerId,
-        interestedUserId: user.uid,
-        interestedUserName: userProfile.name,
-      });
+        const projectRef = doc(db, 'projects', project.id);
+        const updateData = {
+            interestedUsers: wasInterested ? arrayRemove(user.uid) : arrayUnion(user.uid)
+        };
 
-      toast({
-        title: wasInterested ? 'Interest removed' : 'Interest expressed!',
-        description: wasInterested ? undefined : 'The project owner has been notified.',
-      });
-
-      // Update local project state to match optimistic update
-      setProject(prev => prev ? ({ 
-        ...prev, 
-        interestedUsers: wasInterested 
-          ? prev.interestedUsers?.filter(uid => uid !== user.uid)
-          : [...(prev.interestedUsers || []), user.uid]
-      }) : null);
+        // Use the non-blocking update function which has built-in contextual error handling
+        updateDocumentNonBlocking(projectRef, updateData);
+        
+        if (!wasInterested) {
+             addNotification(project.ownerId, {
+                type: 'interest',
+                fromUserId: user.uid,
+                fromUserName: userProfile.name,
+                projectId: project.id,
+                projectTitle: project.title,
+                read: false,
+            });
+        }
+      
+        toast({
+            title: wasInterested ? 'Interest removed' : 'Interest expressed!',
+            description: wasInterested ? undefined : 'The project owner has been notified.',
+        });
 
     } catch (e: any) {
        // Rollback optimistic UI update on failure
