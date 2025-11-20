@@ -114,7 +114,6 @@ export default function ProjectDetailsPage() {
         updateDocumentNonBlocking(projectDocRef, { interestedUsers: arrayUnion(user.uid) });
         setProject(prev => prev ? ({ ...prev, interestedUsers: [...(prev.interestedUsers || []), user.uid] }) : null);
         
-        // This is now a server action.
         await addNotification(project.ownerId, {
             type: 'interest',
             fromUserId: user.uid,
