@@ -31,7 +31,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { createMatch } from '@/lib/firebase/matches';
-import { addNotification } from '@/lib/firebase/notifications';
 
 interface InterestedUser extends UserProfile {
   // extends to ensure type safety
@@ -107,15 +106,14 @@ export default function ProjectDetailsPage() {
 
     try {
       if (isInterested) {
-        // Use non-blocking update which has its own error handling
         updateDocumentNonBlocking(projectDocRef, { interestedUsers: arrayRemove(user.uid) });
         setProject(prev => prev ? ({ ...prev, interestedUsers: prev.interestedUsers?.filter(uid => uid !== user.uid) }) : null);
         toast({ title: 'Interest removed' });
       } else {
-        // Use non-blocking update
         updateDocumentNonBlocking(projectDocRef, { interestedUsers: arrayUnion(user.uid) });
         setProject(prev => prev ? ({ ...prev, interestedUsers: [...(prev.interestedUsers || []), user.uid] }) : null);
         
+        // Directly call the server action, no need for fetch
         await addNotification(project.ownerId, {
             type: 'interest',
             fromUserId: user.uid,
@@ -140,27 +138,10 @@ export default function ProjectDetailsPage() {
   const handleMatch = async (interestedUser: InterestedUser) => {
     if (!user || !project) return;
     try {
-      // 1. Create the match document
+      // The server action now handles everything atomically.
       const matchId = await createMatch(project.id, project.ownerId, interestedUser.uid);
-
-      // 2. Update the project document (remove from interested, add to matched)
-      const projectDocRef = doc(db, 'projects', project.id);
-      updateDocumentNonBlocking(projectDocRef, {
-        interestedUsers: arrayRemove(interestedUser.uid),
-        matchedUsers: arrayUnion(interestedUser.uid),
-      });
-
-      // 3. Send notification to the matched user
-      await addNotification(interestedUser.uid, {
-          type: 'match',
-          fromUserId: user.uid,
-          fromUserName: user.displayName || 'A user',
-          matchId: matchId,
-          projectTitle: project.title,
-          read: false,
-      });
-
-      // 4. Update UI
+      
+      // Update UI
       setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId });
       setShowMatchModal(true);
       setInterestedUsers(prev => prev.filter(u => u.uid !== interestedUser.uid));
