@@ -14,11 +14,11 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create, update, delete: if isSignedIn() && uid() == userId;
 
+      // Allow a user to read, update, or delete their own notifications.
+      // Crucially, allow ANY signed-in user to create a notification for another user.
       match /notifications/{notificationId} {
-        // Allow anyone signed-in to create a notification for another user
-        allow create: if isSignedIn();
-        // Only the user can read, update, or delete their own notifications
         allow read, update, delete: if isSignedIn() && uid() == userId;
+        allow create: if isSignedIn();
       }
     }
 
@@ -26,7 +26,8 @@ service cloud.firestore {
     match /projects/{projectId} {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.ownerId == uid();
-      allow update: if isSignedIn() && (resource.data.ownerId == uid() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers','matchedUsers']));
+      // Allow update if user is owner, OR if the only fields being changed are 'interestedUsers' or 'matchedUsers'.
+      allow update: if isSignedIn() && (resource.data.ownerId == uid() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers', 'matchedUsers']));
       allow delete: if isSignedIn() && resource.data.ownerId == uid();
     }
 

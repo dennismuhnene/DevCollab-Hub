@@ -111,10 +111,9 @@ export default function Notifications() {
     }
   }
   
-  const formatTimestamp = (timestamp: Timestamp | Date | undefined) => {
+  const formatTimestamp = (timestamp: Timestamp | undefined) => {
     if (!timestamp) return '';
-    const date = timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
-    return formatDistanceToNow(date, { addSuffix: true });
+    return formatDistanceToNow(timestamp.toDate(), { addSuffix: true });
   }
 
   return (
@@ -151,7 +150,7 @@ export default function Notifications() {
                 <div className="flex-1">
                     {getNotificationText(notif)}
                     <p className="text-xs text-muted-foreground mt-1">
-                        {formatTimestamp(notif.timestamp)}
+                        {formatTimestamp(notif.timestamp as Timestamp)}
                     </p>
                 </div>
             </DropdownMenuItem>
