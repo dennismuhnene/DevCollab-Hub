@@ -27,9 +27,9 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.ownerId == uid();
       
-      // Allow updates under two conditions:
-      // 1. The user is the owner of the project.
-      // 2. The user is only modifying the 'interestedUsers' array.
+      // Combined update rule:
+      // - Allow if the user is the owner.
+      // - OR if the user is only modifying the 'interestedUsers' array.
       allow update: if isSignedIn() && (
         request.resource.data.ownerId == uid() || 
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers'])
