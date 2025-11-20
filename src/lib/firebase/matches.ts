@@ -3,6 +3,7 @@
 import { db } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, doc, getDoc, writeBatch, arrayUnion, arrayRemove } from 'firebase/firestore';
 import type { UserProfile, Project, Notification } from '@/types';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export async function createMatch(projectId: string, ownerId: string, matchedUserId: string): Promise<string> {
   if (!projectId || !ownerId || !matchedUserId) {
@@ -28,10 +29,7 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
     const matchedUserData = matchedUserDoc.data() as UserProfile;
     const projectData = projectDoc.data() as Project;
     
-    const batch = writeBatch(db);
-
     const matchCollectionRef = collection(db, 'matches');
-    const newMatchRef = doc(matchCollectionRef); // Create a new ref with a unique ID
 
     const matchData = {
       projectId,
@@ -47,34 +45,13 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
       timestamp: serverTimestamp(),
     };
 
-    // 1. Create the match document
-    batch.set(newMatchRef, matchData);
+    // This server action now ONLY creates the match document.
+    const matchRef = await addDoc(matchCollectionRef, matchData);
     
-    // 2. Update the project document
-    batch.update(projectDocRef, {
-        matchedUsers: arrayUnion(matchedUserId),
-        interestedUsers: arrayRemove(matchedUserId),
-    });
-
-    // 3. Create a notification for the USER WHO WAS MATCHED
-    const matchedUserNotificationRef = doc(collection(db, 'users', matchedUserId, 'notifications'));
-    batch.set(matchedUserNotificationRef, {
-      type: 'match',
-      fromUserId: ownerId,
-      fromUserName: ownerData.name || 'A user',
-      matchId: newMatchRef.id,
-      projectTitle: projectData.title,
-      read: false,
-      timestamp: serverTimestamp(),
-    } as Omit<Notification, 'id'>);
-    
-    await batch.commit();
-
-    return newMatchRef.id;
+    return matchRef.id;
 
   } catch (error) {
     console.error("Error in createMatch Server Action:", error);
-    // Re-throwing the error to be caught by the client-side caller
     if (error instanceof Error) {
         throw new Error(error.message || 'An unknown error occurred while creating the match.');
     }

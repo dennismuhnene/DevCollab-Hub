@@ -38,7 +38,7 @@ interface InterestedUser extends UserProfile {
 }
 
 export default function ProjectDetailsPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
   const projectId = params.id as string;
@@ -69,7 +69,7 @@ export default function ProjectDetailsPage() {
       const projectDoc = await getDoc(projectDocRef);
 
       if (projectDoc.exists()) {
-        const projectData = { id: projectDoc.id, ...projectDoc.data() } as Project;
+        const projectData = { id: projectDoc.id, ...doc.data() } as Project;
         setProject(projectData);
 
         const ownerDocRef = doc(db, 'users', projectData.ownerId);
@@ -107,14 +107,15 @@ export default function ProjectDetailsPage() {
 
     try {
       if (isInterested) {
-        await updateDoc(projectDocRef, { interestedUsers: arrayRemove(user.uid) });
+        // Use non-blocking update which has its own error handling
+        updateDocumentNonBlocking(projectDocRef, { interestedUsers: arrayRemove(user.uid) });
         setProject(prev => prev ? ({ ...prev, interestedUsers: prev.interestedUsers?.filter(uid => uid !== user.uid) }) : null);
         toast({ title: 'Interest removed' });
       } else {
-        await updateDocumentNonBlocking(projectDocRef, { interestedUsers: arrayUnion(user.uid) });
+        // Use non-blocking update
+        updateDocumentNonBlocking(projectDocRef, { interestedUsers: arrayUnion(user.uid) });
         setProject(prev => prev ? ({ ...prev, interestedUsers: [...(prev.interestedUsers || []), user.uid] }) : null);
         
-        // This is a direct call to the server action.
         await addNotification(project.ownerId, {
             type: 'interest',
             fromUserId: user.uid,
@@ -131,25 +132,43 @@ export default function ProjectDetailsPage() {
        toast({
         variant: 'destructive',
         title: 'Error updating interest',
-        description: e.message,
+        description: e.message || 'An unknown error occurred.',
       });
     }
   };
-
+  
   const handleMatch = async (interestedUser: InterestedUser) => {
     if (!user || !project) return;
     try {
+      // 1. Create the match document
       const matchId = await createMatch(project.id, project.ownerId, interestedUser.uid);
+
+      // 2. Update the project document (remove from interested, add to matched)
+      const projectDocRef = doc(db, 'projects', project.id);
+      updateDocumentNonBlocking(projectDocRef, {
+        interestedUsers: arrayRemove(interestedUser.uid),
+        matchedUsers: arrayUnion(interestedUser.uid),
+      });
+
+      // 3. Send notification to the matched user
+      await addNotification(interestedUser.uid, {
+          type: 'match',
+          fromUserId: user.uid,
+          fromUserName: user.displayName || 'A user',
+          matchId: matchId,
+          projectTitle: project.title,
+          read: false,
+      });
+
+      // 4. Update UI
       setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId });
       setShowMatchModal(true);
-      
-      // Optimistically update the UI
       setInterestedUsers(prev => prev.filter(u => u.uid !== interestedUser.uid));
-      setProject(prev => prev ? ({ ...prev, matchedUsers: [...(prev.matchedUsers || []), interestedUser.uid] }) : null);
+      setProject(prev => prev ? ({ ...prev, matchedUsers: [...(prev.matchedUsers || []), interestedUser.uid], interestedUsers: prev.interestedUsers?.filter(uid => uid !== interestedUser.uid) }) : null);
 
     } catch (error) {
        console.error("Failed to create match:", error);
-       toast({ variant: 'destructive', title: 'Matching Failed' });
+       toast({ variant: 'destructive', title: 'Matching Failed', description: error instanceof Error ? error.message : 'An unknown error occurred.' });
     }
   };
 
@@ -395,5 +414,3 @@ export default function ProjectDetailsPage() {
     </div>
   );
 }
-
-    
