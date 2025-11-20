@@ -1,8 +1,8 @@
 'use server';
 
 import { db } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, doc, getDoc, writeBatch } from 'firebase/firestore';
-import type { UserProfile, Project } from '@/types';
+import { collection, addDoc, serverTimestamp, doc, getDoc, writeBatch, arrayUnion, arrayRemove } from 'firebase/firestore';
+import type { UserProfile, Project, Notification } from '@/types';
 
 export async function createMatch(projectId: string, ownerId: string, matchedUserId: string): Promise<string> {
   if (!projectId || !ownerId || !matchedUserId) {
@@ -56,9 +56,7 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
         interestedUsers: arrayRemove(matchedUserId),
     });
 
-    // 3. Create a notification for the USER WHO WAS MATCHED (not the owner making the call)
-    // This is allowed because anyone can create a notification in another user's subcollection
-    // as long as the rule allows it (which it will). The owner gets instant feedback from the UI.
+    // 3. Create a notification for the USER WHO WAS MATCHED
     const matchedUserNotificationRef = doc(collection(db, 'users', matchedUserId, 'notifications'));
     batch.set(matchedUserNotificationRef, {
       type: 'match',
@@ -68,7 +66,7 @@ export async function createMatch(projectId: string, ownerId: string, matchedUse
       projectTitle: projectData.title,
       read: false,
       timestamp: serverTimestamp(),
-    });
+    } as Omit<Notification, 'id'>);
     
     await batch.commit();
 
