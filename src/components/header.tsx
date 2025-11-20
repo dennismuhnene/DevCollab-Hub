@@ -22,9 +22,16 @@ export default function Header() {
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
 
-  const handleLogout = () => {
-    auth.signOut();
-    router.push('/');
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      // Redirect immediately after sign-out is initiated.
+      router.push('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      // Even if there's an error, try to push the user to the home page.
+      router.push('/');
+    }
   };
 
   const getInitials = (name: string) => {
