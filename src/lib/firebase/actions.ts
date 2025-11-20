@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/firebase/config';
-import { collection, doc, writeBatch, serverTimestamp, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
+import { collection, doc, writeBatch, serverTimestamp, arrayUnion, arrayRemove } from 'firebase/firestore';
 
 // --- MATCH ACTIONS ---
 interface CreateMatchArgs {
@@ -72,6 +72,7 @@ export async function createMatch(args: CreateMatchArgs): Promise<MatchResult> {
         fromUserId: ownerId,
         fromUserName: ownerName,
         matchId: matchDocRef.id,
+        projectId: projectId,
         projectTitle: projectTitle,
         read: false,
         timestamp: serverTimestamp(),
@@ -85,6 +86,7 @@ export async function createMatch(args: CreateMatchArgs): Promise<MatchResult> {
         fromUserId: matchedUserId,
         fromUserName: matchedUserName,
         matchId: matchDocRef.id,
+        projectId: projectId,
         projectTitle: projectTitle,
         read: false,
         timestamp: serverTimestamp(),

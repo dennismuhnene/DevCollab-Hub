@@ -27,12 +27,12 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.ownerId == uid();
       
-      // Combined update rule:
-      // - Allow the owner to update any field.
-      // - OR allow any signed-in user to ONLY modify the 'interestedUsers' array.
+      // Combined, unambiguous update rule:
+      // - The user is the owner, they can change anything.
+      // - OR, a non-owner is ONLY changing the 'interestedUsers' array.
       allow update: if isSignedIn() && 
                     (resource.data.ownerId == uid() || 
-                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers']));
+                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers']));
       
       allow delete: if isSignedIn() && resource.data.ownerId == uid();
     }
