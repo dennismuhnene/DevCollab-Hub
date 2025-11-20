@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -21,8 +22,8 @@ export default function Header() {
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
 
-  const handleLogout = async () => {
-    await auth.signOut();
+  const handleLogout = () => {
+    auth.signOut();
     router.push('/');
   };
 
@@ -117,5 +118,3 @@ export default function Header() {
     </header>
   );
 }
-
-    
