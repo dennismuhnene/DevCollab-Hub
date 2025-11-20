@@ -32,20 +32,16 @@ export async function expressInterest(args: ExpressInterestArgs): Promise<Intere
   }
 
   const projectRef = doc(db, 'projects', projectId);
-  const notificationRef = doc(collection(db, 'users', projectOwnerId, 'notifications'));
   
   try {
     const batch = writeBatch(db);
 
     if (remove) {
-      // If removing interest, just update the project
       batch.update(projectRef, { interestedUsers: arrayRemove(interestedUserId) });
-      // Note: We don't remove the notification to keep the owner's history clean.
     } else {
-      // Add interest to project
       batch.update(projectRef, { interestedUsers: arrayUnion(interestedUserId) });
 
-      // Create notification for project owner
+      const notificationRef = doc(collection(db, 'users', projectOwnerId, 'notifications'));
       const notificationData = {
         type: 'interest',
         fromUserId: interestedUserId,
@@ -63,9 +59,16 @@ export async function expressInterest(args: ExpressInterestArgs): Promise<Intere
 
   } catch (error) {
     console.error('Error expressing interest:', error);
-    if (error instanceof Error) {
-        return { success: false, error: error.message };
-    }
-    return { success: false, error: 'An unknown error occurred.' };
+    // Re-throw the original error to be caught by the client and displayed in the Next.js overlay
+    throw error;
   }
+}
+
+export async function addNotification(userId: string, notification: any) {
+    if (!userId) return;
+    const notificationRef = collection(db, 'users', userId, 'notifications');
+    await addDoc(notificationRef, {
+        ...notification,
+        timestamp: serverTimestamp(),
+    });
 }

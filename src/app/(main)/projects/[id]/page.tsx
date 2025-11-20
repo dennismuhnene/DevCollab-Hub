@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { db, storage } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
@@ -82,7 +82,6 @@ export default function ProjectDetailsPage() {
           setIsInterested(projectData.interestedUsers?.includes(user.uid) || false);
         }
 
-        // If the user is the owner, fetch the full profiles of interested users
         if (projectData.ownerId === user?.uid && projectData.interestedUsers && projectData.interestedUsers.length > 0) {
           const interestedQuery = query(collection(db, 'users'), where('uid', 'in', projectData.interestedUsers));
           const interestedSnapshot = await getDocs(interestedQuery);
@@ -103,7 +102,6 @@ export default function ProjectDetailsPage() {
     if (!user || !userProfile || !project) return;
     
     const wasInterested = isInterested;
-    // Optimistically update the UI
     setIsInterested(!wasInterested);
     
     try {
@@ -113,11 +111,11 @@ export default function ProjectDetailsPage() {
         projectOwnerId: project.ownerId,
         interestedUserId: user.uid,
         interestedUserName: userProfile.name,
-        remove: wasInterested, // Pass true to remove interest
+        remove: wasInterested,
       });
 
-      if (!result.success) {
-        throw new Error(result.error || 'An unknown error occurred.');
+      if (!result.success && result.error) {
+        throw new Error(result.error);
       }
       
       toast({
@@ -125,7 +123,6 @@ export default function ProjectDetailsPage() {
         description: wasInterested ? undefined : 'The project owner has been notified.',
       });
 
-      // Update local project state to match backend
       setProject(prev => prev ? ({ 
         ...prev, 
         interestedUsers: wasInterested 
@@ -134,7 +131,7 @@ export default function ProjectDetailsPage() {
       }) : null);
 
     } catch (e: any) {
-      // Revert optimistic UI update on failure
+       console.error("Full error from handleInterest:", e);
        setIsInterested(wasInterested);
        toast({
         variant: 'destructive',
@@ -178,7 +175,6 @@ export default function ProjectDetailsPage() {
 
     try {
       if (project.imageUrl) {
-        // We can attempt to delete the image, but don't block if it fails
         const { ref, deleteObject } = await import('firebase/storage');
         const imageRef = ref(storage, project.imageUrl);
         await deleteObject(imageRef).catch(err => console.warn("Image deletion failed, may not exist", err));
