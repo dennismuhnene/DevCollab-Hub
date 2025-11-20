@@ -27,12 +27,13 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.ownerId == uid();
       
-      // Allow the owner to make any update to their own project.
-      allow update: if isSignedIn() && request.resource.data.ownerId == uid();
-
-      // ALSO allow any signed-in user to update ONLY the 'interestedUsers' field.
-      // This is for expressing or removing interest in a project.
-      allow update: if isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers']);
+      // Allow updates under two conditions:
+      // 1. The user is the owner of the project.
+      // 2. The user is only modifying the 'interestedUsers' array.
+      allow update: if isSignedIn() && (
+        request.resource.data.ownerId == uid() || 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers'])
+      );
       
       allow delete: if isSignedIn() && resource.data.ownerId == uid();
     }
