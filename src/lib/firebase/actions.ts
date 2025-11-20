@@ -51,8 +51,8 @@ export async function createMatch(args: CreateMatchArgs): Promise<MatchResult> {
       matchedUserId,
       participants: [ownerId, matchedUserId],
       participantsDetails: [
-        { uid: ownerId, name: ownerName, photoURL: ownerPhotoURL },
-        { uid: matchedUserId, name: matchedUserName, photoURL: matchedUserPhotoURL },
+        { uid: ownerId, name: ownerName || 'Project Owner', photoURL: ownerPhotoURL || '' },
+        { uid: matchedUserId, name: matchedUserName || 'A Developer', photoURL: matchedUserPhotoURL || '' },
       ],
       status: 'active',
       timestamp: serverTimestamp(),
