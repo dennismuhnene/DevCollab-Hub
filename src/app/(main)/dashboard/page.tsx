@@ -14,7 +14,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import ProjectCard from '@/components/project-card';
 import { PlusCircle, ArrowRight, Briefcase, Users, Edit, Eye, BadgeCheck, BadgeX, BrainCircuit, Code, Clock, UserCheck, MessageSquare, Hand } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { createMatch } from '@/lib/firebase/matches';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -26,6 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { createMatch } from '@/lib/firebase/actions';
 
 interface InterestedUser extends UserProfile {
   // No additional fields needed, just to type the array
@@ -121,7 +121,7 @@ export default function DashboardPage() {
          throw new Error(matchResult.error || 'Failed to create match.');
       }
     } catch (error) {
-      console.error("Failed to create match:", error);
+      console.error("Full error from handleMatch:", error);
       toast({
         variant: 'destructive',
         title: 'Matching Failed',

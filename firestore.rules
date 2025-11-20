@@ -32,7 +32,12 @@ service cloud.firestore {
       // - OR if the user is only modifying the 'interestedUsers' array.
       allow update: if isSignedIn() && (
         request.resource.data.ownerId == uid() || 
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers'])
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers']) &&
+          // Ensure they aren't trying to impersonate the owner or change other locked fields
+          request.resource.data.ownerId == resource.data.ownerId &&
+          request.resource.data.title == resource.data.title
+        )
       );
       
       allow delete: if isSignedIn() && resource.data.ownerId == uid();

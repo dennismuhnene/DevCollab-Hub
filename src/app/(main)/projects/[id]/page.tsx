@@ -29,8 +29,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { createMatch } from '@/lib/firebase/matches';
-import { expressInterest } from '@/lib/firebase/notifications';
+import { toggleInterest, createMatch } from '@/lib/firebase/actions';
 
 interface InterestedUser extends UserProfile {
   // extends to ensure type safety
@@ -102,27 +101,24 @@ export default function ProjectDetailsPage() {
     if (!user || !userProfile || !project) return;
     
     const wasInterested = isInterested;
+    // Optimistically update the UI
     setIsInterested(!wasInterested);
     
     try {
-      const result = await expressInterest({
+      await toggleInterest({
         projectId: project.id,
         projectTitle: project.title,
         projectOwnerId: project.ownerId,
         interestedUserId: user.uid,
         interestedUserName: userProfile.name,
-        remove: wasInterested,
       });
 
-      if (!result.success && result.error) {
-        throw new Error(result.error);
-      }
-      
       toast({
         title: wasInterested ? 'Interest removed' : 'Interest expressed!',
         description: wasInterested ? undefined : 'The project owner has been notified.',
       });
 
+      // Update local project state to match optimistic update
       setProject(prev => prev ? ({ 
         ...prev, 
         interestedUsers: wasInterested 
@@ -131,12 +127,13 @@ export default function ProjectDetailsPage() {
       }) : null);
 
     } catch (e: any) {
-       console.error("Full error from handleInterest:", e);
+       // Rollback optimistic UI update on failure
        setIsInterested(wasInterested);
+       console.error("Full error from handleInterest:", e);
        toast({
         variant: 'destructive',
         title: 'Error updating interest',
-        description: e.message,
+        description: e.message || 'An unknown error occurred.',
       });
     }
   };

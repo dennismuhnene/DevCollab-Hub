@@ -1,8 +1,76 @@
 'use server';
 
 import { db } from '@/lib/firebase/config';
-import { collection, doc, writeBatch, serverTimestamp, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, doc, writeBatch, serverTimestamp, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
 
+// --- INTEREST ACTIONS ---
+interface ToggleInterestArgs {
+  projectId: string;
+  projectTitle: string;
+  projectOwnerId: string;
+  interestedUserId: string;
+  interestedUserName: string;
+}
+
+export async function toggleInterest(args: ToggleInterestArgs): Promise<{ success: boolean; error?: string }> {
+  const {
+    projectId,
+    projectTitle,
+    projectOwnerId,
+    interestedUserId,
+    interestedUserName,
+  } = args;
+
+  if (!projectId || !projectOwnerId || !interestedUserId) {
+    throw new Error("Invalid arguments for toggling interest.");
+  }
+
+  const projectRef = doc(db, 'projects', projectId);
+
+  try {
+    const projectSnap = await getDoc(projectRef);
+    if (!projectSnap.exists()) {
+      throw new Error("Project not found.");
+    }
+    
+    const projectData = projectSnap.data();
+    const isCurrentlyInterested = projectData.interestedUsers?.includes(interestedUserId);
+    
+    const batch = writeBatch(db);
+
+    if (isCurrentlyInterested) {
+      // --- REMOVE INTEREST ---
+      batch.update(projectRef, { interestedUsers: arrayRemove(interestedUserId) });
+      // Note: We are not deleting the notification to keep the owner's history.
+    } else {
+      // --- ADD INTEREST ---
+      batch.update(projectRef, { interestedUsers: arrayUnion(interestedUserId) });
+
+      // Create notification for the project owner
+      const notificationRef = doc(collection(db, 'users', projectOwnerId, 'notifications'));
+      const notificationData = {
+        type: 'interest',
+        fromUserId: interestedUserId,
+        fromUserName: interestedUserName,
+        projectId: projectId,
+        projectTitle: projectTitle,
+        read: false,
+        timestamp: serverTimestamp(),
+      };
+      batch.set(notificationRef, notificationData);
+    }
+    
+    await batch.commit();
+    return { success: true };
+
+  } catch (error) {
+    console.error('Error in toggleInterest Server Action:', error);
+    // Re-throw the original error to be caught by the client for detailed debugging
+    throw error;
+  }
+}
+
+// --- MATCH ACTIONS ---
 interface CreateMatchArgs {
   projectId: string;
   projectTitle: string;
@@ -20,7 +88,6 @@ interface MatchResult {
   error?: string;
 }
 
-// This is now an atomic server action that handles all DB writes in a single batch.
 export async function createMatch(args: CreateMatchArgs): Promise<MatchResult> {
   const {
     projectId,
@@ -34,7 +101,7 @@ export async function createMatch(args: CreateMatchArgs): Promise<MatchResult> {
   } = args;
 
   if (!projectId || !ownerId || !matchedUserId) {
-    return { success: false, error: 'Invalid arguments for creating a match.' };
+     throw new Error('Invalid arguments for creating a match.');
   }
 
   const projectDocRef = doc(db, 'projects', projectId);
@@ -98,9 +165,7 @@ export async function createMatch(args: CreateMatchArgs): Promise<MatchResult> {
 
   } catch (error) {
     console.error("Error in createMatch Server Action:", error);
-    if (error instanceof Error) {
-        return { success: false, error: error.message };
-    }
-    return { success: false, error: 'An unknown error occurred while creating the match.' };
+    // Re-throw the original error to be caught by the client for detailed debugging
+    throw error;
   }
 }
