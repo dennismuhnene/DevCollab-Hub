@@ -34,7 +34,7 @@ export async function createMatch(args: CreateMatchArgs): Promise<MatchResult> {
   } = args;
 
   if (!projectId || !ownerId || !matchedUserId) {
-     throw new Error('Invalid arguments for creating a match.');
+     throw new Error('Invalid arguments for creating a match. Missing projectId, ownerId, or matchedUserId.');
   }
 
   const projectDocRef = doc(db, 'projects', projectId);
@@ -70,7 +70,7 @@ export async function createMatch(args: CreateMatchArgs): Promise<MatchResult> {
     const userNotificationData = {
         type: 'match',
         fromUserId: ownerId,
-        fromUserName: ownerName,
+        fromUserName: ownerName || 'A User',
         matchId: matchDocRef.id,
         projectId: projectId,
         projectTitle: projectTitle,
@@ -84,7 +84,7 @@ export async function createMatch(args: CreateMatchArgs): Promise<MatchResult> {
     const ownerNotificationData = {
         type: 'match',
         fromUserId: matchedUserId,
-        fromUserName: matchedUserName,
+        fromUserName: matchedUserName || 'A User',
         matchId: matchDocRef.id,
         projectId: projectId,
         projectTitle: projectTitle,
@@ -101,24 +101,6 @@ export async function createMatch(args: CreateMatchArgs): Promise<MatchResult> {
   } catch (error) {
     console.error("Error in createMatch Server Action:", error);
     // Re-throw the original error to be caught by the client for detailed debugging
-    throw error;
-  }
-}
-
-// This action is being kept in case it's needed elsewhere, but the primary interest logic
-// is now handled on the client with non-blocking updates for better error reporting.
-export async function toggleInterest(projectId: string, userId: string, isInterested: boolean) {
-  if (!projectId || !userId) {
-    throw new Error('Project ID and User ID must be provided');
-  }
-  const projectRef = doc(db, 'projects', projectId);
-  try {
-    await updateDoc(projectRef, {
-      interestedUsers: isInterested ? arrayRemove(userId) : arrayUnion(userId),
-    });
-    return { success: true };
-  } catch (error) {
-    console.error('Error toggling interest:', error);
     throw error;
   }
 }

@@ -121,7 +121,7 @@ export default function DashboardPage() {
          throw new Error(matchResult.error || 'Failed to create match.');
       }
     } catch (error) {
-      console.error("Full error from handleMatch:", error);
+      console.error("Failed to create match:", error);
       toast({
         variant: 'destructive',
         title: 'Matching Failed',
