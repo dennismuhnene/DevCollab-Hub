@@ -45,17 +45,21 @@ service cloud.firestore {
 
     // MATCHES
     match /matches/{matchId} {
-      // Allow a user to read, update, or delete a match document if their UID is in participants list.
+      // Allow reading an individual match only if user is participant
       allow get, update, delete: if isSignedIn() && uid() in resource.data.participants;
 
-      // Allow create: user must be in participants being created.
+      // Creating: must include themselves as participant
       allow create: if isSignedIn() && uid() in request.resource.data.participants;
 
-      // Allow a list (query) only if querying by participants array-contains the caller UID
-      allow list: if isSignedIn() && 'participants' in request.query.where;
+      // Allow list (query): A user can only query for matches they are a participant in.
+      allow list: if isSignedIn() && request.query.where.size() == 1 &&
+                 'participants' in request.query.where &&
+                 request.query.where['participants'][1] == 'array-contains' &&
+                 request.query.where['participants'][2] == uid();
 
       // MESSAGES SUBCOLLECTION
       match /messages/{messageId} {
+
         function isParticipant() {
           return exists(/databases/$(database)/documents/matches/$(matchId)) &&
                  uid() in get(/databases/$(database)/documents/matches/$(matchId)).data.participants;
