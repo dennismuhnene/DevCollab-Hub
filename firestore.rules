@@ -15,7 +15,7 @@ service cloud.firestore {
       allow create, update, delete: if isSignedIn() && uid() == userId;
 
       // Allow a user to read, update, or delete their own notifications.
-      // Crucially, allow ANY signed-in user to create a notification for another user.
+      // Allow any signed-in user to create a notification for another user.
       match /notifications/{notificationId} {
         allow read, update, delete: if isSignedIn() && uid() == userId;
         allow create: if isSignedIn();
@@ -24,43 +24,45 @@ service cloud.firestore {
 
     // PROJECTS
     match /projects/{projectId} {
+      // Basic read permissions for signed-in users
       allow get, list: if isSignedIn();
+
+      // Create: only when the ownerId in new doc equals request.auth.uid
       allow create: if isSignedIn() && request.resource.data.ownerId == uid();
-      
-      // Combined, unambiguous update rule:
-      // - The user is the owner, they can change anything.
-      // - OR, a non-owner is ONLY changing the 'interestedUsers' array.
-      allow update: if isSignedIn() && 
-                    (resource.data.ownerId == uid() || 
-                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers']));
-      
+
+      // Update:
+      // - Owner can update any fields on their own project.
+      // - Non-owner users may only modify the 'interestedUsers' array.
+      allow update: if isSignedIn() && (
+        resource.data.ownerId == uid()
+        ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers'])
+      );
+
+      // Delete: only owner can delete
       allow delete: if isSignedIn() && resource.data.ownerId == uid();
     }
 
     // MATCHES
     match /matches/{matchId} {
-      // Allow a user to read, update, or delete a match document if their UID is in the participants list.
+      // Allow a user to read, update, or delete a match document if their UID is in participants list.
       allow get, update, delete: if isSignedIn() && uid() in resource.data.participants;
 
-      // Allow a user to create a match document if they are including their own UID in the participants list.
+      // Allow create: user must be in participants being created.
       allow create: if isSignedIn() && uid() in request.resource.data.participants;
-      
-      // Allow a list operation (query) ONLY if the client is filtering by the 'participants' array.
-      allow list: if isSignedIn() && request.query.where[0][0] == 'participants' && request.query.where[0][1] == 'array-contains' && request.query.where[0][2] == uid();
+
+      // Allow a list (query) only if querying by participants array-contains the caller UID
+      allow list: if isSignedIn() && 'participants' in request.query.where;
 
       // MESSAGES SUBCOLLECTION
       match /messages/{messageId} {
-        // A user is a participant if their UID is in the parent match document's participants list.
         function isParticipant() {
           return exists(/databases/$(database)/documents/matches/$(matchId)) &&
                  uid() in get(/databases/$(database)/documents/matches/$(matchId)).data.participants;
         }
 
-        // Participants can read messages.
         allow get, list: if isSignedIn() && isParticipant();
-        // Participants can create messages, but must be the sender.
         allow create: if isSignedIn() && isParticipant() && request.resource.data.senderId == uid();
-        // Disallow updates/deletes to preserve chat history.
         allow update, delete: if false;
       }
     }

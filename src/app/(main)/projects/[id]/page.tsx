@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, getDocs, arrayRemove, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, arrayRemove, arrayUnion, documentId } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useParams } from 'next/navigation';
@@ -84,9 +84,9 @@ export default function ProjectDetailsPage() {
         }
 
         if (projectData.ownerId === user?.uid && projectData.interestedUsers && projectData.interestedUsers.length > 0) {
-          const interestedQuery = query(collection(db, 'users'), where('uid', 'in', projectData.interestedUsers));
+          const interestedQuery = query(collection(db, 'users'), where(documentId(), 'in', projectData.interestedUsers));
           const interestedSnapshot = await getDocs(interestedQuery);
-          setInterestedUsers(interestedSnapshot.docs.map(d => d.data() as InterestedUser));
+          setInterestedUsers(interestedSnapshot.docs.map(d => ({ uid: d.id, ...(d.data() as any) } as InterestedUser)));
         }
 
       } else {
@@ -127,7 +127,7 @@ export default function ProjectDetailsPage() {
             await addNotification(project.ownerId, {
                 type: 'interest',
                 fromUserId: user.uid,
-                fromUserName: userProfile.displayName,
+                fromUserName: userProfile.name,
                 projectId: project.id,
                 projectTitle: project.title,
                 read: false,
@@ -149,7 +149,7 @@ export default function ProjectDetailsPage() {
         projectId: project.id,
         projectTitle: project.title,
         ownerId: project.ownerId,
-        ownerName: userProfile.displayName || 'Project Owner',
+        ownerName: userProfile.name || 'Project Owner',
         ownerPhotoURL: userProfile.photoURL || '',
         matchedUserId: interestedUser.uid,
         matchedUserName: interestedUser.name || 'A Developer',

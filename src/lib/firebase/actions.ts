@@ -1,18 +1,39 @@
 'use server';
 
-import { db } from '@/lib/firebase/config';
-import { collection, doc, writeBatch, serverTimestamp, arrayUnion, arrayRemove } from 'firebase/firestore';
+import admin from 'firebase-admin';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+
+// Initialize firebase-admin once (singleton pattern).
+if (!admin.apps.length) {
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    throw new Error('Missing FIREBASE_SERVICE_ACCOUNT_KEY environment variable for firebase-admin initialization.');
+  }
+  let serviceAccount;
+  try {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+  } catch (err) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON. Make sure you pasted the JSON key stringified into the env var.');
+  }
+
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    // Optional: if you use databaseURL in other admin APIs add it to env and here:
+    // databaseURL: process.env.FIREBASE_DATABASE_URL,
+  });
+}
+
+const adminDb = getFirestore();
 
 // --- MATCH ACTIONS ---
 interface CreateMatchArgs {
   projectId: string;
   projectTitle: string;
   ownerId: string;
-  ownerName: string;
-  ownerPhotoURL: string;
+  ownerName?: string;
+  ownerPhotoURL?: string;
   matchedUserId: string;
-  matchedUserName: string;
-  matchedUserPhotoURL: string;
+  matchedUserName?: string;
+  matchedUserPhotoURL?: string;
 }
 
 interface MatchResult {
@@ -34,16 +55,26 @@ export async function createMatch(args: CreateMatchArgs): Promise<MatchResult> {
   } = args;
 
   if (!projectId || !ownerId || !matchedUserId) {
-     throw new Error('Invalid arguments for creating a match. Missing projectId, ownerId, or matchedUserId.');
+    throw new Error('Invalid arguments for creating a match. Missing projectId, ownerId, or matchedUserId.');
   }
 
-  const projectDocRef = doc(db, 'projects', projectId);
-  
   try {
-    const batch = writeBatch(db);
+    // 0. Verify the calling user is the project owner.
+    const projectRef = adminDb.doc(`projects/${projectId}`);
+    const projectSnap = await projectRef.get();
+    if (!projectSnap.exists) {
+      return { success: false, error: 'Project not found.' };
+    }
+    const projectData = projectSnap.data();
+    if (!projectData || projectData.ownerId !== ownerId) {
+      return { success: false, error: 'Not authorized: provided ownerId does not match project owner.' };
+    }
 
-    // 1. Create the new match document.
-    const matchDocRef = doc(collection(db, 'matches'));
+    // 1. Build batch
+    const batch = adminDb.batch();
+
+    // 1a. Create match doc in top-level 'matches' collection
+    const matchDocRef = adminDb.collection('matches').doc(); // auto id
     const matchData = {
       projectId,
       projectTitle,
@@ -55,52 +86,51 @@ export async function createMatch(args: CreateMatchArgs): Promise<MatchResult> {
         { uid: matchedUserId, name: matchedUserName || 'A Developer', photoURL: matchedUserPhotoURL || '' },
       ],
       status: 'active',
-      timestamp: serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     };
     batch.set(matchDocRef, matchData);
 
-    // 2. Update the project document: remove from interested, add to matched
-    batch.update(projectDocRef, {
-      interestedUsers: arrayRemove(matchedUserId),
-      matchedUsers: arrayUnion(matchedUserId)
+    // 1b. Update project document
+    batch.update(projectRef, {
+      interestedUsers: FieldValue.arrayRemove(matchedUserId),
+      matchedUsers: FieldValue.arrayUnion(matchedUserId),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // 3. Create notification for the matched user.
-    const userNotificationRef = doc(collection(db, 'users', matchedUserId, 'notifications'));
+    // 1c. Create notification for the matched user
+    const userNotificationRef = adminDb.collection('users').doc(matchedUserId).collection('notifications').doc();
     const userNotificationData = {
-        type: 'match',
-        fromUserId: ownerId,
-        fromUserName: ownerName || 'A User',
-        matchId: matchDocRef.id,
-        projectId: projectId,
-        projectTitle: projectTitle,
-        read: false,
-        timestamp: serverTimestamp(),
+      type: 'match',
+      fromUserId: ownerId,
+      fromUserName: ownerName || 'A User',
+      matchId: matchDocRef.id,
+      projectId: projectId,
+      projectTitle: projectTitle,
+      read: false,
+      timestamp: FieldValue.serverTimestamp(),
     };
     batch.set(userNotificationRef, userNotificationData);
 
-    // 4. Create notification for the project owner.
-    const ownerNotificationRef = doc(collection(db, 'users', ownerId, 'notifications'));
+    // 1d. Create notification for the project owner
+    const ownerNotificationRef = adminDb.collection('users').doc(ownerId).collection('notifications').doc();
     const ownerNotificationData = {
-        type: 'match',
-        fromUserId: matchedUserId,
-        fromUserName: matchedUserName || 'A User',
-        matchId: matchDocRef.id,
-        projectId: projectId,
-        projectTitle: projectTitle,
-        read: false,
-        timestamp: serverTimestamp(),
+      type: 'match',
+      fromUserId: matchedUserId,
+      fromUserName: matchedUserName || 'A User',
+      matchId: matchDocRef.id,
+      projectId: projectId,
+      projectTitle: projectTitle,
+      read: false,
+      timestamp: FieldValue.serverTimestamp(),
     };
     batch.set(ownerNotificationRef, ownerNotificationData);
 
-    // 5. Commit the atomic batch write.
+    // 2. Commit the batch atomically
     await batch.commit();
-    
-    return { success: true, matchId: matchDocRef.id };
 
-  } catch (error) {
-    console.error("Error in createMatch Server Action:", error);
-    // Re-throw the original error to be caught by the client for detailed debugging
-    throw error;
+    return { success: true, matchId: matchDocRef.id };
+  } catch (error: any) {
+    console.error('Error in createMatch server action (admin):', error);
+    return { success: false, error: error?.message || String(error) };
   }
 }

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { collection, query, where, getDocs, limit, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, doc, documentId } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { Project, UserProfile } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -65,18 +65,18 @@ export default function DashboardPage() {
       const interestedUsersData: Record<string, InterestedUser[]> = {};
       for (const project of projects) {
         if (project.interestedUsers && project.interestedUsers.length > 0) {
-          const usersQuery = query(collection(db, 'users'), where('uid', 'in', project.interestedUsers));
+          const usersQuery = query(collection(db, 'users'), where(documentId(), 'in', project.interestedUsers));
           const usersSnapshot = await getDocs(usersQuery);
-          interestedUsersData[project.id] = usersSnapshot.docs.map(d => d.data() as InterestedUser);
+          interestedUsersData[project.id] = usersSnapshot.docs.map(d => ({ uid: d.id, ...(d.data() as any) } as InterestedUser));
         }
       }
       setInterestedUsersByProject(interestedUsersData);
 
       // Fetch recommended developers
       const usersCol = collection(db, 'users');
-      const usersQuery = query(usersCol, where('uid', '!=', user.uid), limit(4));
+      const usersQuery = query(usersCol, where(documentId(), '!=', user.uid), limit(4));
       const usersSnapshot = await getDocs(usersQuery);
-      setRecommendedDevelopers(usersSnapshot.docs.map(doc => doc.data() as UserProfile));
+      setRecommendedDevelopers(usersSnapshot.docs.map(d => ({ uid: d.id, ...(d.data() as any) } as UserProfile)));
       
       setLoadingData(false);
     };
@@ -91,7 +91,7 @@ export default function DashboardPage() {
         projectId: project.id,
         projectTitle: project.title,
         ownerId: project.ownerId,
-        ownerName: userProfile.displayName || 'Project Owner',
+        ownerName: userProfile.name || 'Project Owner',
         ownerPhotoURL: userProfile.photoURL || '',
         matchedUserId: interestedUser.uid,
         matchedUserName: interestedUser.name || 'A Developer',
