@@ -51,11 +51,8 @@ service cloud.firestore {
       // Creating: must include themselves as participant
       allow create: if isSignedIn() && uid() in request.resource.data.participants;
 
-      // Allow list (query): A user can only query for matches they are a participant in.
-      allow list: if isSignedIn() && request.query.where.size() == 1 &&
-                 'participants' in request.query.where &&
-                 request.query.where['participants'][1] == 'array-contains' &&
-                 request.query.where['participants'][2] == uid();
+      // Allow list (query): allow signed-in users, but ONLY if they are filtering by their own UID in the 'participants' array.
+      allow list: if isSignedIn() && request.query.where.size() == 1 && request.query.where[0].fieldPath == 'participants' && request.query.where[0].op == 'array-contains' && request.query.where[0].value == uid();
 
       // MESSAGES SUBCOLLECTION
       match /messages/{messageId} {
