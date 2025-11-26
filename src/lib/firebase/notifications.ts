@@ -1,3 +1,4 @@
+
 import { db } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, writeBatch } from 'firebase/firestore';
 
@@ -9,7 +10,6 @@ export async function addNotification(userId: string, notification: any) {
             ...notification,
             read: notification.read ?? false,
             timestamp: serverTimestamp(),
-            clientTimestamp: new Date(),
         });
     } catch (error) {
         console.error("Failed to add notification: ", error);
