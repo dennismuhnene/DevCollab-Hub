@@ -88,12 +88,9 @@ export default function Notifications() {
         await updateDoc(notifRef, { read: true });
     }
 
-    // Do not navigate for message notifications, just mark as read.
-    if (notification.type === 'message') {
-      return; 
-    }
-
-    if (notification.type === 'interest' && notification.projectId) {
+    if (notification.type === 'message' && notification.matchId) {
+      router.push(`/messages/${notification.matchId}`);
+    } else if (notification.type === 'interest' && notification.projectId) {
       router.push(`/projects/${notification.projectId}`);
     } else if (notification.type === 'match' && notification.matchId) {
        await openChat(notification.matchId, router);
@@ -138,9 +135,17 @@ export default function Notifications() {
     }
   }
   
-  const formatTimestamp = (timestamp: Timestamp | undefined) => {
+  const formatTimestamp = (timestamp: any) => {
     if (!timestamp) return '';
-    return formatDistanceToNow(timestamp.toDate(), { addSuffix: true });
+    // Firestore Timestamps have a toDate() method.
+    if (timestamp instanceof Timestamp) {
+      return formatDistanceToNow(timestamp.toDate(), { addSuffix: true });
+    }
+    // Handle cases where it might be a plain object from SSR or serialization
+    if (typeof timestamp === 'object' && timestamp.seconds) {
+      return formatDistanceToNow(new Date(timestamp.seconds * 1000), { addSuffix: true });
+    }
+    return '';
   }
 
   return (
@@ -177,7 +182,7 @@ export default function Notifications() {
                 <div className="flex-1">
                     {getNotificationText(notif)}
                     <p className="text-xs text-muted-foreground mt-1">
-                        {formatTimestamp(notif.timestamp as Timestamp)}
+                        {formatTimestamp(notif.timestamp)}
                     </p>
                 </div>
             </DropdownMenuItem>
