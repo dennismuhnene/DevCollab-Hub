@@ -240,6 +240,8 @@ export default function ProjectDetailsPage() {
   if (!project) {
     return <div className="text-center py-20">Project not found.</div>;
   }
+  
+  const uniqueMatchedUsers = project.matchedUsers ? [...new Set(project.matchedUsers)] : [];
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
@@ -299,11 +301,11 @@ export default function ProjectDetailsPage() {
                   </div>
                 ) : <p className="text-muted-foreground text-sm mb-6">No one has shown interest yet.</p>}
 
-                 {project.matchedUsers && project.matchedUsers.length > 0 && (
+                 {uniqueMatchedUsers.length > 0 && (
                   <div>
                     <h3 className="font-semibold mb-4 flex items-center gap-2"><UserCheck className="h-5 w-5 text-green-500"/>Matched Developers</h3>
                      <ul className="space-y-4">
-                      {project.matchedUsers.map(userId => (
+                      {uniqueMatchedUsers.map(userId => (
                         <li key={userId} className="flex items-center justify-between">
                           <p>A developer is matched</p>
                           <Button variant="outline" size="sm" asChild>
