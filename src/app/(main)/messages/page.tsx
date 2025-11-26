@@ -1,6 +1,6 @@
 'use client';
 
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { db } from '@/lib/firebase/config';
