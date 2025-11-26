@@ -49,8 +49,8 @@ export default function ChatPage() {
    useEffect(() => {
     if (matches) {
         const sorted = [...matches].sort((a, b) => {
-            const timeA = a.timestamp?.toMillis() || 0;
-            const timeB = b.timestamp?.toMillis() || 0;
+            const timeA = a.timestamp?.toMillis() || a.createdAt?.toMillis() || 0;
+            const timeB = b.timestamp?.toMillis() || b.createdAt?.toMillis() || 0;
             return timeB - timeA;
         });
         setSortedMatches(sorted);

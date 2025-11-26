@@ -41,18 +41,17 @@ service cloud.firestore {
     match /matches/{matchId} {
 
       function hasParticipants() {
-        return resource.data.keys().hasAll(['participants', 'participantsDetails'])
+        return resource.data.keys().hasAll(['participants'])
           && resource.data.participants is list;
       }
-
-      // Allow any participant to read their own match document
-      allow read: if isSignedIn() && hasParticipants() && uid() in resource.data.participants;
       
-      // Temporarily permissive rule for LIST to unblock the client.
-      // WARNING: This is insecure and should be replaced.
-      allow list: if isSignedIn();
+      // Allow any participant to read their own match document
+      allow get: if isSignedIn() && hasParticipants() && uid() in resource.data.participants;
 
-      // When creating a match, the new document must contain a 'participants' map
+      // Secure rule for LIST: Only allow if the query is filtering by the user's UID.
+      allow list: if isSignedIn() && request.query.where[0][0] == 'participants' && request.query.where[0][1] == 'array-contains' && request.query.where[0][2] == uid();
+
+      // When creating a match, the new document must contain a 'participants' array
       // and the current user must be one of the participants.
       allow create: if isSignedIn()
           && request.resource.data.keys().hasAll(['participants', 'participantsDetails'])
@@ -62,7 +61,7 @@ service cloud.firestore {
       // Allow participants to update the match (e.g., for last message timestamp)
       allow update: if isSignedIn()
           && hasParticipants()
-          && uid() in resource.data.participants;
+          -&& uid() in resource.data.participants;
 
       // Do not allow matches to be deleted.
       allow delete: if false;
