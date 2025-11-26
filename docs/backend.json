@@ -173,6 +173,13 @@
           "type": "string",
           "description": "Status of the match (e.g., active, closed).",
           "enum": ["active", "closed"]
+        },
+        "archivedBy": {
+          "type": "array",
+          "description": "List of user IDs who have archived this match.",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [

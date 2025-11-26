@@ -6,14 +6,17 @@ import { useAuth } from '@/lib/hooks/use-auth';
 import { db } from '@/lib/firebase/config';
 import type { Match } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageSquare, Users } from 'lucide-react';
+import { MessageSquare, Users, Archive } from 'lucide-react';
 import MatchList from '@/components/match-list';
 import { useMemoFirebase } from '@/firebase';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 export default function MessagesPage() {
   const { user } = useAuth();
   const [sortedMatches, setSortedMatches] = useState<Match[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
 
   // This query now perfectly matches the security rule for 'list'
   const matchesQuery = useMemoFirebase(
@@ -40,6 +43,14 @@ export default function MessagesPage() {
         setSortedMatches(sorted);
     }
   }, [matches]);
+  
+  const filteredMatches = useMemo(() => {
+    if (!user) return [];
+    return sortedMatches.filter(match => {
+      const isArchived = match.archivedBy?.includes(user.uid);
+      return showArchived ? isArchived : !isArchived;
+    });
+  }, [sortedMatches, showArchived, user]);
 
 
   useEffect(() => {
@@ -51,19 +62,26 @@ export default function MessagesPage() {
 
   return (
     <div className="flex h-full border-t">
-      <aside className="w-full md:w-1/3 lg:w-1/4 h-full border-r bg-muted/20">
+      <aside className="w-full md:w-1/3 lg:w-1/4 h-full border-r bg-muted/20 flex flex-col">
         <div className="p-4 border-b">
           <h2 className="text-xl font-semibold flex items-center">
             <Users className="mr-3 h-5 w-5" />
             Matches
           </h2>
         </div>
+        <div className="p-4 border-b flex items-center justify-between">
+           <Label htmlFor="show-archived" className="flex items-center gap-2 text-sm font-medium">
+             <Archive className="h-4 w-4" />
+             Show Archived
+           </Label>
+           <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
+        </div>
         {isLoading ? (
           <div className="p-4 space-y-3">
             {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
           </div>
         ) : (
-          <MatchList matches={sortedMatches} />
+          <MatchList matches={filteredMatches} />
         )}
       </aside>
       <main className="flex-1 hidden md:flex flex-col items-center justify-center text-center bg-background">

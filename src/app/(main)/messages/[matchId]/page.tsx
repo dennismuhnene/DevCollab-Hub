@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { useAuth } from '@/lib/hooks/use-auth';
@@ -12,10 +12,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Send, Users } from 'lucide-react';
+import { Send, Users, Archive } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { addNotification } from '@/lib/firebase/notifications';
 import { useMemoFirebase } from '@/firebase';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 export default function ChatPage() {
   const { user, loading: authLoading } = useAuth();
@@ -30,6 +32,8 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sortedMatches, setSortedMatches] = useState<Match[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
+
 
   // This query now perfectly matches the security rule for 'list'
   const matchesQuery = useMemoFirebase(
@@ -56,6 +60,14 @@ export default function ChatPage() {
         setSortedMatches(sorted);
     }
   }, [matches]);
+
+  const filteredMatches = useMemo(() => {
+    if (!user) return [];
+    return sortedMatches.filter(match => {
+      const isArchived = match.archivedBy?.includes(user.uid);
+      return showArchived ? isArchived : !isArchived;
+    });
+  }, [sortedMatches, showArchived, user]);
 
   useEffect(() => {
     if (matchesError) {
@@ -162,19 +174,26 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-full border-t">
-      <aside className="hidden md:block w-1/3 lg:w-1/4 h-full border-r bg-muted/20">
+      <aside className="hidden md:block w-1/3 lg:w-1/4 h-full border-r bg-muted/20 flex-col">
         <div className="p-4 border-b">
           <h2 className="text-xl font-semibold flex items-center">
             <Users className="mr-3 h-5 w-5" />
             Matches
           </h2>
         </div>
+         <div className="p-4 border-b flex items-center justify-between">
+           <Label htmlFor="show-archived" className="flex items-center gap-2 text-sm font-medium">
+             <Archive className="h-4 w-4" />
+             Show Archived
+           </Label>
+           <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
+        </div>
         {matchesLoading ? (
            <div className="p-4 space-y-3">
             {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
           </div>
         ) : (
-          <MatchList matches={sortedMatches} activeMatchId={matchId} />
+          <MatchList matches={filteredMatches} activeMatchId={matchId} />
         )}
       </aside>
       <main className="flex-1 flex flex-col">

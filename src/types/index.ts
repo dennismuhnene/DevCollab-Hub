@@ -45,6 +45,7 @@ export interface Match {
   status: 'active' | 'closed';
   lastMessage?: string | null;
   createdAt: Timestamp;
+  archivedBy?: string[];
 }
 
 export interface Message {
