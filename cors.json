@@ -13,7 +13,8 @@
     ],
     "responseHeader": [
       "Content-Type",
-      "Access-Control-Allow-Origin"
+      "Access-Control-Allow-Origin",
+      "x-goog-upload-protocol"
     ],
     "maxAgeSeconds": 3600
   }
