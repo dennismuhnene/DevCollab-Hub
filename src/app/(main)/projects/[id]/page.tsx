@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -159,7 +160,7 @@ export default function ProjectDetailsPage() {
   const handleMatch = async (interestedUser: UserWithId) => {
     if (!user || !userProfile || !project) return;
     try {
-      const matchId = await createMatch(user.uid, interestedUser.id, project.title);
+      const matchId = await createMatch(user.uid, interestedUser.id, project.id, project.title);
       
       const projectRef = doc(db, 'projects', project.id);
       // Let the real-time listener handle UI updates.
@@ -492,3 +493,5 @@ export default function ProjectDetailsPage() {
     </div>
   );
 }
+
+    

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -105,7 +106,7 @@ export default function DashboardPage() {
   const handleMatch = async (project: Project, interestedUser: InterestedUser) => {
     if (!user || !userProfile) return;
     try {
-      const matchId = await createMatch(user.uid, interestedUser.uid, project.title);
+      const matchId = await createMatch(user.uid, interestedUser.uid, project.id, project.title);
       
       const projectRef = doc(db, 'projects', project.id);
       updateDocumentNonBlocking(projectRef, {
@@ -443,3 +444,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
