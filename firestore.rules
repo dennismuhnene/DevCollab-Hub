@@ -39,8 +39,8 @@ service cloud.firestore {
 
     // MATCHES
     match /matches/{matchId} {
-      // PERMISSIVE RULE FOR DEBUGGING
-      allow read, list: if isSignedIn();
+      // Allow a user to read or list matches they are a participant in.
+      allow get, list: if isSignedIn() && uid() in resource.data.participants;
       
       // CREATE rule remains secure
       allow create: if isSignedIn()
@@ -52,7 +52,7 @@ service cloud.firestore {
       allow update: if isSignedIn()
           && uid() in resource.data.participants;
 
-      // Do not allow matches to be deleted.
+      // Do not allow matches to be deleted to maintain chat history.
       allow delete: if false;
       
       // Message subcollection
