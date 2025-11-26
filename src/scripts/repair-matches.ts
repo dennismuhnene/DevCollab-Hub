@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, getDocs, updateDoc } from "firebase/firestore";
+import { getFirestore, collection, getDocs, updateDoc, serverTimestamp } from "firebase/firestore";
 import { firebaseConfig } from "../lib/firebase/config";
 
 const app = initializeApp(firebaseConfig);
@@ -14,29 +14,26 @@ async function repairMatches() {
   for (const docSnap of snapshot.docs) {
     const data = docSnap.data();
     let needsRepair = false;
+    const updateData: any = {};
+
 
     // Fix missing participants
     if (!data.participants || !Array.isArray(data.participants)) {
       console.log(`⚠ Repairing ${docSnap.id} — participants missing`);
-      data.participants = [];
+      updateData.participants = [];
       needsRepair = true;
     }
-
-    // Remove null/empty strings
-    data.participants = data.participants.filter((p: any) => typeof p === "string" && p.length > 0);
 
     // Fix missing timestamp
     if (!data.timestamp) {
       console.log(`⚠ Repairing ${docSnap.id} — timestamp missing`);
-      data.timestamp = null;
+      updateData.timestamp = serverTimestamp();
       needsRepair = true;
     }
 
     if (needsRepair) {
-      await updateDoc(docSnap.ref, {
-        ...data,
-        repaired: true
-      });
+      updateData.repaired = true;
+      await updateDoc(docSnap.ref, updateData);
       fixedCount++;
     }
   }
