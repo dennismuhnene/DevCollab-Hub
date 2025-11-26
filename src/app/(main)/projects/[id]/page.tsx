@@ -54,6 +54,7 @@ export default function ProjectDetailsPage() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
+  const [isMatched, setIsMatched] = useState(false);
   const [isInterestLoading, setIsInterestLoading] = useState(false);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedInfo, setMatchedInfo] = useState<{ projectName: string; devName: string; matchId: string } | null>(null);
@@ -89,6 +90,7 @@ export default function ProjectDetailsPage() {
         if (user) {
           setIsOwner(project.ownerId === user.uid);
           setIsInterested(project.interestedUsers?.includes(user.uid) || false);
+          setIsMatched(project.matchedUsers?.includes(user.uid) || false);
         }
         
         const fetchUsersByIds = async (ids: string[]) => {
@@ -134,11 +136,6 @@ export default function ProjectDetailsPage() {
     
     updateDocumentNonBlocking(projectRef, updateData);
 
-    toast({
-        title: wasInterested ? 'Interest removed' : 'Interest expressed!',
-        description: wasInterested ? undefined : 'The project owner has been notified.',
-    });
-
     if (!wasInterested) {
         try {
             await addNotification(project.ownerId, {
@@ -149,9 +146,21 @@ export default function ProjectDetailsPage() {
                 projectTitle: project.title,
                 read: false,
             });
+             toast({
+                title: 'Interest expressed!',
+                description: 'The project owner has been notified.',
+            });
         } catch (e) {
             console.error("Failed to send interest notification:", e);
+             toast({
+                title: 'Interest expressed!',
+                description: 'But failed to notify the owner.',
+            });
         }
+    } else {
+         toast({
+            title: 'Interest removed',
+        });
     }
     
     setIsInterestLoading(false);
@@ -417,7 +426,7 @@ export default function ProjectDetailsPage() {
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
-            ) : (
+            ) : !isMatched && (
               <Button size="lg" className="w-full" onClick={handleInterest} disabled={!project.collaborationOpen || isInterestLoading}>
                 {project.collaborationOpen ? (
                   isInterested ? (
@@ -493,5 +502,3 @@ export default function ProjectDetailsPage() {
     </div>
   );
 }
-
-    
