@@ -51,12 +51,12 @@ service cloud.firestore {
           && resource.data.participants is list;
       }
 
-      // Temporarily allow any signed-in user to read to isolate the issue.
-      allow read: if isSignedIn();
+      // Allow any participant to read their own match document
+      allow read: if isSignedIn() && hasParticipants() && uid() in resource.data.participants;
       
-      // Temporarily allow any signed-in user to list to isolate the issue.
-      // This bypasses the complex query check.
-      allow list: if isSignedIn();
+      // Secure rule for listing matches: A user can only list matches
+      // if their query is explicitly filtering for their own UID.
+      allow list: if isSignedIn() && request.query.where.size() > 0 && request.query.where[0] == ['participants', 'array-contains', uid()];
 
       // When creating a match, the new document must contain a 'participants' map
       // and the current user must be one of the participants.
