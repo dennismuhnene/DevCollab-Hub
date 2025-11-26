@@ -57,8 +57,7 @@ service cloud.firestore {
       function isQueryingOwnMatches() {
         // The where clause can be a list of lists in complex queries. 
         // We check the simple case for 'array-contains' which is represented as a list of 3 elements.
-        let query = request.query;
-        return query.where[0] == ['participants', 'array-contains', uid()];
+        return request.query.where[0] == ['participants', 'array-contains', uid()];
       }
       
       allow list: if isSignedIn() && isQueryingOwnMatches();
