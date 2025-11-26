@@ -88,9 +88,12 @@ export default function Notifications() {
         await updateDoc(notifRef, { read: true });
     }
 
-    if (notification.type === 'message' && notification.matchId) {
-      await openChat(notification.matchId, router);
-    } else if (notification.type === 'interest' && notification.projectId) {
+    // Do not navigate for message notifications, just mark as read.
+    if (notification.type === 'message') {
+      return; 
+    }
+
+    if (notification.type === 'interest' && notification.projectId) {
       router.push(`/projects/${notification.projectId}`);
     } else if (notification.type === 'match' && notification.matchId) {
        await openChat(notification.matchId, router);
