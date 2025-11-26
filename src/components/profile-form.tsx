@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import { doc } from 'firebase/firestore';
-import { updateProfile, deleteUser } from 'firebase/auth';
+import { updateProfile } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { Button } from '@/components/ui/button';
@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const professionalSkills = [
   'Problem Solving',
@@ -193,16 +194,42 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
   };
 
   const handleDeleteAccount = async () => {
-    if (!user) return;
+    if (!auth.currentUser) {
+        toast({ variant: 'destructive', title: 'Not authenticated' });
+        return;
+    }
     setLoading(true);
+
     try {
-      await deleteUser(user);
-      toast({ title: 'Account deleted successfully' });
-      router.push('/');
+        const idToken = await auth.currentUser.getIdToken(true);
+        const response = await fetch("https://deleteuseraccount-k2sep2gqrq-uc.a.run.app", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
+            },
+        });
+
+        if (!response.ok) {
+            const errorData = await response.text();
+            throw new Error(errorData || 'Failed to delete account.');
+        }
+
+        toast({ title: 'Account deleted successfully' });
+        // The onAuthStateChanged listener in useAuth will handle the redirect
+        // by setting the user to null, which will cause a redirect to '/'.
+        // No need for router.push here.
+        await auth.signOut(); // Signing out ensures a clean state transition
+        router.push('/');
+
     } catch (error: any) {
-      console.error("Account deletion error:", error);
-      toast({ variant: 'destructive', title: 'Error deleting account', description: error.message });
-      setLoading(false);
+        console.error("Account deletion error:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Error deleting account',
+            description: error.message || 'An unknown error occurred.',
+        });
+        setLoading(false);
     }
   };
 
@@ -362,7 +389,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
         </p>
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="destructive">
+            <Button variant="destructive" disabled={loading}>
               <Trash2 className="mr-2 h-4 w-4" />
               Delete My Account
             </Button>
@@ -371,7 +398,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
             <AlertDialogHeader>
               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete your account and remove your data from our servers.
+                This action cannot be undone. This will permanently delete your authentication record and all of your associated data, including projects and chats.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -379,7 +406,9 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
               <AlertDialogAction
                 onClick={handleDeleteAccount}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={loading}
               >
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Continue
               </AlertDialogAction>
             </AlertDialogFooter>
