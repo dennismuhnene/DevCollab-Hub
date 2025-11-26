@@ -1,7 +1,16 @@
 [
   {
-    "origin": ["*"],
-    "method": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "origin": [
+      "http://localhost:9002",
+      "https://6000-firebase-studio-1762274740510.cluster-ikslh4rdsnbqsvu5nw3v4dqjj2.cloudworkstations.dev"
+    ],
+    "method": [
+      "GET",
+      "POST",
+      "PUT",
+      "HEAD",
+      "DELETE"
+    ],
     "responseHeader": [
       "Content-Type",
       "Access-Control-Allow-Origin"
