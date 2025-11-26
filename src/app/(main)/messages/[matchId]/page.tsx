@@ -178,25 +178,38 @@ export default function ChatPage() {
         )}
       </aside>
       <main className="flex-1 flex flex-col">
-        {otherUser && (
+        {otherUser && match && match.participantsDetails && match.participantsDetails[otherUser.uid] ? (
            <div className="p-4 border-b flex items-center gap-4 bg-background">
             <Avatar>
-                <AvatarImage src={otherUser.photoURL} />
-                <AvatarFallback>{getInitials(otherUser.name)}</AvatarFallback>
+                <AvatarImage src={match.participantsDetails[otherUser.uid].photoURL} />
+                <AvatarFallback>{getInitials(match.participantsDetails[otherUser.uid].name)}</AvatarFallback>
             </Avatar>
             <div>
-                <h3 className="font-semibold">{otherUser.name}</h3>
+                <h3 className="font-semibold">{match.participantsDetails[otherUser.uid].name}</h3>
                 <p className="text-sm text-muted-foreground">Project: {match?.projectTitle}</p>
             </div>
            </div>
+        ) : (
+            otherUser && (
+                <div className="p-4 border-b flex items-center gap-4 bg-background">
+                    <Avatar>
+                        <AvatarImage src={otherUser.photoURL} />
+                        <AvatarFallback>{getInitials(otherUser.name)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <h3 className="font-semibold">{otherUser.name}</h3>
+                        <p className="text-sm text-muted-foreground">Project: {match?.projectTitle}</p>
+                    </div>
+                </div>
+            )
         )}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {messages.map((msg, index) => (
                 <div key={index} className={cn("flex items-end gap-2", msg.senderId === user?.uid ? "justify-end" : "justify-start")}>
-                   {msg.senderId !== user?.uid && otherUser && (
+                   {msg.senderId !== user?.uid && otherUser && match && match.participantsDetails && match.participantsDetails[otherUser.uid] && (
                      <Avatar className="h-8 w-8">
-                       <AvatarImage src={otherUser.photoURL} />
-                       <AvatarFallback>{getInitials(otherUser.name)}</AvatarFallback>
+                       <AvatarImage src={match.participantsDetails[otherUser.uid].photoURL} />
+                       <AvatarFallback>{getInitials(match.participantsDetails[otherUser.uid].name)}</AvatarFallback>
                      </Avatar>
                    )}
                    <div className={cn(
