@@ -50,7 +50,7 @@ service cloud.firestore {
       
       // Secure rule for listing matches: A user can only list matches
       // if their query is explicitly filtering for their own UID.
-      allow list: if isSignedIn() && request.query.where[0] == ['participants', 'array-contains', request.auth.uid];
+      allow list: if isSignedIn() && request.query.where[0][1] == 'array-contains' && request.query.where[0][2] == request.auth.uid;
 
       // When creating a match, the new document must contain a 'participants' map
       // and the current user must be one of the participants.
