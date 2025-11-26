@@ -15,7 +15,7 @@ service cloud.firestore {
       allow create, update, delete: if isSignedIn() && uid() == userId;
 
       // Allow a user to read, update, or delete their own notifications.
-      // Allow any signed-in user to create a notification for another user.
+      // Crucially, allow ANY signed-in user to create a notification for another user.
       match /notifications/{notificationId} {
         allow read, update, delete: if isSignedIn() && uid() == userId;
         allow create: if isSignedIn();
@@ -24,22 +24,16 @@ service cloud.firestore {
 
     // PROJECTS
     match /projects/{projectId} {
-      // Basic read permissions for signed-in users
       allow get, list: if isSignedIn();
-
-      // Create: only when the ownerId in new doc equals request.auth.uid
       allow create: if isSignedIn() && request.resource.data.ownerId == uid();
-
-      // Update:
-      // - Owner can update any fields on their own project.
-      // - Non-owner users may only modify the 'interestedUsers' array.
-      allow update: if isSignedIn() && (
-        resource.data.ownerId == uid()
-        ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers'])
-      );
-
-      // Delete: only owner can delete
+      
+      // Combined, unambiguous update rule:
+      // - The user is the owner, they can change anything.
+      // - OR, a non-owner is ONLY changing the 'interestedUsers' array.
+      allow update: if isSignedIn() && 
+                    (resource.data.ownerId == uid() || 
+                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers']));
+      
       allow delete: if isSignedIn() && resource.data.ownerId == uid();
     }
 
@@ -47,7 +41,7 @@ service cloud.firestore {
     match /matches/{matchId} {
 
       function hasParticipants() {
-        return resource.data.keys().hasAll(['participants'])
+        return resource.data.keys().hasAll(['participants', 'participantsDetails'])
           && resource.data.participants is list;
       }
 
@@ -56,7 +50,7 @@ service cloud.firestore {
       
       // Secure rule for listing matches: A user can only list matches
       // if their query is explicitly filtering for their own UID.
-      allow list: if isSignedIn() && request.query.where.size() > 0 && request.query.where[0] == ['participants', 'array-contains', uid()];
+      allow list: if isSignedIn() && request.query.where[0] == ['participants', 'array-contains', request.auth.uid];
 
       // When creating a match, the new document must contain a 'participants' map
       // and the current user must be one of the participants.
