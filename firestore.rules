@@ -55,10 +55,10 @@ service cloud.firestore {
       // in an 'array-contains' filter on the 'participants' field.
       // This is a robust way to check for the required query constraint.
       function isQueryingOwnMatches() {
+        // The where clause can be a list of lists in complex queries. 
+        // We check the simple case for 'array-contains' which is represented as a list of 3 elements.
         let query = request.query;
-        // The where clause can be a list of lists in complex queries. We check the simple case.
-        return query.where[0] == ['participants', 'array-contains', uid()] ||
-               (query.where.size() > 1 && query.where[1] == ['participants', 'array-contains', uid()]);
+        return query.where[0] == ['participants', 'array-contains', uid()];
       }
       
       allow list: if isSignedIn() && isQueryingOwnMatches();
