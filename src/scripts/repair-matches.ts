@@ -46,8 +46,6 @@ async function repairMatches() {
 
 repairMatches().then(() => {
     console.log("Script finished.");
-    process.exit(0);
 }).catch(err => {
     console.error("Script failed:", err);
-    process.exit(1);
 });
