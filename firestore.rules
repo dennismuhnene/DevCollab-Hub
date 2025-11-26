@@ -17,7 +17,8 @@ service cloud.firestore {
       // Allow a user to list, read, update, or delete their own notifications.
       // Crucially, allow ANY signed-in user to create a notification for another user.
       match /notifications/{notificationId} {
-        allow list, read, update, delete: if isSignedIn() && uid() == userId;
+        allow read, list: if isSignedIn() && uid() == userId;
+        allow update, delete: if isSignedIn() && uid() == userId;
         allow create: if isSignedIn();
       }
     }
@@ -27,9 +28,6 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.ownerId == uid();
       
-      // Combined, unambiguous update rule:
-      // - The user is the owner, they can change anything.
-      // - OR, a non-owner is ONLY changing the 'interestedUsers' array.
       allow update: if isSignedIn() && 
                     (resource.data.ownerId == uid() || 
                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers']));
@@ -39,19 +37,15 @@ service cloud.firestore {
 
     // MATCHES
     match /matches/{matchId} {
-      // Allow a user to read, update, or delete a match document if their UID is in participants list.
       allow get, update, delete: if isSignedIn() && uid() in resource.data.participants;
 
-      // Allow create: user must be in participants being created.
       allow create: if isSignedIn()
           && request.resource.data.keys().hasAll(['participants', 'participantsDetails'])
           && request.resource.data.participants is list
           && uid() in request.resource.data.participants;
 
-      // Allow list (query): allow signed-in users to run queries; document-level rules still enforce per-doc access.
       allow list: if isSignedIn();
 
-      // MESSAGES SUBCOLLECTION
       match /messages/{messageId} {
         function isParticipant() {
           return exists(/databases/$(database)/documents/matches/$(matchId))

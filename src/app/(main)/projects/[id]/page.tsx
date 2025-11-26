@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { createMatch } from '@/lib/firebase/matches';
-import { addNotification } from '@/lib/firebase/notifications';
+import { addNotification, markInterestNotificationsAsRead } from '@/lib/firebase/notifications';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase';
 
@@ -91,6 +91,11 @@ export default function ProjectDetailsPage() {
           setIsOwner(project.ownerId === user.uid);
           setIsInterested(project.interestedUsers?.includes(user.uid) || false);
           setIsMatched(project.matchedUsers?.includes(user.uid) || false);
+          
+          // If the current user is the owner, mark interest notifications as read
+          if (project.ownerId === user.uid) {
+            markInterestNotificationsAsRead(user.uid, project.id);
+          }
         }
         
         const fetchUsersByIds = async (ids: string[]) => {

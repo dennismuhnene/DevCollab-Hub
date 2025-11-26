@@ -19,6 +19,7 @@ import { useMemoFirebase } from '@/firebase';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useDoc } from '@/firebase/firestore/use-doc';
+import { markMatchNotificationsAsRead } from '@/lib/firebase/notifications';
 
 export default function ChatPage() {
   const { user, loading: authLoading } = useAuth();
@@ -79,9 +80,8 @@ export default function ChatPage() {
     }
   }, [matchesError]);
 
-   useEffect(() => {
+  useEffect(() => {
     if (match && user) {
-      // Reset unread count for the current user when they view the chat.
       const userUnreadCount = match.unreadCounts?.[user.uid] || 0;
       if (userUnreadCount > 0) {
         const matchDocRef = doc(db, 'matches', matchId);
@@ -89,9 +89,10 @@ export default function ChatPage() {
           [`unreadCounts.${user.uid}`]: 0,
         });
       }
+      // This will now mark both 'message' and 'match' notifications as read
+      markMatchNotificationsAsRead(user.uid, matchId);
     }
-  }, [match, user, matchId]);
-
+}, [match, user, matchId]);
 
   useEffect(() => {
     if (!matchId || !user) return;

@@ -61,26 +61,26 @@ export default function Notifications() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) return;
-
-    const notifsQuery = query(
-      collection(db, 'users', user.uid, 'notifications'),
-      orderBy('timestamp', 'desc'),
-      limit(10)
-    );
-
+    if (!user?.uid) return;
+  
+    const notifsRef = collection(db, 'users', user.uid, 'notifications');
+    const notifsQuery = query(notifsRef, orderBy('timestamp', 'desc'), limit(10));
+  
     const unsubscribe = onSnapshot(notifsQuery, (snapshot) => {
       const notifsData = snapshot.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() } as Notification)
       );
+      console.log("NOTIFICATION SNAPSHOT:", notifsData);
+      const count = Number(notifsData.filter((n) => !n.read).length);
+      console.log("CALCULATED UNREAD COUNT:", count);
+      setUnreadCount(count);
       setNotifications(notifsData);
-      setUnreadCount(notifsData.filter((n) => !n.read).length);
     }, (err) => {
       console.error("Notification listener error:", err);
-    });
-
+    });      
+  
     return () => unsubscribe();
-  }, [user]);
+  }, [user?.uid]);
 
   const handleNotificationClick = async (notification: Notification) => {
     if (notification.id && user && !notification.read) {
