@@ -2,9 +2,9 @@ import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import type { UserProfile } from "@/types";
 
-export async function createMatch(userA_Id: string, userB_Id: string, projectTitle: string) {
-  // Ensure consistent match ID regardless of who initiates
-  const matchId = [userA_Id, userB_Id].sort().join("_");
+export async function createMatch(userA_Id: string, userB_Id: string, projectId: string, projectTitle: string) {
+  // Use a combination of sorted user IDs and the project ID for a unique match ID
+  const matchId = [userA_Id, userB_Id].sort().join("_") + `_${projectId}`;
   const matchRef = doc(db, "matches", matchId);
 
   // Fetch both user profiles to store their details
@@ -21,6 +21,7 @@ export async function createMatch(userA_Id: string, userB_Id: string, projectTit
   const userB = userBDoc.data() as UserProfile;
 
   const matchData = {
+    projectId: projectId, // Store the project ID
     participants: [userA_Id, userB_Id],
     participantsDetails: {
       [userA_Id]: {

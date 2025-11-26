@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, getDocs, arrayRemove, arrayUnion, documentId, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, arrayRemove, arrayUnion, documentId, serverTimestamp, limit } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import type { Project, UserProfile } from '@/types';
+import type { Project, UserProfile, Match } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -155,7 +155,7 @@ export default function ProjectDetailsPage() {
   const handleMatch = async (interestedUser: UserWithId) => {
     if (!user || !userProfile || !project) return;
     try {
-      const matchId = await createMatch(user.uid, interestedUser.id, project.title);
+      const matchId = await createMatch(user.uid, interestedUser.id, project.id, project.title);
       
       const projectRef = doc(db, 'projects', project.id);
       updateDocumentNonBlocking(projectRef, {
@@ -176,7 +176,7 @@ export default function ProjectDetailsPage() {
 
       addNotification(user.uid, {
         type: 'match',
-        fromUserId: interestedUser.name, // Corrected from interestedUser.name to use the UserWithId object
+        fromUserId: interestedUser.name,
         fromUserName: interestedUser.name,
         matchId: matchId,
         projectId: project.id,
@@ -188,10 +188,48 @@ export default function ProjectDetailsPage() {
       setShowMatchModal(true);
       setInterestedUsers(prev => prev.filter(u => u.id !== interestedUser.id));
       setProject(prev => prev ? ({ ...prev, matchedUsers: [...(prev.matchedUsers || []), interestedUser.id], interestedUsers: prev.interestedUsers?.filter(uid => uid !== interestedUser.id) }) : null);
+      setMatchedUsers(prev => [...prev, interestedUser]);
 
     } catch (error) {
        console.error("Failed to create match:", error);
        toast({ variant: 'destructive', title: 'Matching Failed', description: error instanceof Error ? error.message : 'An unknown error occurred.' });
+    }
+  };
+
+  const handleGoToMessage = async (matchedUserId: string) => {
+    if (!user || !project) return;
+    
+    try {
+      const matchesRef = collection(db, 'matches');
+      const q = query(
+        matchesRef,
+        where('projectId', '==', project.id),
+        where('participants', 'array-contains', user.uid),
+        limit(10) // Limit to avoid overly large queries, adjust if needed
+      );
+
+      const querySnapshot = await getDocs(q);
+      
+      // The previous query got all matches for the project the user is in.
+      // Now we client-filter to find the specific one with the other user.
+      const matchDoc = querySnapshot.docs.find(doc => {
+          const match = doc.data() as Match;
+          return match.participants.includes(matchedUserId);
+      });
+
+      if (matchDoc) {
+        router.push(`/messages/${matchDoc.id}`);
+      } else {
+        // This case should ideally not happen if a match exists in the project's 'matchedUsers' array
+        toast({
+          variant: 'destructive',
+          title: 'Conversation not found',
+          description: 'Could not find the conversation for this specific match.',
+        });
+      }
+    } catch (error) {
+       console.error('Error finding match:', error);
+       toast({ variant: 'destructive', title: 'Error', description: 'Could not navigate to conversation.' });
     }
   };
 
@@ -234,11 +272,6 @@ export default function ProjectDetailsPage() {
     if (!name) return 'U';
     return name.split(' ').map((n) => n[0]).join('');
   };
-  
-  const getMatchId = (user1: string, user2: string) => {
-      return [user1, user2].sort().join('_');
-  }
-
 
   if (loading || authLoading || !user) {
     return (
@@ -332,11 +365,9 @@ export default function ProjectDetailsPage() {
                             <Button variant="outline" size="sm" asChild>
                               <Link href={`/developers/${matchedUser.id}`}>Profile</Link>
                             </Button>
-                             <Button size="sm" asChild>
-                               <Link href={`/messages/${getMatchId(user.uid, matchedUser.id)}`}>
-                                   <MessageSquare className="mr-2 h-4 w-4"/>
-                                   Message
-                                </Link>
+                             <Button size="sm" onClick={() => handleGoToMessage(matchedUser.id)}>
+                               <MessageSquare className="mr-2 h-4 w-4"/>
+                               Message
                             </Button>
                           </div>
                         </li>
