@@ -34,16 +34,17 @@ export interface Match {
   id: string;
   projectId: string;
   projectTitle: string;
-  ownerId: string;
-  matchedUserId: string;
   participants: string[];
   participantsDetails: {
-    uid: string;
-    name: string;
-    photoURL: string;
-  }[];
+    [uid: string]: {
+      name: string;
+      photoURL?: string;
+    }
+  };
   timestamp: Timestamp;
   status: 'active' | 'closed';
+  lastMessage?: string | null;
+  createdAt: Timestamp;
 }
 
 export interface Message {

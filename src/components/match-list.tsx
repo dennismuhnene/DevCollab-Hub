@@ -22,8 +22,11 @@ export default function MatchList({ matches, activeMatchId }: MatchListProps) {
   return (
     <nav className="p-2 space-y-1">
       {matches.length > 0 ? matches.map((match) => {
-        const otherParticipant = match.participantsDetails.find(p => p.uid !== user?.uid);
-        if (!otherParticipant) return null;
+        const otherUserId = match.participants.find(p => p !== user?.uid);
+        if (!otherUserId) return null; // Should not happen in a valid match
+        
+        const otherParticipantDetails = match.participantsDetails?.[otherUserId];
+        if (!otherParticipantDetails) return null; // Data might not be populated yet
 
         return (
           <Link
@@ -37,11 +40,11 @@ export default function MatchList({ matches, activeMatchId }: MatchListProps) {
             )}
           >
             <Avatar className="h-10 w-10">
-              <AvatarImage src={otherParticipant.photoURL} />
-              <AvatarFallback>{getInitials(otherParticipant.name)}</AvatarFallback>
+              <AvatarImage src={otherParticipantDetails.photoURL} />
+              <AvatarFallback>{getInitials(otherParticipantDetails.name)}</AvatarFallback>
             </Avatar>
             <div className="flex-1 overflow-hidden">
-              <p className="font-semibold truncate">{otherParticipant.name}</p>
+              <p className="font-semibold truncate">{otherParticipantDetails.name}</p>
               <p className={cn(
                   "text-sm truncate",
                    match.id === activeMatchId ? "text-primary-foreground/80" : "text-muted-foreground"
@@ -59,5 +62,3 @@ export default function MatchList({ matches, activeMatchId }: MatchListProps) {
     </nav>
   );
 }
-
-    
