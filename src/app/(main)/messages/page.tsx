@@ -27,7 +27,7 @@ export default function MessagesPage() {
     [user?.uid]
   );
 
-  const { data: matches, isLoading, error } = useCollection<Match>(matchesQuery);
+  const { data: matches, isLoading, error } = useCollection<Match>(user ? matchesQuery : null);
   
   // Sorting is now done on the client-side to avoid complex indexed queries
   useEffect(() => {

@@ -43,7 +43,7 @@ export default function ChatPage() {
     [user?.uid]
   );
 
-  const { data: matches, isLoading: matchesLoading, error: matchesError } = useCollection<Match>(matchesQuery);
+  const { data: matches, isLoading: matchesLoading, error: matchesError } = useCollection<Match>(user ? matchesQuery : null);
   
   // Sorting is now done on the client-side to avoid complex indexed queries
    useEffect(() => {
