@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, getDocs, arrayRemove, arrayUnion, documentId, serverTimestamp, limit } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, arrayRemove, arrayUnion, documentId, serverTimestamp } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useParams } from 'next/navigation';
@@ -31,6 +31,8 @@ import {
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { createMatch } from '@/lib/firebase/matches';
 import { addNotification } from '@/lib/firebase/notifications';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { useMemoFirebase } from '@/firebase';
 
 interface UserWithId extends UserProfile {
   id: string;
@@ -42,11 +44,13 @@ export default function ProjectDetailsPage() {
   const params = useParams();
   const projectId = params.id as string;
 
-  const [project, setProject] = useState<Project | null>(null);
+  const projectRef = useMemoFirebase(() => projectId ? doc(db, 'projects', projectId) : null, [projectId]);
+  const { data: project, isLoading: projectLoading, error: projectError } = useDoc<Project>(projectRef);
+
   const [owner, setOwner] = useState<UserProfile | null>(null);
   const [interestedUsers, setInterestedUsers] = useState<UserWithId[]>([]);
   const [matchedUsers, setMatchedUsers] = useState<UserWithId[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingUsers, setLoadingUsers] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
   const [isInterestLoading, setIsInterestLoading] = useState(false);
@@ -60,79 +64,81 @@ export default function ProjectDetailsPage() {
       router.push('/login');
     }
   }, [user, authLoading, router]);
+  
+  useEffect(() => {
+    if (projectError) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not load project data.' });
+      router.push('/projects');
+    }
+  }, [projectError, toast, router]);
 
   useEffect(() => {
-    if (!projectId) return;
+    if (!project) return;
+    
+    setLoadingUsers(true);
 
-    const fetchProjectData = async () => {
-      setLoading(true);
-      const projectDocRef = doc(db, 'projects', projectId);
-      const projectDoc = await getDoc(projectDocRef);
-
-      if (projectDoc.exists()) {
-        const projectData = { id: projectDoc.id, ...projectDoc.data() } as Project;
-        setProject(projectData);
-
-        const ownerDocRef = doc(db, 'users', projectData.ownerId);
+    const fetchAssociatedUsers = async () => {
+        // Fetch owner
+        const ownerDocRef = doc(db, 'users', project.ownerId);
         const ownerDoc = await getDoc(ownerDocRef);
         if (ownerDoc.exists()) {
           setOwner({ uid: ownerDoc.id, ...ownerDoc.data() } as UserProfile);
         }
-        
+
         if (user) {
-          setIsOwner(projectData.ownerId === user.uid);
-          setIsInterested(projectData.interestedUsers?.includes(user.uid) || false);
+          setIsOwner(project.ownerId === user.uid);
+          setIsInterested(project.interestedUsers?.includes(user.uid) || false);
         }
         
         const fetchUsersByIds = async (ids: string[]) => {
           if (!ids || ids.length === 0) return [];
-          const usersQuery = query(collection(db, 'users'), where(documentId(), 'in', ids));
-          const usersSnapshot = await getDocs(usersQuery);
-          return usersSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as UserWithId));
+          // Firestore 'in' query is limited to 30 elements.
+          const userChunks = [];
+          for (let i = 0; i < ids.length; i += 30) {
+            userChunks.push(ids.slice(i, i + 30));
+          }
+          const userPromises = userChunks.map(chunk => 
+            getDocs(query(collection(db, 'users'), where(documentId(), 'in', chunk)))
+          );
+          const userSnapshots = await Promise.all(userPromises);
+          return userSnapshots.flatMap(snap => snap.docs.map(d => ({ id: d.id, ...d.data() } as UserWithId)));
         };
         
-        if (projectData.ownerId === user?.uid) {
-           const interested = await fetchUsersByIds(projectData.interestedUsers || []);
+        // Only the owner needs to see the list of interested users
+        if (project.ownerId === user?.uid) {
+           const interested = await fetchUsersByIds(project.interestedUsers || []);
            setInterestedUsers(interested);
         }
 
-        const matched = await fetchUsersByIds(projectData.matchedUsers || []);
+        const matched = await fetchUsersByIds(project.matchedUsers || []);
         setMatchedUsers(matched);
 
-      } else {
-        toast({ variant: 'destructive', title: 'Project not found' });
-        router.push('/projects');
-      }
-      setLoading(false);
+        setLoadingUsers(false);
     };
 
-    fetchProjectData();
-  }, [projectId, user, toast, router]);
+    fetchAssociatedUsers();
+  }, [project, user]);
 
   const handleInterest = async () => {
     if (!user || !userProfile || !project) return;
     
     setIsInterestLoading(true);
     const wasInterested = isInterested;
-    // Optimistically update the UI
-    setIsInterested(!wasInterested);
+    // UI state is now handled by the real-time listener, no need to setIsInterested here.
     
     const projectRef = doc(db, 'projects', project.id);
     const updateData = {
         interestedUsers: wasInterested ? arrayRemove(user.uid) : arrayUnion(user.uid)
     };
     
-    // Use non-blocking update with contextual error handling
     updateDocumentNonBlocking(projectRef, updateData);
 
-    // Show toast immediately based on optimistic update
     toast({
         title: wasInterested ? 'Interest removed' : 'Interest expressed!',
         description: wasInterested ? undefined : 'The project owner has been notified.',
     });
 
     if (!wasInterested) {
-        // Send notification non-blockingly as well
         try {
             await addNotification(project.ownerId, {
                 type: 'interest',
@@ -143,12 +149,10 @@ export default function ProjectDetailsPage() {
                 read: false,
             });
         } catch (e) {
-             // If notification fails, it's not critical. Log it but don't bother the user.
             console.error("Failed to send interest notification:", e);
         }
     }
     
-    // This is primarily for UI feedback, the actual write is happening in the background
     setIsInterestLoading(false);
   };
   
@@ -158,9 +162,10 @@ export default function ProjectDetailsPage() {
       const matchId = await createMatch(user.uid, interestedUser.id, project.title);
       
       const projectRef = doc(db, 'projects', project.id);
+      // Let the real-time listener handle UI updates.
       updateDocumentNonBlocking(projectRef, {
-        interestedUsers: (project.interestedUsers || []).filter(uid => uid !== interestedUser.id),
-        matchedUsers: [...(project.matchedUsers || []), interestedUser.id],
+        interestedUsers: arrayRemove(interestedUser.id),
+        matchedUsers: arrayUnion(interestedUser.id),
         updatedAt: serverTimestamp(),
       });
 
@@ -186,9 +191,6 @@ export default function ProjectDetailsPage() {
 
       setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId: matchId });
       setShowMatchModal(true);
-      setInterestedUsers(prev => prev.filter(u => u.id !== interestedUser.id));
-      setProject(prev => prev ? ({ ...prev, matchedUsers: [...(prev.matchedUsers || []), interestedUser.id], interestedUsers: prev.interestedUsers?.filter(uid => uid !== interestedUser.id) }) : null);
-      setMatchedUsers(prev => [...prev, interestedUser]);
 
     } catch (error) {
        console.error("Failed to create match:", error);
@@ -200,7 +202,6 @@ export default function ProjectDetailsPage() {
     if (!user || !project) return;
   
     try {
-      // First, try to find an existing match for this specific project.
       const matchesRef = collection(db, 'matches');
       const q = query(
         matchesRef,
@@ -209,15 +210,13 @@ export default function ProjectDetailsPage() {
       );
   
       const querySnapshot = await getDocs(q);
-      const matchDoc = querySnapshot.docs.find(doc => 
+      let matchDoc = querySnapshot.docs.find(doc => 
         (doc.data() as Match).participants.includes(matchedUserId)
       );
   
       if (matchDoc) {
-        // If a match specific to this project is found, go to that chat.
         router.push(`/messages/${matchDoc.id}`);
       } else {
-        // If no match is found for this project, create one and then navigate.
         toast({
           title: 'Conversation not found',
           description: 'Creating a new conversation for this project match...',
@@ -237,7 +236,7 @@ export default function ProjectDetailsPage() {
 
   const handleDeleteProject = async () => {
     if (!project || !user || !isOwner) return;
-    setLoading(true);
+    setLoadingUsers(true);
 
     try {
       if (project.imageUrl) {
@@ -255,7 +254,7 @@ export default function ProjectDetailsPage() {
     } catch (error: any) {
       console.error("Project deletion error:", error);
       toast({ variant: 'destructive', title: 'Error deleting project', description: error.message });
-      setLoading(false);
+      setLoadingUsers(false);
     }
   };
   
@@ -274,8 +273,10 @@ export default function ProjectDetailsPage() {
     if (!name) return 'U';
     return name.split(' ').map((n) => n[0]).join('');
   };
+  
+  const loading = authLoading || projectLoading || loadingUsers || !user;
 
-  if (loading || authLoading || !user) {
+  if (loading) {
     return (
       <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
         <Skeleton className="h-10 w-3/4 mb-4" />
@@ -491,5 +492,3 @@ export default function ProjectDetailsPage() {
     </div>
   );
 }
-
-    
