@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { collection, query, where, getDocs, limit, doc, documentId } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, doc, documentId, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { Project, UserProfile } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -65,18 +65,34 @@ export default function DashboardPage() {
       const interestedUsersData: Record<string, InterestedUser[]> = {};
       for (const project of projects) {
         if (project.interestedUsers && project.interestedUsers.length > 0) {
-          const usersQuery = query(collection(db, 'users'), where(documentId(), 'in', project.interestedUsers));
-          const usersSnapshot = await getDocs(usersQuery);
-          interestedUsersData[project.id] = usersSnapshot.docs.map(d => ({ uid: d.id, ...(d.data() as any) } as InterestedUser));
+          const ids: string[] = project.interestedUsers;
+
+          // Use 'in' when safe (<=10); otherwise fall back to individual gets.
+          if (ids.length <= 10) {
+            const usersQuery = query(collection(db, 'users'), where(documentId(), 'in', ids));
+            const usersSnapshot = await getDocs(usersQuery);
+            interestedUsersData[project.id] = usersSnapshot.docs.map(d => ({ uid: d.id, ...(d.data() as any) } as InterestedUser));
+          } else {
+            // Fallback: fetch individual docs (safer for large arrays)
+            const snaps = await Promise.all(ids.map((id: string) => getDoc(doc(db, 'users', id))));
+            interestedUsersData[project.id] = snaps.filter(s => s.exists()).map(s => ({ uid: s.id, ...(s.data() as any) } as InterestedUser));
+          }
+        } else {
+          interestedUsersData[project.id] = [];
         }
       }
       setInterestedUsersByProject(interestedUsersData);
 
       // Fetch recommended developers
       const usersCol = collection(db, 'users');
-      const usersQuery = query(usersCol, where(documentId(), '!=', user.uid), limit(4));
+      // Use a simple limited query and filter out the current user client-side
+      const usersQuery = query(usersCol, limit(5));
       const usersSnapshot = await getDocs(usersQuery);
-      setRecommendedDevelopers(usersSnapshot.docs.map(d => ({ uid: d.id, ...(d.data() as any) } as UserProfile)));
+      const devs = usersSnapshot.docs
+        .map(d => ({ uid: d.id, ...(d.data() as any) } as UserProfile))
+        .filter(d => d.uid !== user.uid)
+        .slice(0, 4);
+      setRecommendedDevelopers(devs);
       
       setLoadingData(false);
     };
