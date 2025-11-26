@@ -44,7 +44,7 @@ service cloud.firestore {
       allow get: if isSignedIn() && uid() in resource.data.participants;
 
       // Secure rule for LIST: Only allow if the query is filtering by the user's UID.
-      allow list: if isSignedIn() && request.query.where[0][0] == 'participants' && request.query.where[0][1] == 'array-contains' && request.query.where[0][2] == uid();
+      allow list: if isSignedIn() && request.query.where[0][2] == uid();
       
       // When creating a match, the new document must contain a 'participants' array
       // and the current user must be one of the participants.
