@@ -21,7 +21,8 @@ export default function MessagesPage() {
       if (!user?.uid) return null; // CRITICAL: Do not query if user is not loaded
       return query(
         collection(db, 'matches'),
-        where('participants', 'array-contains', user.uid)
+        where('participants', 'array-contains', user.uid),
+        orderBy('timestamp', 'desc')
       );
     },
     [user?.uid]
