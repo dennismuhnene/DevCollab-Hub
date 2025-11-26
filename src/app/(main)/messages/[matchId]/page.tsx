@@ -34,13 +34,13 @@ export default function ChatPage() {
   // This query now perfectly matches the security rule for 'list'
   const matchesQuery = useMemoFirebase(
     () => {
-      if (!user) return null; // CRITICAL: Do not query if user is not loaded
+      if (!user?.uid) return null; // CRITICAL: Do not query if user is not loaded
       return query(
             collection(db, 'matches'),
             where('participants', 'array-contains', user.uid)
           );
     },
-    [user]
+    [user?.uid]
   );
 
   const { data: matches, isLoading: matchesLoading, error: matchesError } = useCollection<Match>(matchesQuery);
