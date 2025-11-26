@@ -426,7 +426,16 @@ export default function ProjectDetailsPage() {
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
-            ) : !isMatched && (
+            ) : isMatched ? (
+                 <div className="flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-green-500 bg-green-500/10 p-4 text-center">
+                    <UserCheck className="h-8 w-8 text-green-500" />
+                    <p className="font-semibold text-green-700 dark:text-green-400">You're Matched!</p>
+                    <Button size="sm" className="w-full" onClick={() => handleGoToMessage(project.ownerId)}>
+                        <MessageSquare className="mr-2 h-4 w-4"/>
+                        Go to Conversation
+                    </Button>
+                 </div>
+            ) : (
               <Button size="lg" className="w-full" onClick={handleInterest} disabled={!project.collaborationOpen || isInterestLoading}>
                 {project.collaborationOpen ? (
                   isInterested ? (
