@@ -72,9 +72,7 @@ service cloud.firestore {
       // This function ensures a 'list' query is ONLY allowed if it filters by
       // the 'participants' field, ensuring users only see their own matches.
       function isQueryingOwnMatches() {
-        return request.query.keys().hasAny(['where'])
-          && request.query.where.size() > 0
-          && request.query.where[0][0] == 'participants'
+        return request.query.where[0][0] == 'participants'
           && request.query.where[0][1] == 'array-contains'
           && request.query.where[0][2] == uid();
       }
