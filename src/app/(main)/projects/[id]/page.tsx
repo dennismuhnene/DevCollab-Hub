@@ -155,7 +155,7 @@ export default function ProjectDetailsPage() {
   const handleMatch = async (interestedUser: UserWithId) => {
     if (!user || !userProfile || !project) return;
     try {
-      const matchId = await createMatch(user.uid, interestedUser.id, project.id, project.title);
+      const matchId = await createMatch(user.uid, interestedUser.id, project.title);
       
       const projectRef = doc(db, 'projects', project.id);
       updateDocumentNonBlocking(projectRef, {
@@ -198,38 +198,40 @@ export default function ProjectDetailsPage() {
 
   const handleGoToMessage = async (matchedUserId: string) => {
     if (!user || !project) return;
-    
+  
     try {
+      // First, try to find an existing match for this specific project.
       const matchesRef = collection(db, 'matches');
       const q = query(
         matchesRef,
         where('projectId', '==', project.id),
-        where('participants', 'array-contains', user.uid),
-        limit(10) // Limit to avoid overly large queries, adjust if needed
+        where('participants', 'array-contains', user.uid)
       );
-
+  
       const querySnapshot = await getDocs(q);
-      
-      // The previous query got all matches for the project the user is in.
-      // Now we client-filter to find the specific one with the other user.
-      const matchDoc = querySnapshot.docs.find(doc => {
-          const match = doc.data() as Match;
-          return match.participants.includes(matchedUserId);
-      });
-
+      const matchDoc = querySnapshot.docs.find(doc => 
+        (doc.data() as Match).participants.includes(matchedUserId)
+      );
+  
       if (matchDoc) {
+        // If a match specific to this project is found, go to that chat.
         router.push(`/messages/${matchDoc.id}`);
       } else {
-        // This case should ideally not happen if a match exists in the project's 'matchedUsers' array
+        // If no match is found for this project, create one and then navigate.
         toast({
-          variant: 'destructive',
           title: 'Conversation not found',
-          description: 'Could not find the conversation for this specific match.',
+          description: 'Creating a new conversation for this project match...',
         });
+        const newMatchId = await createMatch(user.uid, matchedUserId, project.id, project.title);
+        router.push(`/messages/${newMatchId}`);
       }
     } catch (error) {
-       console.error('Error finding match:', error);
-       toast({ variant: 'destructive', title: 'Error', description: 'Could not navigate to conversation.' });
+      console.error('Error finding or creating match:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not start the conversation. Please try again.',
+      });
     }
   };
 
@@ -489,3 +491,5 @@ export default function ProjectDetailsPage() {
     </div>
   );
 }
+
+    
