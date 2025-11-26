@@ -46,6 +46,9 @@ export interface Match {
   lastMessage?: string | null;
   createdAt: Timestamp;
   archivedBy?: string[];
+  unreadCounts?: {
+    [uid: string]: number;
+  };
 }
 
 export interface Message {

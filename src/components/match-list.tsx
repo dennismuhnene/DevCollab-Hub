@@ -10,6 +10,7 @@ import { Archive, ArchiveRestore, X } from 'lucide-react';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from './ui/badge';
 
 type MatchListProps = {
   matches: Match[];
@@ -58,6 +59,7 @@ export default function MatchList({ matches, activeMatchId }: MatchListProps) {
         if (!otherParticipantDetails) return null; // Data might not be populated yet
         
         const isArchived = match.archivedBy?.includes(user?.uid || '');
+        const unreadCount = match.unreadCounts?.[user?.uid || ''] || 0;
 
         return (
           <div key={match.id} className="relative group">
@@ -80,9 +82,12 @@ export default function MatchList({ matches, activeMatchId }: MatchListProps) {
                     "text-sm truncate",
                     match.id === activeMatchId ? "text-primary-foreground/80" : "text-muted-foreground"
                 )}>
-                  {match.projectTitle}
+                  {match.lastMessage || `Project: ${match.projectTitle}`}
                 </p>
               </div>
+              {unreadCount > 0 && (
+                <Badge className="flex-shrink-0">{unreadCount}</Badge>
+              )}
             </Link>
             <Button
               variant="ghost"

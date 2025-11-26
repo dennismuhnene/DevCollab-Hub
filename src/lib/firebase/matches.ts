@@ -38,11 +38,13 @@ export async function createMatch(userA_Id: string, userB_Id: string, projectId:
     lastMessage: null,
     createdAt: serverTimestamp(),
     status: 'active',
+    unreadCounts: {
+      [userA_Id]: 0,
+      [userB_Id]: 0,
+    },
   };
 
   await setDoc(matchRef, matchData, { merge: true });
 
   return matchId;
 }
-
-    

@@ -180,6 +180,13 @@
           "items": {
             "type": "string"
           }
+        },
+        "unreadCounts": {
+            "type": "object",
+            "description": "An object storing the unread message count for each participant.",
+            "additionalProperties": {
+                "type": "number"
+            }
         }
       },
       "required": [
@@ -307,4 +314,3 @@
     ]
   }
 }
-    

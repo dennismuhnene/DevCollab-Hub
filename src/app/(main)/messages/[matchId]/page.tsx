@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, increment } from 'firebase/firestore';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { db } from '@/lib/firebase/config';
 import type { Match, Message, UserProfile } from '@/types';
@@ -18,6 +18,7 @@ import { addNotification } from '@/lib/firebase/notifications';
 import { useMemoFirebase } from '@/firebase';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { useDoc } from '@/firebase/firestore/use-doc';
 
 export default function ChatPage() {
   const { user, loading: authLoading } = useAuth();
@@ -25,7 +26,6 @@ export default function ChatPage() {
   const params = useParams();
   const matchId = params.matchId as string;
 
-  const [match, setMatch] = useState<Match | null>(null);
   const [otherUser, setOtherUser] = useState<UserProfile | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -33,6 +33,9 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sortedMatches, setSortedMatches] = useState<Match[]>([]);
   const [showArchived, setShowArchived] = useState(false);
+
+  const matchRef = useMemoFirebase(() => matchId ? doc(db, 'matches', matchId) : null, [matchId]);
+  const { data: match, isLoading: matchLoading } = useDoc<Match>(matchRef);
 
 
   // This query now perfectly matches the security rule for 'list'
@@ -76,10 +79,24 @@ export default function ChatPage() {
     }
   }, [matchesError]);
 
+   useEffect(() => {
+    if (match && user) {
+      // Reset unread count for the current user when they view the chat.
+      const userUnreadCount = match.unreadCounts?.[user.uid] || 0;
+      if (userUnreadCount > 0) {
+        const matchDocRef = doc(db, 'matches', matchId);
+        updateDoc(matchDocRef, {
+          [`unreadCounts.${user.uid}`]: 0,
+        });
+      }
+    }
+  }, [match, user, matchId]);
+
+
   useEffect(() => {
     if (!matchId || !user) return;
 
-    const fetchMatchDetails = async () => {
+    const fetchOtherUser = async () => {
       setLoading(true);
       const matchDocRef = doc(db, 'matches', matchId);
       const matchDoc = await getDoc(matchDocRef);
@@ -90,7 +107,6 @@ export default function ChatPage() {
           router.push('/messages');
           return;
         }
-        setMatch(matchData);
 
         const otherUserId = matchData.participants.find(p => p !== user.uid);
         if (otherUserId) {
@@ -106,7 +122,7 @@ export default function ChatPage() {
       setLoading(false);
     };
 
-    fetchMatchDetails();
+    fetchOtherUser();
 
     const messagesQuery = query(collection(db, 'matches', matchId, 'messages'), orderBy('timestamp', 'asc'));
     const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
@@ -136,9 +152,13 @@ export default function ChatPage() {
     const messagesCollectionRef = collection(db, 'matches', matchId, 'messages');
     await addDoc(messagesCollectionRef, messageData);
     
-    // Also update the parent match document to reflect the latest message time for sorting
+    // Also update the parent match document to reflect the latest message time and unread count
     const matchDocRef = doc(db, 'matches', matchId);
-    await updateDoc(matchDocRef, { timestamp: serverTimestamp() });
+    await updateDoc(matchDocRef, { 
+      timestamp: serverTimestamp(),
+      lastMessage: newMessage,
+      [`unreadCounts.${otherUser.uid}`]: increment(1),
+    });
 
     addNotification(otherUser.uid, {
         type: 'message',
@@ -157,7 +177,7 @@ export default function ChatPage() {
     return name.split(' ').map((n) => n[0]).join('');
   };
 
-  if (authLoading || loading) {
+  if (authLoading || loading || matchLoading) {
     return (
          <div className="flex h-full border-t">
             <aside className="w-1/3 lg:w-1/4 h-full border-r bg-muted/20">
