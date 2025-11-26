@@ -39,14 +39,31 @@ service cloud.firestore {
 
     // MATCHES
     match /matches/{matchId} {
-      // Allow a user to read, update, or delete a match document if their UID is in the participants list.
-      allow get, update, delete: if isSignedIn() && uid() in resource.data.participants;
 
-      // Allow a user to create a match document if they are including their own UID in the participants list.
-      allow create: if isSignedIn() && uid() in request.resource.data.participants;
-      
-      // Allow a list operation (query) ONLY if the client is filtering by the 'participants' array.
-      allow list: if isSignedIn() && request.query.where[0][0] == 'participants' && request.query.where[0][1] == 'array-contains' && request.query.where[0][2] == uid();
+      function hasParticipants() {
+        return resource.data.keys().hasAll(['participants'])
+          && resource.data.participants is list;
+      }
+
+      // Allow any participant to read this match
+      allow read: if isSignedIn() && hasParticipants() && uid() in resource.data.participants;
+
+      allow create: if isSignedIn()
+          && request.resource.data.keys().hasAll(['participants'])
+          && request.resource.data.participants is list
+          && uid() in request.resource.data.participants;
+
+      allow update: if isSignedIn()
+          && hasParticipants()
+          && uid() in resource.data.participants;
+
+      allow delete: if false;
+
+      function isQueryingOwnMatches() {
+        return request.query.where[0] == ['participants', 'array-contains', uid()];
+      }
+
+      allow list: if isSignedIn() && isQueryingOwnMatches();
 
       // MESSAGES SUBCOLLECTION
       match /messages/{messageId} {

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useAuth } from '@/lib/hooks/use-auth';
@@ -12,6 +11,7 @@ import {
   updateDoc,
   writeBatch,
   Timestamp,
+  getDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useEffect, useState } from 'react';
@@ -29,6 +29,30 @@ import { Bell, Hand, MessageSquare, UserCheck } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
+
+async function openChat(matchId: string, router: any) {
+  if (!matchId) {
+    alert("This notification is not linked to a valid match.");
+    return;
+  }
+  const matchRef = doc(db, "matches", matchId);
+  const snap = await getDoc(matchRef);
+
+  if (!snap.exists()) {
+    alert("Match does not exist anymore. It may have been deleted.");
+    return router.push("/messages");
+  }
+
+  const data = snap.data();
+
+  if (!data.participants || !Array.isArray(data.participants) || data.participants.length < 2) {
+    alert("This match was corrupted. Attempting auto-repair...");
+    await updateDoc(matchRef, { participants: [], repaired: true });
+    return router.push("/messages");
+  }
+
+  router.push(`/messages/${matchId}`);
+}
 
 export default function Notifications() {
   const { user } = useAuth();
@@ -65,11 +89,11 @@ export default function Notifications() {
     }
 
     if (notification.type === 'message' && notification.matchId) {
-      router.push(`/messages/${notification.matchId}`);
+      await openChat(notification.matchId, router);
     } else if (notification.type === 'interest' && notification.projectId) {
       router.push(`/projects/${notification.projectId}`);
     } else if (notification.type === 'match' && notification.matchId) {
-       router.push(`/messages/${notification.matchId}`);
+       await openChat(notification.matchId, router);
     }
   };
 

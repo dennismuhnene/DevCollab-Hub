@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { collection, query, where, getDocs, limit, doc, documentId, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, doc, documentId, getDoc, updateDoc, FieldValue, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { Project, UserProfile } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { createMatch } from '@/lib/firebase/actions';
+import { createMatch } from '@/lib/firebase/matches';
+import { addNotification } from '@/lib/firebase/notifications';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface InterestedUser extends UserProfile {
   // No additional fields needed, just to type the array
@@ -103,39 +105,54 @@ export default function DashboardPage() {
   const handleMatch = async (project: Project, interestedUser: InterestedUser) => {
     if (!user || !userProfile) return;
     try {
-      const matchResult = await createMatch({
+      const matchId = await createMatch(user.uid, interestedUser.uid, project.title);
+      
+      const projectRef = doc(db, 'projects', project.id);
+      updateDocumentNonBlocking(projectRef, {
+        interestedUsers: (project.interestedUsers || []).filter(uid => uid !== interestedUser.uid),
+        matchedUsers: [...(project.matchedUsers || []), interestedUser.uid],
+        updatedAt: serverTimestamp(),
+      });
+
+      addNotification(interestedUser.uid, {
+        type: 'match',
+        fromUserId: user.uid,
+        fromUserName: userProfile.name,
+        matchId: matchId,
         projectId: project.id,
         projectTitle: project.title,
-        ownerId: project.ownerId,
-        ownerName: userProfile.name || 'Project Owner',
-        ownerPhotoURL: userProfile.photoURL || '',
-        matchedUserId: interestedUser.uid,
-        matchedUserName: interestedUser.name || 'A Developer',
-        matchedUserPhotoURL: interestedUser.photoURL || '',
+        read: false,
       });
+
+      addNotification(user.uid, {
+        type: 'match',
+        fromUserId: interestedUser.uid,
+        fromUserName: interestedUser.name,
+        matchId: matchId,
+        projectId: project.id,
+        projectTitle: project.title,
+        read: false,
+      });
+
+      setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId: matchId });
+      setShowMatchModal(true);
       
-      if (matchResult.success && matchResult.matchId) {
-        setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId: matchResult.matchId });
-        setShowMatchModal(true);
-        
-        // Update local state to reflect the match
-        setInterestedUsersByProject(prev => ({
-          ...prev,
-          [project.id]: prev[project.id]?.filter(u => u.uid !== interestedUser.uid)
-        }));
-        setMyProjects(prevProjects => prevProjects.map(p => {
-          if (p.id === project.id) {
-            return {
-              ...p,
-              interestedUsers: p.interestedUsers?.filter(uid => uid !== interestedUser.uid),
-              matchedUsers: [...(p.matchedUsers || []), interestedUser.uid]
-            };
-          }
-          return p;
-        }));
-      } else {
-         throw new Error(matchResult.error || 'Failed to create match.');
-      }
+      // Update local state to reflect the match
+      setInterestedUsersByProject(prev => ({
+        ...prev,
+        [project.id]: prev[project.id]?.filter(u => u.uid !== interestedUser.uid)
+      }));
+      setMyProjects(prevProjects => prevProjects.map(p => {
+        if (p.id === project.id) {
+          return {
+            ...p,
+            interestedUsers: p.interestedUsers?.filter(uid => uid !== interestedUser.uid),
+            matchedUsers: [...(p.matchedUsers || []), interestedUser.uid]
+          };
+        }
+        return p;
+      }));
+
     } catch (error) {
       console.error("Failed to create match:", error);
       toast({

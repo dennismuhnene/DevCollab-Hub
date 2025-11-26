@@ -45,35 +45,37 @@ service cloud.firestore {
 
     // MATCHES
     match /matches/{matchId} {
-      // Allow reading an individual match only if user is participant
-      allow get, update, delete: if isSignedIn() && uid() in resource.data.participants;
 
-      // Creating: must include themselves as participant
-      allow create: if isSignedIn() && uid() in request.resource.data.participants;
+  // Allow any participant to read this match
+  allow read: if isSignedIn() && uid() in resource.data.participants;
 
-      // Allow list (query): allow signed-in users, but ONLY if their UID is included
-      // in an 'array-contains' filter on the 'participants' field.
-      // This is a robust way to check for the required query constraint.
-      function isQueryingOwnMatches() {
-        // The where clause can be a list of lists in complex queries. 
-        // We check the simple case for 'array-contains' which is represented as a list of 3 elements.
-        return request.query.where[0] == ['participants', 'array-contains', uid()];
-      }
-      
-      allow list: if isSignedIn() && isQueryingOwnMatches();
+  allow create: if isSignedIn() && uid() in request.resource.data.participants;
 
-      // MESSAGES SUBCOLLECTION
-      match /messages/{messageId} {
+  // Owner-only update? You had none → keep your update rule:
+  // (Might want to revise later)
+  allow update: if isSignedIn() && uid() in resource.data.participants;
 
-        function isParticipant() {
-          return exists(/databases/$(database)/documents/matches/$(matchId)) &&
-                 uid() in get(/databases/$(database)/documents/matches/$(matchId)).data.participants;
-        }
+  allow delete: if false;
 
-        allow get, list: if isSignedIn() && isParticipant();
-        allow create: if isSignedIn() && isParticipant() && request.resource.data.senderId == uid();
-        allow update, delete: if false;
-      }
+  // Allow only array-contains queries for list
+  function isQueryingOwnMatches() {
+    return request.query.where[0] == ['participants', 'array-contains', uid()];
+  }
+
+  allow list: if isSignedIn() && isQueryingOwnMatches();
+
+  // Message subcollection
+  match /messages/{messageId} {
+    function isParticipant() {
+      return exists(/databases/$(database)/documents/matches/$(matchId))
+        && uid() in get(/databases/$(database)/documents/matches/$(matchId)).data.participants;
     }
+
+    allow read, get, list: if isSignedIn() && isParticipant();
+    allow create: if isSignedIn() && isParticipant() && request.resource.data.senderId == uid();
+    allow update, delete: if false;
+  }
+}
+
   }
 }
