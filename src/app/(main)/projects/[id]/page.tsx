@@ -32,8 +32,8 @@ import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase
 import { createMatch } from '@/lib/firebase/matches';
 import { addNotification } from '@/lib/firebase/notifications';
 
-interface InterestedUser extends UserProfile {
-  // extends to ensure type safety
+interface UserWithId extends UserProfile {
+  id: string;
 }
 
 export default function ProjectDetailsPage() {
@@ -44,7 +44,8 @@ export default function ProjectDetailsPage() {
 
   const [project, setProject] = useState<Project | null>(null);
   const [owner, setOwner] = useState<UserProfile | null>(null);
-  const [interestedUsers, setInterestedUsers] = useState<InterestedUser[]>([]);
+  const [interestedUsers, setInterestedUsers] = useState<UserWithId[]>([]);
+  const [matchedUsers, setMatchedUsers] = useState<UserWithId[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
@@ -82,12 +83,21 @@ export default function ProjectDetailsPage() {
           setIsOwner(projectData.ownerId === user.uid);
           setIsInterested(projectData.interestedUsers?.includes(user.uid) || false);
         }
-
-        if (projectData.ownerId === user?.uid && projectData.interestedUsers && projectData.interestedUsers.length > 0) {
-          const interestedQuery = query(collection(db, 'users'), where(documentId(), 'in', projectData.interestedUsers));
-          const interestedSnapshot = await getDocs(interestedQuery);
-          setInterestedUsers(interestedSnapshot.docs.map(d => ({ uid: d.id, ...(d.data() as any) } as InterestedUser)));
+        
+        const fetchUsersByIds = async (ids: string[]) => {
+          if (!ids || ids.length === 0) return [];
+          const usersQuery = query(collection(db, 'users'), where(documentId(), 'in', ids));
+          const usersSnapshot = await getDocs(usersQuery);
+          return usersSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as UserWithId));
+        };
+        
+        if (projectData.ownerId === user?.uid) {
+           const interested = await fetchUsersByIds(projectData.interestedUsers || []);
+           setInterestedUsers(interested);
         }
+
+        const matched = await fetchUsersByIds(projectData.matchedUsers || []);
+        setMatchedUsers(matched);
 
       } else {
         toast({ variant: 'destructive', title: 'Project not found' });
@@ -142,19 +152,19 @@ export default function ProjectDetailsPage() {
     setIsInterestLoading(false);
   };
   
-  const handleMatch = async (interestedUser: InterestedUser) => {
+  const handleMatch = async (interestedUser: UserWithId) => {
     if (!user || !userProfile || !project) return;
     try {
-      const matchId = await createMatch(user.uid, interestedUser.uid, project.title);
+      const matchId = await createMatch(user.uid, interestedUser.id, project.title);
       
       const projectRef = doc(db, 'projects', project.id);
       updateDocumentNonBlocking(projectRef, {
-        interestedUsers: (project.interestedUsers || []).filter(uid => uid !== interestedUser.uid),
-        matchedUsers: [...(project.matchedUsers || []), interestedUser.uid],
+        interestedUsers: (project.interestedUsers || []).filter(uid => uid !== interestedUser.id),
+        matchedUsers: [...(project.matchedUsers || []), interestedUser.id],
         updatedAt: serverTimestamp(),
       });
 
-      addNotification(interestedUser.uid, {
+      addNotification(interestedUser.id, {
         type: 'match',
         fromUserId: user.uid,
         fromUserName: userProfile.name,
@@ -166,7 +176,7 @@ export default function ProjectDetailsPage() {
 
       addNotification(user.uid, {
         type: 'match',
-        fromUserId: interestedUser.uid,
+        fromUserId: interestedUser.name, // Corrected from interestedUser.name to use the UserWithId object
         fromUserName: interestedUser.name,
         matchId: matchId,
         projectId: project.id,
@@ -176,8 +186,8 @@ export default function ProjectDetailsPage() {
 
       setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId: matchId });
       setShowMatchModal(true);
-      setInterestedUsers(prev => prev.filter(u => u.uid !== interestedUser.uid));
-      setProject(prev => prev ? ({ ...prev, matchedUsers: [...(prev.matchedUsers || []), interestedUser.uid], interestedUsers: prev.interestedUsers?.filter(uid => uid !== interestedUser.uid) }) : null);
+      setInterestedUsers(prev => prev.filter(u => u.id !== interestedUser.id));
+      setProject(prev => prev ? ({ ...prev, matchedUsers: [...(prev.matchedUsers || []), interestedUser.id], interestedUsers: prev.interestedUsers?.filter(uid => uid !== interestedUser.id) }) : null);
 
     } catch (error) {
        console.error("Failed to create match:", error);
@@ -224,6 +234,10 @@ export default function ProjectDetailsPage() {
     if (!name) return 'U';
     return name.split(' ').map((n) => n[0]).join('');
   };
+  
+  const getMatchId = (user1: string, user2: string) => {
+      return [user1, user2].sort().join('_');
+  }
 
 
   if (loading || authLoading || !user) {
@@ -241,7 +255,7 @@ export default function ProjectDetailsPage() {
     return <div className="text-center py-20">Project not found.</div>;
   }
   
-  const uniqueMatchedUsers = project.matchedUsers ? [...new Set(project.matchedUsers)] : [];
+  const uniqueMatchedUsers = matchedUsers.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
@@ -286,13 +300,13 @@ export default function ProjectDetailsPage() {
                     <h3 className="font-semibold mb-4 flex items-center gap-2"><Hand className="h-5 w-5 text-yellow-500"/>Interested Developers</h3>
                     <ul className="space-y-4">
                       {interestedUsers.map(interested => (
-                        <li key={interested.uid} className="flex items-center justify-between">
+                        <li key={interested.id} className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
                              <Avatar>
                               <AvatarImage src={interested.photoURL} />
                               <AvatarFallback>{getInitials(interested.name)}</AvatarFallback>
                             </Avatar>
-                            <Link href={`/developers/${interested.uid}`} className="font-medium hover:underline">{interested.name}</Link>
+                            <Link href={`/developers/${interested.id}`} className="font-medium hover:underline">{interested.name}</Link>
                           </div>
                           <Button size="sm" onClick={() => handleMatch(interested)}>Match</Button>
                         </li>
@@ -305,12 +319,26 @@ export default function ProjectDetailsPage() {
                   <div>
                     <h3 className="font-semibold mb-4 flex items-center gap-2"><UserCheck className="h-5 w-5 text-green-500"/>Matched Developers</h3>
                      <ul className="space-y-4">
-                      {uniqueMatchedUsers.map(userId => (
-                        <li key={userId} className="flex items-center justify-between">
-                          <p>A developer is matched</p>
-                          <Button variant="outline" size="sm" asChild>
-                            <Link href={`/developers/${userId}`}>View Profile</Link>
-                          </Button>
+                      {uniqueMatchedUsers.map(matchedUser => (
+                        <li key={matchedUser.id} className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                             <Avatar>
+                              <AvatarImage src={matchedUser.photoURL} />
+                              <AvatarFallback>{getInitials(matchedUser.name)}</AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{matchedUser.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href={`/developers/${matchedUser.id}`}>Profile</Link>
+                            </Button>
+                             <Button size="sm" asChild>
+                               <Link href={`/messages/${getMatchId(user.uid, matchedUser.id)}`}>
+                                   <MessageSquare className="mr-2 h-4 w-4"/>
+                                   Message
+                                </Link>
+                            </Button>
+                          </div>
                         </li>
                       ))}
                     </ul>
