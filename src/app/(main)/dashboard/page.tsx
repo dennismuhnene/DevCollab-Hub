@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import ProjectCard from '@/components/project-card';
-import { PlusCircle, ArrowRight, Briefcase, Users, Edit, Eye, BadgeCheck, BadgeX, BrainCircuit, Code, Clock, UserCheck, MessageSquare, Hand } from 'lucide-react';
+import { PlusCircle, ArrowRight, Briefcase, Users, Edit, Eye, BadgeCheck, BadgeX, BrainCircuit, Code, Clock, UserCheck, MessageSquare, Hand, Sparkles, Loader2, Lightbulb } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -29,6 +29,8 @@ import {
 import { createMatch } from '@/lib/firebase/matches';
 import { addNotification } from '@/lib/firebase/notifications';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { getProfileInsights } from '@/ai/flows/get-profile-insights';
+import type { GetProfileInsightsOutput } from '@/types/ai';
 
 interface InterestedUser extends UserProfile {
   // No additional fields needed, just to type the array
@@ -44,6 +46,9 @@ export default function DashboardPage() {
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedInfo, setMatchedInfo] = useState<{ projectName: string; devName: string; matchId: string } | null>(null);
   const { toast } = useToast();
+  const [isAiInsightsLoading, startAiInsightsTransition] = useTransition();
+  const [aiInsights, setAiInsights] = useState<GetProfileInsightsOutput | null>(null);
+
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -66,9 +71,11 @@ export default function DashboardPage() {
 
       // Fetch interested users for each project
       const interestedUsersData: Record<string, InterestedUser[]> = {};
+      const allInterestedUserIds = new Set<string>();
       for (const project of projects) {
         if (project.interestedUsers && project.interestedUsers.length > 0) {
-          const ids: string[] = project.interestedUsers;
+           project.interestedUsers.forEach(id => allInterestedUserIds.add(id));
+           const ids: string[] = project.interestedUsers;
 
           // Use 'in' when safe (<=10); otherwise fall back to individual gets.
           if (ids.length <= 10) {
@@ -85,6 +92,34 @@ export default function DashboardPage() {
         }
       }
       setInterestedUsersByProject(interestedUsersData);
+
+      if (allInterestedUserIds.size > 0) {
+        const uniqueInterestedUsers: UserProfile[] = [];
+        const fetchedIds = new Set<string>();
+        for (const projId in interestedUsersData) {
+          interestedUsersData[projId].forEach(interestedDev => {
+            if (!fetchedIds.has(interestedDev.uid)) {
+              uniqueInterestedUsers.push(interestedDev);
+              fetchedIds.add(interestedDev.uid);
+            }
+          });
+        }
+        
+        startAiInsightsTransition(async () => {
+          try {
+            const insights = await getProfileInsights({
+              userProfile: userProfile,
+              userProjects: projects,
+              interestedDevelopers: uniqueInterestedUsers,
+            });
+            setAiInsights(insights);
+          } catch (e) {
+            console.error("Failed to get AI insights", e);
+             toast({ variant: 'destructive', title: 'Could not load AI insights.'});
+          }
+        });
+      }
+
 
       // Fetch recommended developers
       const usersCol = collection(db, 'users');
@@ -222,6 +257,32 @@ export default function DashboardPage() {
               </Button>
             </CardContent>
           </Card>
+          
+          {aiInsights && (
+             <Card className="bg-gradient-to-br from-primary/5 to-transparent">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <Lightbulb className="h-6 w-6 text-yellow-400" />
+                  <span>AI-Powered Insights</span>
+                </CardTitle>
+                <CardDescription>A summary of who's interested in your work and what to do next.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm">
+                <div>
+                  <h4 className="font-semibold mb-1">Audience Summary</h4>
+                  <p className="text-muted-foreground">{aiInsights.audienceSummary}</p>
+                </div>
+                 <div>
+                  <h4 className="font-semibold mb-1">Potential Opportunities</h4>
+                  <p className="text-muted-foreground">{aiInsights.potentialGaps}</p>
+                </div>
+                 <div className="p-3 bg-primary/10 rounded-md">
+                  <h4 className="font-semibold mb-1">Actionable Advice</h4>
+                  <p className="text-foreground/90 font-medium">{aiInsights.actionableAdvice}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <section>
             <div className="flex items-center justify-between mb-6">
