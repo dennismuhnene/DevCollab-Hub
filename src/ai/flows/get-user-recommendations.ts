@@ -34,6 +34,11 @@ const prompt = ai.definePrompt({
 
 Given the user's skills and a list of project descriptions, identify the projects that best match the user's skillset and interests.  Return a list of project descriptions that the user would be interested in.
 
+Your recommendations should be prioritized based on the following hierarchy, in order:
+1. Tech Stack
+2. Skills
+3. Years of Experience
+
 User Skills:
 {{#each userSkills}}
 - {{this}}
