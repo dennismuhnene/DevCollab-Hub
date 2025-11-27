@@ -5,7 +5,7 @@ import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { collection, query, where, getDocs, limit, doc, documentId, getDoc, updateDoc, FieldValue, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, doc, documentId, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { Project, UserProfile } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import ProjectCard from '@/components/project-card';
-import { PlusCircle, ArrowRight, Briefcase, Users, Edit, Eye, BadgeCheck, BadgeX, BrainCircuit, Code, Clock, UserCheck, MessageSquare, Hand, Sparkles, Loader2, Lightbulb } from 'lucide-react';
+import { PlusCircle, ArrowRight, Briefcase, Users, Edit, Eye, BadgeCheck, BadgeX, BrainCircuit, Code, Clock, UserCheck, MessageSquare, Hand, Lightbulb } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -69,48 +69,46 @@ export default function DashboardPage() {
       const projects = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
       setMyProjects(projects);
 
-      // Fetch interested users for each project
-      const interestedUsersData: Record<string, InterestedUser[]> = {};
+      // Consolidate all unique interested user IDs from all projects
       const allInterestedUserIds = new Set<string>();
-      for (const project of projects) {
-        if (project.interestedUsers && project.interestedUsers.length > 0) {
-           project.interestedUsers.forEach(id => allInterestedUserIds.add(id));
-           const ids: string[] = project.interestedUsers;
+      projects.forEach(p => {
+        p.interestedUsers?.forEach(uid => allInterestedUserIds.add(uid));
+      });
 
-          // Use 'in' when safe (<=10); otherwise fall back to individual gets.
-          if (ids.length <= 10) {
-            const usersQuery = query(collection(db, 'users'), where(documentId(), 'in', ids));
-            const usersSnapshot = await getDocs(usersQuery);
-            interestedUsersData[project.id] = usersSnapshot.docs.map(d => ({ uid: d.id, ...(d.data() as any) } as InterestedUser));
-          } else {
-            // Fallback: fetch individual docs (safer for large arrays)
-            const snaps = await Promise.all(ids.map((id: string) => getDoc(doc(db, 'users', id))));
-            interestedUsersData[project.id] = snaps.filter(s => s.exists()).map(s => ({ uid: s.id, ...(s.data() as any) } as InterestedUser));
-          }
-        } else {
-          interestedUsersData[project.id] = [];
+      const uniqueInterestedUserIds = Array.from(allInterestedUserIds);
+      let interestedUsersProfiles: UserProfile[] = [];
+
+      // Fetch profiles of all interested users
+      if (uniqueInterestedUserIds.length > 0) {
+        // Firestore 'in' query is limited to 30 elements.
+        const userChunks = [];
+        for (let i = 0; i < uniqueInterestedUserIds.length; i += 30) {
+            userChunks.push(uniqueInterestedUserIds.slice(i, i + 30));
         }
+        const userPromises = userChunks.map(chunk => 
+            getDocs(query(collection(db, 'users'), where(documentId(), 'in', chunk)))
+        );
+        const userSnapshots = await Promise.all(userPromises);
+        interestedUsersProfiles = userSnapshots.flatMap(snap => snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)));
+      }
+
+      // Map interested users back to their respective projects for the UI
+      const interestedUsersData: Record<string, InterestedUser[]> = {};
+      for (const project of projects) {
+        interestedUsersData[project.id] = (project.interestedUsers || [])
+          .map(uid => interestedUsersProfiles.find(p => p.uid === uid))
+          .filter((u): u is InterestedUser => u !== undefined);
       }
       setInterestedUsersByProject(interestedUsersData);
 
-      if (allInterestedUserIds.size > 0) {
-        const uniqueInterestedUsers: UserProfile[] = [];
-        const fetchedIds = new Set<string>();
-        for (const projId in interestedUsersData) {
-          interestedUsersData[projId].forEach(interestedDev => {
-            if (!fetchedIds.has(interestedDev.uid)) {
-              uniqueInterestedUsers.push(interestedDev);
-              fetchedIds.add(interestedDev.uid);
-            }
-          });
-        }
-        
+      // Trigger AI insights if there are interested developers
+      if (interestedUsersProfiles.length > 0) {
         startAiInsightsTransition(async () => {
           try {
             const insights = await getProfileInsights({
               userProfile: userProfile,
               userProjects: projects,
-              interestedDevelopers: uniqueInterestedUsers,
+              interestedDevelopers: interestedUsersProfiles,
             });
             setAiInsights(insights);
           } catch (e) {
@@ -136,7 +134,7 @@ export default function DashboardPage() {
     };
 
     fetchData();
-  }, [user, userProfile]);
+  }, [user, userProfile, toast]);
 
   const handleMatch = async (project: Project, interestedUser: InterestedUser) => {
     if (!user || !userProfile) return;
