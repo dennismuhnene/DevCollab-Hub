@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useRef, useMemo, useTransition } from 'react';
@@ -135,7 +136,7 @@ export default function ChatPage() {
             const projectDocRef = doc(db, 'projects', matchData.projectId);
             const projectDoc = await getDoc(projectDocRef);
             if (projectDoc.exists()) {
-                setProject(projectDoc.data() as Project);
+                setProject({ id: projectDoc.id, ...projectDoc.data() } as Project);
             }
         }
 
@@ -246,6 +247,8 @@ export default function ChatPage() {
     )
   }
 
+  const isProjectOwner = project?.ownerId === user?.uid;
+
   return (
     <>
     <div className="flex h-full border-t">
@@ -284,10 +287,12 @@ export default function ChatPage() {
                   <p className="text-sm text-muted-foreground">Project: {match?.projectTitle}</p>
               </div>
             </div>
+            {isProjectOwner && (
              <Button variant="outline" size="sm" onClick={handleGetAiInsights} disabled={isAiInsightsLoading}>
                 {isAiInsightsLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />}
                 Get AI Insights
              </Button>
+            )}
            </div>
         ) : (
             otherUser && (
