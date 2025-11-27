@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -24,6 +25,12 @@ service cloud.firestore {
         allow read, list, update, delete: if isSignedIn() && uid() == userId;
         allow create: if isSignedIn();
       }
+      
+      // Allow any signed-in user to log a view, but only the profile owner can read views.
+      match /views/{viewId} {
+        allow read, list: if isSignedIn() && uid() == userId;
+        allow create: if isSignedIn() && request.resource.data.visitorId == uid();
+      }
     }
 
     // PROJECTS
@@ -39,6 +46,12 @@ service cloud.firestore {
                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers']));
       
       allow delete: if isSignedIn() && resource.data.ownerId == uid();
+
+      // Allow any signed-in user to log a view, but only the project owner can read views.
+      match /views/{viewId} {
+          allow read, list: if isSignedIn() && get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == uid();
+          allow create: if isSignedIn() && request.resource.data.visitorId == uid();
+      }
     }
 
     // MATCHES

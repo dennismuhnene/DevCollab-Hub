@@ -22,13 +22,13 @@ const prompt = ai.definePrompt({
   name: 'getProfileInsightsPrompt',
   input: { schema: GetProfileInsightsInputSchema },
   output: { schema: GetProfileInsightsOutputSchema },
-  prompt: `You are an expert career and project advisor for software developers. Your task is to analyze a user's profile, their projects, and the profiles of other developers who have shown interest in those projects.
+  prompt: `You are an expert career and project advisor for software developers. Your task is to analyze a user's profile, their projects, and the profiles of other developers who have viewed, shown interest in, or matched with those projects.
 
 Based on this data, provide a concise, actionable summary for the user.
 
 Your analysis should answer the following:
-1.  **Audience Summary:** Briefly describe the common themes or trends you see in the developers who are interested in the user's projects (e.g., "You are attracting mostly junior frontend developers with a background in React.").
-2.  **Potential Gaps/Opportunities:** Based on the user's skills and projects, identify any potential gaps or exciting opportunities. Are they missing a chance to collaborate with backend developers? Is there a popular skill they could add to attract more collaborators?
+1.  **Audience Summary:** Briefly describe the common themes or trends you see in the developers who are engaging with the user's projects (e.g., "You are attracting mostly junior frontend developers with a background in React."). Consider their skills, tech stack, and experience.
+2.  **Potential Gaps/Opportunities:** Based on the user's skills and the audience they are attracting, identify any potential gaps or exciting opportunities. Are they missing a chance to collaborate with backend developers? Is there a popular skill they could add to attract more collaborators?
 3.  **Actionable Advice:** Provide a single, clear recommendation for the user. For example: "Consider creating a new project that requires Node.js to attract backend developers," or "Highlight your 'System Design' skill more prominently in your bio to attract senior talent."
 
 **User's Profile:**
@@ -44,7 +44,7 @@ Your analysis should answer the following:
   - Required Skills: {{#each this.requiredSkills}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
 {{/each}}
 
-**Profiles of Interested Developers:**
+**Profiles of Interested, Matched, and Visiting Developers:**
 {{#if interestedDevelopers.length}}
     {{#each interestedDevelopers}}
     - Developer Bio: {{{this.bio}}}
@@ -53,7 +53,7 @@ Your analysis should answer the following:
       - Experience: {{{this.yearsOfExperience}}} years
     {{/each}}
 {{else}}
-- No developers have shown interest yet.
+- No developers have shown interest, matched, or viewed your projects yet.
 {{/if}}
 
 Generate the insight now.

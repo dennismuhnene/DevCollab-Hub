@@ -71,10 +71,15 @@ export default function DashboardPage() {
 
       // Consolidate all unique interested and matched user IDs from all projects
       const allEngagedUserIds = new Set<string>();
-      projects.forEach(p => {
+      
+      // Fetch all viewers for all projects
+      for (const p of projects) {
+        const viewsSnapshot = await getDocs(collection(db, 'projects', p.id, 'views'));
+        viewsSnapshot.forEach(doc => allEngagedUserIds.add(doc.data().visitorId));
         p.interestedUsers?.forEach(uid => allEngagedUserIds.add(uid));
         p.matchedUsers?.forEach(uid => allEngagedUserIds.add(uid));
-      });
+      }
+      
 
       const uniqueEngagedUserIds = Array.from(allEngagedUserIds);
       let engagedUsersProfiles: UserProfile[] = [];

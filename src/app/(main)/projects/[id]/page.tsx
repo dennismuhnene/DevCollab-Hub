@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, getDocs, arrayRemove, arrayUnion, documentId, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, arrayRemove, arrayUnion, documentId, serverTimestamp, addDoc } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useParams } from 'next/navigation';
@@ -29,7 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { createMatch } from '@/lib/firebase/matches';
 import { addNotification, markInterestNotificationsAsRead } from '@/lib/firebase/notifications';
 import { useDoc } from '@/firebase/firestore/use-doc';
@@ -91,6 +91,14 @@ export default function ProjectDetailsPage() {
           setIsOwner(project.ownerId === user.uid);
           setIsInterested(project.interestedUsers?.includes(user.uid) || false);
           setIsMatched(project.matchedUsers?.includes(user.uid) || false);
+          
+          if (project.ownerId !== user.uid) {
+            const viewsRef = collection(db, 'projects', project.id, 'views');
+            addDocumentNonBlocking(viewsRef, {
+              visitorId: user.uid,
+              timestamp: serverTimestamp(),
+            });
+          }
           
           // If the current user is the owner, mark interest notifications as read
           if (project.ownerId === user.uid) {
