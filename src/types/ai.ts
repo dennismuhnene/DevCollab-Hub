@@ -34,3 +34,30 @@ export const GetProfileInsightsOutputSchema = z.object({
 
 // Infer the TypeScript type for the output.
 export type GetProfileInsightsOutput = z.infer<typeof GetProfileInsightsOutputSchema>;
+
+
+// Schemas for GetChatInsights flow
+const ChatUserProfileSchema = z.object({
+    skills: z.array(z.string()),
+    yearsOfExperience: z.number(),
+});
+
+const ChatProjectSchema = z.object({
+    title: z.string(),
+    description: z.string(),
+    requiredSkills: z.array(z.string()),
+});
+
+export const GetChatInsightsInputSchema = z.object({
+    currentUser: ChatUserProfileSchema.describe("The profile of the user requesting the insights."),
+    otherUser: ChatUserProfileSchema.describe("The profile of the other user in the chat."),
+    project: ChatProjectSchema.describe("The project that they are matched on."),
+});
+export type GetChatInsightsInput = z.infer<typeof GetChatInsightsInputSchema>;
+
+export const GetChatInsightsOutputSchema = z.object({
+    keyOverlaps: z.string().describe("A summary of the key skill and experience overlaps between the two users relevant to the project."),
+    potentialGaps: z.string().describe("A summary of potential skill or experience gaps for the project that should be discussed."),
+    suggestedQuestions: z.array(z.string()).describe("A list of 3-4 insightful questions to ask the other user to clarify roles, experience, and working style."),
+});
+export type GetChatInsightsOutput = z.infer<typeof GetChatInsightsOutputSchema>;

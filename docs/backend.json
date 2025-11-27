@@ -122,6 +122,10 @@
           "items": {
             "type": "string"
           }
+        },
+        "viewCount": {
+          "type": "number",
+          "description": "The number of times the project has been viewed."
         }
       },
       "required": [
