@@ -80,7 +80,7 @@ export default function DashboardPage() {
 
       // Fetch profiles of all interested users
       if (uniqueInterestedUserIds.length > 0) {
-        // Firestore 'in' query is limited to 30 elements.
+        // Firestore 'in' query is limited to 30 elements. Chunk the requests if necessary.
         const userChunks = [];
         for (let i = 0; i < uniqueInterestedUserIds.length; i += 30) {
             userChunks.push(uniqueInterestedUserIds.slice(i, i + 30));
@@ -106,9 +106,23 @@ export default function DashboardPage() {
         startAiInsightsTransition(async () => {
           try {
             const insights = await getProfileInsights({
-              userProfile: userProfile,
-              userProjects: projects,
-              interestedDevelopers: interestedUsersProfiles,
+              userProfile: {
+                bio: userProfile.bio,
+                skills: userProfile.skills,
+                techStack: userProfile.techStack,
+                yearsOfExperience: userProfile.yearsOfExperience,
+              },
+              userProjects: projects.map(p => ({
+                title: p.title,
+                description: p.description,
+                requiredSkills: p.requiredSkills,
+              })),
+              interestedDevelopers: interestedUsersProfiles.map(i => ({
+                  bio: i.bio,
+                  skills: i.skills,
+                  techStack: i.techStack,
+                  yearsOfExperience: i.yearsOfExperience,
+              })),
             });
             setAiInsights(insights);
           } catch (e) {

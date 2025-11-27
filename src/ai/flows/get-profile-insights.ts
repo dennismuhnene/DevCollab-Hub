@@ -33,8 +33,8 @@ Your analysis should answer the following:
 
 **User's Profile:**
 - Bio: {{{userProfile.bio}}}
-- Skills: {{#each userProfile.skills}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
-- Tech Stack: {{#each userProfile.techStack}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
+- Skills: {{#if userProfile.skills}}{{#each userProfile.skills}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}No skills listed.{{/if}}
+- Tech Stack: {{#if userProfile.techStack}}{{#each userProfile.techStack}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}No tech stack listed.{{/if}}
 - Experience: {{{userProfile.yearsOfExperience}}} years
 
 **User's Projects:**
@@ -48,8 +48,8 @@ Your analysis should answer the following:
 {{#if interestedDevelopers.length}}
     {{#each interestedDevelopers}}
     - Developer Bio: {{{this.bio}}}
-      - Skills: {{#each this.skills}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
-      - Tech Stack: {{#each this.techStack}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
+      - Skills: {{#if this.skills}}{{#each this.skills}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}No skills listed.{{/if}}
+      - Tech Stack: {{#if this.techStack}}{{#each this.techStack}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}No tech stack listed.{{/if}}
       - Experience: {{{this.yearsOfExperience}}} years
     {{/each}}
 {{else}}
