@@ -71,5 +71,3 @@ const getProfileInsightsFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    
