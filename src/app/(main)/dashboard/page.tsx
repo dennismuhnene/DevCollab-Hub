@@ -258,8 +258,8 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
           
-          {aiInsights && (
-             <Card className="bg-gradient-to-br from-primary/5 to-transparent">
+          {(isAiInsightsLoading || aiInsights) && (
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3">
                   <Lightbulb className="h-6 w-6 text-yellow-400" />
@@ -268,18 +268,29 @@ export default function DashboardPage() {
                 <CardDescription>A summary of who's interested in your work and what to do next.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 text-sm">
-                <div>
-                  <h4 className="font-semibold mb-1">Audience Summary</h4>
-                  <p className="text-muted-foreground">{aiInsights.audienceSummary}</p>
-                </div>
-                 <div>
-                  <h4 className="font-semibold mb-1">Potential Opportunities</h4>
-                  <p className="text-muted-foreground">{aiInsights.potentialGaps}</p>
-                </div>
-                 <div className="p-3 bg-primary/10 rounded-md">
-                  <h4 className="font-semibold mb-1">Actionable Advice</h4>
-                  <p className="text-foreground/90 font-medium">{aiInsights.actionableAdvice}</p>
-                </div>
+                {isAiInsightsLoading ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-4 w-1/4" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-8 w-4/5" />
+                  </div>
+                ) : aiInsights ? (
+                  <>
+                    <div>
+                      <h4 className="font-semibold mb-1">Audience Summary</h4>
+                      <p className="text-muted-foreground">{aiInsights.audienceSummary}</p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-1">Potential Opportunities</h4>
+                      <p className="text-muted-foreground">{aiInsights.potentialGaps}</p>
+                    </div>
+                    <div className="p-3 bg-primary/10 rounded-md">
+                      <h4 className="font-semibold mb-1">Actionable Advice</h4>
+                      <p className="text-foreground/90 font-medium">{aiInsights.actionableAdvice}</p>
+                    </div>
+                  </>
+                ) : null}
               </CardContent>
             </Card>
           )}
