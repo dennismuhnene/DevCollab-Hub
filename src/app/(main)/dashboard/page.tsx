@@ -69,59 +69,60 @@ export default function DashboardPage() {
       const projects = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
       setMyProjects(projects);
 
-      // Consolidate all unique interested user IDs from all projects
-      const allInterestedUserIds = new Set<string>();
+      // Consolidate all unique interested and matched user IDs from all projects
+      const allEngagedUserIds = new Set<string>();
       projects.forEach(p => {
-        p.interestedUsers?.forEach(uid => allInterestedUserIds.add(uid));
+        p.interestedUsers?.forEach(uid => allEngagedUserIds.add(uid));
+        p.matchedUsers?.forEach(uid => allEngagedUserIds.add(uid));
       });
 
-      const uniqueInterestedUserIds = Array.from(allInterestedUserIds);
-      let interestedUsersProfiles: UserProfile[] = [];
+      const uniqueEngagedUserIds = Array.from(allEngagedUserIds);
+      let engagedUsersProfiles: UserProfile[] = [];
 
-      // Fetch profiles of all interested users
-      if (uniqueInterestedUserIds.length > 0) {
+      // Fetch profiles of all engaged users
+      if (uniqueEngagedUserIds.length > 0) {
         // Firestore 'in' query is limited to 30 elements. Chunk the requests if necessary.
         const userChunks = [];
-        for (let i = 0; i < uniqueInterestedUserIds.length; i += 30) {
-            userChunks.push(uniqueInterestedUserIds.slice(i, i + 30));
+        for (let i = 0; i < uniqueEngagedUserIds.length; i += 30) {
+            userChunks.push(uniqueEngagedUserIds.slice(i, i + 30));
         }
         const userPromises = userChunks.map(chunk => 
             getDocs(query(collection(db, 'users'), where(documentId(), 'in', chunk)))
         );
         const userSnapshots = await Promise.all(userPromises);
-        interestedUsersProfiles = userSnapshots.flatMap(snap => snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)));
+        engagedUsersProfiles = userSnapshots.flatMap(snap => snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)));
       }
 
-      // Map interested users back to their respective projects for the UI
+      // Map interested users back to their respective projects for the UI (only for display, not for AI)
       const interestedUsersData: Record<string, InterestedUser[]> = {};
       for (const project of projects) {
         interestedUsersData[project.id] = (project.interestedUsers || [])
-          .map(uid => interestedUsersProfiles.find(p => p.uid === uid))
+          .map(uid => engagedUsersProfiles.find(p => p.uid === uid))
           .filter((u): u is InterestedUser => u !== undefined);
       }
       setInterestedUsersByProject(interestedUsersData);
 
-      // Trigger AI insights if there are interested developers
-      if (interestedUsersProfiles.length > 0) {
+      // Trigger AI insights if there are any engaged developers
+      if (engagedUsersProfiles.length > 0) {
         startAiInsightsTransition(async () => {
           try {
             const insights = await getProfileInsights({
               userProfile: {
-                bio: userProfile.bio,
-                skills: userProfile.skills,
-                techStack: userProfile.techStack,
-                yearsOfExperience: userProfile.yearsOfExperience,
+                bio: userProfile.bio || '',
+                skills: userProfile.skills || [],
+                techStack: userProfile.techStack || [],
+                yearsOfExperience: userProfile.yearsOfExperience || 0,
               },
               userProjects: projects.map(p => ({
                 title: p.title,
                 description: p.description,
                 requiredSkills: p.requiredSkills,
               })),
-              interestedDevelopers: interestedUsersProfiles.map(i => ({
-                  bio: i.bio,
-                  skills: i.skills,
-                  techStack: i.techStack,
-                  yearsOfExperience: i.yearsOfExperience,
+              interestedDevelopers: engagedUsersProfiles.map(i => ({
+                  bio: i.bio || '',
+                  skills: i.skills || [],
+                  techStack: i.techStack || [],
+                  yearsOfExperience: i.yearsOfExperience || 0,
               })),
             });
             setAiInsights(insights);
@@ -131,7 +132,6 @@ export default function DashboardPage() {
           }
         });
       }
-
 
       // Fetch recommended developers
       const usersCol = collection(db, 'users');
