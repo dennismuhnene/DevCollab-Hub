@@ -28,6 +28,10 @@ const signupSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
   email: z.string().email({ message: 'Please enter a valid email address' }),
   password: z.string().min(9, { message: 'Password must be at least 9 characters long' }),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
 });
 
 type SignupFormData = z.infer<typeof signupSchema>;
@@ -35,6 +39,7 @@ type SignupFormData = z.infer<typeof signupSchema>;
 export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -128,6 +133,26 @@ export default function SignupPage() {
               </Button>
             </div>
             {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <div className="relative">
+              <Input
+                id="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                {...register('confirmPassword')}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? <EyeOff /> : <Eye />}
+              </Button>
+            </div>
+            {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>}
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Creating account...' : 'Sign Up'}
