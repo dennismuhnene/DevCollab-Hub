@@ -4,8 +4,7 @@ import { Code2 } from 'lucide-react';
 const NeuralAxisLogo = () => (
     <svg width="24" height="24" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-6 w-6">
         <g clipPath="url(#clip0_footer_logo)">
-            {/* Use currentColor to inherit the text color from the parent anchor tag */}
-            <path d="M50 100C77.6142 100 100 77.6142 100 50C100 22.3858 77.6142 0 50 0C22.3858 0 0 22.3858 0 50C0 77.6142 22.3858 100 50 100Z" fill="currentColor"/>
+            <path d="M50 100C77.6142 100 100 77.6142 100 50C100 22.3858 77.6142 0 50 0C22.3858 0 0 22.3858 0 50C0 77.6142 22.3858 100 50 100Z" fill="#000"/>
             <path d="M50.0002 91.6667C72.9926 91.6667 91.6668 72.9924 91.6668 50C91.6668 27.0076 72.9926 8.33331 50.0002 8.33331C27.0078 8.33331 8.3335 27.0076 8.3335 50C8.3335 72.9924 27.0078 91.6667 50.0002 91.6667Z" stroke="#F1B302" strokeWidth="3"/>
             <path d="M62.6375 29.1667L81.25 62.5H68.75L62.6375 52.0833V29.1667Z" fill="#F1B302"/>
             <path d="M62.6375 29.1667L43.75 62.5H56.25L62.6375 52.0833V29.1667Z" fill="#F1B3.2"/>
