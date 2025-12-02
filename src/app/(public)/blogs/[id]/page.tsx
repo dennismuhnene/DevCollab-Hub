@@ -139,7 +139,7 @@ export default function BlogPostPage() {
       )}
 
       <div
-        className="prose-styles max-w-none mx-auto"
+        className="prose-styles-base max-w-none mx-auto"
         dangerouslySetInnerHTML={{ __html: contentToShow }}
       />
       

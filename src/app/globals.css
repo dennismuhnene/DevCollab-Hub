@@ -83,20 +83,48 @@
 }
 
 /* Base styles for rendered HTML content */
-.prose-styles {
+.prose-styles-base {
   @apply text-foreground text-lg leading-relaxed;
 }
-.prose-styles h1, .prose-styles h2, .prose-styles h3 {
-  @apply font-bold tracking-tight mb-4 mt-8;
+
+.prose-styles-base h1,
+.prose-styles-base h2,
+.prose-styles-base h3,
+.prose-styles-base h4,
+.prose-styles-base h5,
+.prose-styles-base h6 {
+  /* Let inline styles from editor control margins */
 }
-.prose-styles h1 { @apply text-4xl; }
-.prose-styles h2 { @apply text-3xl; }
-.prose-styles h3 { @apply text-2xl; }
-.prose-styles p { @apply mb-4; }
-.prose-styles a { @apply text-primary underline; }
-.prose-styles ul, .prose-styles ol { @apply pl-6 mb-4; }
-.prose-styles li { @apply mb-2; }
-.prose-styles blockquote { @apply border-l-4 border-primary pl-4 italic text-muted-foreground; }
-.prose-styles pre { @apply bg-muted p-4 rounded-md text-sm; }
-.prose-styles code { @apply bg-muted px-1 py-0.5 rounded-sm font-mono text-sm; }
-.prose-styles pre code { @apply bg-transparent p-0; }
+
+.prose-styles-base p {
+  /* Let inline styles from editor control margins */
+}
+
+.prose-styles-base a {
+  @apply text-primary underline;
+}
+
+.prose-styles-base ul,
+.prose-styles-base ol {
+  @apply pl-6 my-4; /* Use 'my' for margin top and bottom */
+}
+
+.prose-styles-base li {
+  @apply mb-2;
+}
+
+.prose-styles-base blockquote {
+  @apply border-l-4 border-primary pl-4 my-4 italic text-muted-foreground;
+}
+
+.prose-styles-base pre {
+  @apply bg-muted p-4 my-4 rounded-md text-sm overflow-x-auto;
+}
+
+.prose-styles-base code {
+  @apply bg-muted px-1.5 py-1 rounded-sm font-mono text-sm;
+}
+
+.prose-styles-base pre code {
+  @apply bg-transparent p-0;
+}
