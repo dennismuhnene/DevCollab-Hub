@@ -61,8 +61,8 @@ export default function Header() {
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto flex h-14 max-w-7xl items-center px-4">
           <nav className="flex flex-1 items-center justify-between">
-            <div className="flex items-center space-x-6 text-sm font-medium">
-              <Link href="/" className="mr-6 flex items-center space-x-2">
+            <div className="flex items-center space-x-2 md:space-x-6 text-sm font-medium">
+              <Link href="/" className="mr-4 md:mr-6 flex items-center space-x-2">
                 <Code2 className="h-6 w-6" />
                 <span className="font-bold hidden sm:inline-block">DevCollab Hub</span>
               </Link>
@@ -120,10 +120,19 @@ export default function Header() {
                           </div>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
+                         <DropdownMenuItem onSelect={() => router.push('/dashboard')}>
+                          <LayoutDashboard className="mr-2 h-4 w-4" />
+                          <span>Dashboard</span>
+                        </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/profile')}>
                           <User className="mr-2 h-4 w-4" />
                           <span>Profile</span>
                         </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/messages')}>
+                          <MessageSquare className="mr-2 h-4 w-4" />
+                          <span>Messages</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem onSelect={handleLogout}>
                           <LogOut className="mr-2 h-4 w-4" />
                           <span>Log out</span>

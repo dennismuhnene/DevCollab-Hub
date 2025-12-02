@@ -33,6 +33,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 export default function ChatPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
@@ -231,6 +232,31 @@ export default function ChatPage() {
     if (!name) return '?';
     return name.split(' ').map((n) => n[0]).join('');
   };
+  
+  const MatchListContent = () => (
+      <>
+        <div className="p-4 border-b">
+          <h2 className="text-xl font-semibold flex items-center">
+            <Users className="mr-3 h-5 w-5" />
+            Matches
+          </h2>
+        </div>
+         <div className="p-4 border-b flex items-center justify-between">
+           <Label htmlFor="show-archived" className="flex items-center gap-2 text-sm font-medium">
+             <Archive className="h-4 w-4" />
+             Show Archived
+           </Label>
+           <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
+        </div>
+        {matchesLoading ? (
+           <div className="p-4 space-y-3">
+            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
+          </div>
+        ) : (
+          <MatchList matches={filteredMatches} activeMatchId={matchId} />
+        )}
+      </>
+  );
 
   if (authLoading || loading || matchLoading) {
     return (
@@ -252,32 +278,25 @@ export default function ChatPage() {
   return (
     <>
     <div className="flex h-full border-t">
-      <aside className="hidden md:block w-1/3 lg:w-1/4 h-full border-r bg-muted/20 flex-col">
-        <div className="p-4 border-b">
-          <h2 className="text-xl font-semibold flex items-center">
-            <Users className="mr-3 h-5 w-5" />
-            Matches
-          </h2>
-        </div>
-         <div className="p-4 border-b flex items-center justify-between">
-           <Label htmlFor="show-archived" className="flex items-center gap-2 text-sm font-medium">
-             <Archive className="h-4 w-4" />
-             Show Archived
-           </Label>
-           <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
-        </div>
-        {matchesLoading ? (
-           <div className="p-4 space-y-3">
-            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
-          </div>
-        ) : (
-          <MatchList matches={filteredMatches} activeMatchId={matchId} />
-        )}
+      <aside className="hidden md:flex w-1/3 lg:w-1/4 h-full border-r bg-muted/20 flex-col">
+        <MatchListContent />
       </aside>
       <main className="flex-1 flex flex-col">
         {otherUser && match && match.participantsDetails && match.participantsDetails[otherUser.uid] ? (
            <div className="p-4 border-b flex items-center justify-between gap-4 bg-background">
             <div className="flex items-center gap-4">
+                <div className="md:hidden">
+                    <Sheet>
+                      <SheetTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                            <Users className="h-5 w-5" />
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent side="left" className="p-0 w-3/4">
+                          <MatchListContent />
+                      </SheetContent>
+                    </Sheet>
+                </div>
               <Avatar>
                   <AvatarImage src={match.participantsDetails[otherUser.uid].photoURL} />
                   <AvatarFallback>{getInitials(match.participantsDetails[otherUser.uid].name)}</AvatarFallback>

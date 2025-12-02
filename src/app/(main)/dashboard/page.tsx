@@ -350,7 +350,7 @@ export default function DashboardPage() {
                   {interestedUsersByProject[project.id]?.length > 0 && (
                     <Card className="mb-6">
                       <CardHeader>
-                        <CardTitle className="flex items-center gap-3">
+                        <CardTitle className="flex items-center flex-wrap gap-3">
                           <Hand className="h-5 w-5"/>
                           <span>Interested Developers for: <Link href={`/projects/${project.id}`} className="text-primary hover:underline">{project.title}</Link></span>
                         </CardTitle>
@@ -358,7 +358,7 @@ export default function DashboardPage() {
                       <CardContent>
                         <ul className="space-y-4">
                           {interestedUsersByProject[project.id]?.map(interestedUser => (
-                            <li key={interestedUser.uid} className="flex items-center justify-between">
+                            <li key={interestedUser.uid} className="flex flex-col sm:flex-row items-center justify-between gap-4">
                               <div className="flex items-center space-x-3">
                                 <Avatar>
                                   <AvatarImage src={interestedUser.photoURL} />
@@ -454,7 +454,7 @@ export default function DashboardPage() {
                           {myProjects.length > 0 ? (
                              <div className="space-y-4">
                               {myProjects.map(project => (
-                                <Card key={project.id} className="flex items-center justify-between p-4">
+                                <Card key={project.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 gap-4">
                                   <div className="flex-1">
                                     <Link href={`/projects/${project.id}`} className="font-semibold hover:underline">{project.title}</Link>
                                     <p className="text-sm text-muted-foreground line-clamp-1">{project.description}</p>
