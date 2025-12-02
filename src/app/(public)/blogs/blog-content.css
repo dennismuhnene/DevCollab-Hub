@@ -5,13 +5,6 @@
     line-height: 1.7;
 }
 
-.blog-content > * {
-    font-family: inherit;
-    line-height: inherit;
-    text-align: inherit;
-    font-size: inherit;
-}
-
 .blog-content h1,
 .blog-content h2,
 .blog-content h3,
@@ -86,27 +79,4 @@
     background-color: transparent;
     padding: 0;
     font-family: inherit;
-}
-
-/* Allow inline styles from Tiptap to always take precedence */
-.blog-content [style] {
-    font-family: var(--tiptap-font-family, inherit) !important;
-    line-height: var(--tiptap-line-height, inherit) !important;
-    text-align: var(--tiptap-text-align, inherit) !important;
-    font-size: var(--tiptap-font-size, inherit) !important;
-}
-
-.blog-content p[style],
-.blog-content h1[style],
-.blog-content h2[style],
-.blog-content h3[style],
-.blog-content h4[style] {
-    font-family: var(--tiptap-font-family, inherit) !important;
-    line-height: var(--tiptap-line-height, inherit) !important;
-    text-align: var(--tiptap-text-align, inherit) !important;
-}
-
-.blog-content span[style] {
-    font-family: var(--tiptap-font-family, inherit) !important;
-    font-size: var(--tiptap-font-size, inherit) !important;
 }

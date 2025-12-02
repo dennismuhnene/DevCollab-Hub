@@ -27,8 +27,8 @@ import {
   Link as LinkIcon,
   Code2,
   Eraser,
-  Text,
   CaseSensitive,
+  Text,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useCallback, useEffect } from 'react';
@@ -40,7 +40,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-// --- Custom Tiptap Extension for Line Height ---
+// --- Custom Tiptap Extensions ---
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     lineHeight: {
@@ -59,7 +59,7 @@ const LineHeight = Extension.create({
   addOptions() {
     return {
       types: ['heading', 'paragraph'],
-      defaultLineHeight: '1.5',
+      defaultLineHeight: '1.7',
     };
   },
   addGlobalAttributes() {
@@ -305,7 +305,7 @@ export default function RichContentEditor({ content, onChange }: RichContentEdit
     },
     editorProps: {
       attributes: {
-        class: 'prose dark:prose-invert prose-sm sm:prose-base max-w-none focus:outline-none bg-background rounded-b-md border border-t-0 p-4 min-h-[400px]',
+        class: 'blog-content prose dark:prose-invert prose-sm sm:prose-base max-w-none focus:outline-none bg-background rounded-b-md border border-input border-t-0 p-4 min-h-[400px]',
       },
     },
   });
