@@ -56,15 +56,16 @@ service cloud.firestore {
 
     // BLOGS
     match /blogs/{blogId} {
-      // Anyone can read a blog post if it is published.
-      allow get: if resource.data.isPublished == true;
-      // Anyone can list published blog posts.
-      allow list: if request.query.get('where')[0][2] == true;
-
-      // Only the admin can create, update, or delete posts.
       function isAdmin() {
         return request.auth.token.email == 'dennis.cmuhnene@gmail.com';
       }
+
+      // Admins can read any post, public can only read published posts.
+      allow get: if (resource.data.isPublished == true) || (isSignedIn() && isAdmin());
+      // Admins can list all posts, public can only list published posts.
+      allow list: if (request.query.get('where') != null && request.query.get('where')[0][2] == true) || (isSignedIn() && isAdmin());
+
+      // Only the admin can create, update, or delete posts.
       allow create, update, delete: if isSignedIn() && isAdmin();
     }
 
