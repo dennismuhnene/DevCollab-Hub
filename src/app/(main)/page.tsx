@@ -18,223 +18,180 @@ export default function HomePage() {
   
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-dvh">
-    <main className="flex-1">
-      <section className="w-full py-20 md:py-32 lg:py-40 border-b border-border/40 bg-background/95">
-        <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
-          <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
-            <div className="flex flex-col justify-center space-y-6">
-              <div className="space-y-4">
-                <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">
-                  Find Your Crew, Build Your Vision
-                </h1>
-                <p className="max-w-[600px] text-muted-foreground md:text-xl">
-                  DevCollab Hub is the ultimate platform for developers to connect, collaborate, and create amazing projects together.
-                </p>
-              </div>
-              <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                <Button asChild size="lg">
+    <div className="flex flex-col min-h-dvh bg-background text-foreground">
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="relative w-full pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
+          <div className="absolute inset-0 -z-10">
+            <div className="absolute inset-0 bg-background" />
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10" />
+            <div className="absolute top-1/2 left-1/2 w-[50vw] h-[50vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-[150px]" />
+          </div>
+
+          <div className="container mx-auto max-w-screen-xl px-4 md:px-8 text-center">
+            <div className="flex flex-col items-center space-y-6">
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tighter !leading-tight animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+                Find Your Crew, <br /> Build Your Vision
+              </h1>
+              <p className="max-w-2xl text-muted-foreground md:text-xl animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                DevCollab Hub is the ultimate platform for developers to connect, collaborate, and create amazing projects together.
+              </p>
+              <div className="flex flex-col gap-4 min-[400px]:flex-row animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+                <Button asChild size="lg" className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-shadow">
                   <Link href={user ? "/developers" : "/login"}>
-                    Search Tribe
+                    Explore Collaborators
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
                 {!user && (
-                    <Button asChild variant="secondary" size="lg">
+                    <Button asChild variant="secondary" size="lg" className="shadow-lg shadow-secondary/20 hover:shadow-secondary/40 transition-shadow">
                     <Link href="/signup">
-                        Join the Community
+                        Join the Hub
                     </Link>
                     </Button>
                 )}
               </div>
             </div>
             {heroImage && (
-              <div className="hidden lg:flex items-center justify-center">
-                 <Image
-                    src={heroImage.imageUrl}
-                    alt={heroImage.description}
-                    width={1200}
-                    height={600}
-                    className="rounded-xl shadow-2xl aspect-video object-cover"
-                    priority
-                    data-ai-hint={heroImage.imageHint}
-                 />
+              <div className="mt-20 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+                 <div className="relative group aspect-video max-w-4xl mx-auto rounded-xl shadow-2xl shadow-primary/10 border border-border overflow-hidden">
+                    <Image
+                        src={heroImage.imageUrl}
+                        alt={heroImage.description}
+                        width={1200}
+                        height={600}
+                        className="rounded-xl object-cover transition-transform duration-500 group-hover:scale-105"
+                        priority
+                        data-ai-hint={heroImage.imageHint}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                 </div>
               </div>
             )}
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section id="how-it-works" className="w-full py-20 md:py-32">
+        {/* Features Section */}
+        <section id="how-it-works" className="w-full py-20 md:py-32">
           <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
-            <div className="text-center space-y-4 mb-12">
+            <div className="text-center space-y-4 mb-16">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">How It Works</h2>
               <p className="max-w-2xl mx-auto text-muted-foreground md:text-xl">
                 Connecting with collaborators is as easy as 1, 2, 3.
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-              <div className="flex flex-col items-center space-y-4 p-6 rounded-lg border border-transparent hover:bg-secondary/40 hover:border-border transition-all">
-                <div className="bg-primary/10 p-4 rounded-full">
-                  <Search className="h-10 w-10 text-primary" />
-                </div>
-                <h3 className="text-2xl font-bold">1. Discover</h3>
-                <p className="text-muted-foreground">Browse through a diverse range of developer profiles and exciting projects seeking collaboration.</p>
-              </div>
-              <div className="flex flex-col items-center space-y-4 p-6 rounded-lg border border-transparent hover:bg-secondary/40 hover:border-border transition-all">
-                <div className="bg-primary/10 p-4 rounded-full">
-                  <Handshake className="h-10 w-10 text-primary" />
-                </div>
-                <h3 className="text-2xl font-bold">2. Connect</h3>
-                <p className="text-muted-foreground">Show interest in projects or reach out to developers whose skills match your needs.</p>
-              </div>
-              <div className="flex flex-col items-center space-y-4 p-6 rounded-lg border border-transparent hover:bg-secondary/40 hover:border-border transition-all">
-                <div className="bg-primary/10 p-4 rounded-full">
-                  <Bot className="h-10 w-10 text-primary" />
-                </div>
-                <h3 className="text-2xl font-bold">3. Build</h3>
-                <p className="text-muted-foreground">Use our AI-powered tools to streamline your workflow and bring your shared vision to life.</p>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[
+                { icon: Search, title: '1. Discover', description: 'Browse through a diverse range of developer profiles and exciting projects seeking collaboration.' },
+                { icon: Handshake, title: '2. Connect', description: 'Show interest in projects or reach out to developers whose skills match your needs.' },
+                { icon: Bot, title: '3. Build', description: 'Use our AI-powered tools to streamline your workflow and bring your shared vision to life.' }
+              ].map((feature, index) => (
+                 <Card key={index} className="relative overflow-hidden bg-card/50 border-border/50 hover:border-primary/50 transition-all duration-300 transform hover:-translate-y-2 hover:shadow-glow animate-fade-in-up" style={{ animationDelay: `${0.2 + index * 0.1}s`}}>
+                    <CardContent className="p-8 text-center flex flex-col items-center">
+                        <div className="mb-6 bg-primary/10 p-4 rounded-full border border-primary/20">
+                            <feature.icon className="h-10 w-10 text-primary" />
+                        </div>
+                        <h3 className="text-2xl font-bold mb-2">{feature.title}</h3>
+                        <p className="text-muted-foreground">{feature.description}</p>
+                    </CardContent>
+                 </Card>
+              ))}
             </div>
           </div>
-      </section>
+        </section>
 
-      <section id="features" className="w-full py-20 md:py-32 bg-secondary/20">
-        <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
-          <div className="flex flex-col items-center justify-center space-y-4 text-center">
-            <div className="space-y-2">
+        {/* Featured Projects */}
+        <section id="features" className="w-full py-20 md:py-32 bg-background/50">
+          <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
+            <div className="text-center space-y-4 mb-16">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Featured Projects</h2>
-              <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+              <p className="max-w-2xl mx-auto text-muted-foreground md:text-xl">
                 Check out some of the exciting projects currently looking for collaborators.
               </p>
             </div>
-          </div>
-          <div className="mx-auto grid grid-cols-1 gap-8 py-12 sm:grid-cols-2 lg:grid-cols-3">
-            {project1 && (
-                <Card className="h-full transform transition-all duration-300 hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-primary/10">
-                  <CardContent className="p-0">
-                    <div className="aspect-[3/2] w-full overflow-hidden rounded-t-lg">
-                      <Image
-                        src={project1.imageUrl}
-                        alt="AI-Powered Chatbot"
-                        width={600}
-                        height={400}
-                        className="h-full w-full object-cover"
-                        data-ai-hint={project1.imageHint}
-                      />
-                    </div>
-                  </CardContent>
-                  <div className="p-6">
-                    <h3 className="mb-2 text-xl font-bold leading-tight">AI-Powered Chatbot</h3>
-                    <p className="mb-4 line-clamp-3 flex-grow text-muted-foreground">
-                      A cutting-edge chatbot for customer service.
-                    </p>
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">React</div>
-                      <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">Node.js</div>
-                      <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">AI</div>
-                    </div>
-                  </div>
-                </Card>
-            )}
-             {project2 && (
-                <Card className="h-full transform transition-all duration-300 hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-primary/10">
-                  <CardContent className="p-0">
-                    <div className="aspect-[3/2] w-full overflow-hidden rounded-t-lg">
-                      <Image
-                        src={project2.imageUrl}
-                        alt="E-commerce Platform"
-                        width={600}
-                        height={400}
-                        className="h-full w-full object-cover"
-                        data-ai-hint={project2.imageHint}
-                      />
-                    </div>
-                  </CardContent>
-                  <div className="p-6">
-                    <h3 className="mb-2 text-xl font-bold leading-tight">E-commerce Platform</h3>
-                    <p className="mb-4 line-clamp-3 flex-grow text-muted-foreground">
-                      Build a scalable online store from scratch.
-                    </p>
-                    <div className="flex flex-wrap gap-2 pt-2">
-                       <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">Next.js</div>
-                       <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">Stripe</div>
-                       <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">GraphQL</div>
-                    </div>
-                  </div>
-                </Card>
-            )}
-             {project3 && (
-                <Card className="h-full transform transition-all duration-300 hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-primary/10">
-                  <CardContent className="p-0">
-                    <div className="aspect-[3/2] w-full overflow-hidden rounded-t-lg">
-                      <Image
-                        src={project3.imageUrl}
-                        alt="Mobile Fitness App"
-                        width={600}
-                        height={400}
-                        className="h-full w-full object-cover"
-                        data-ai-hint={project3.imageHint}
-                      />
-                    </div>
-                  </CardContent>
-                  <div className="p-6">
-                    <h3 className="mb-2 text-xl font-bold leading-tight">Mobile Fitness App</h3>
-                    <p className="mb-4 line-clamp-3 flex-grow text-muted-foreground">
-                      An app to track workouts and nutrition.
-                    </p>
-                    <div className="flex flex-wrap gap-2 pt-2">
-                       <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">React Native</div>
-                       <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">Firebase</div>
-                    </div>
-                  </div>
-                </Card>
-            )}
-          </div>
-          <div className="flex justify-center mt-8">
-            <Button asChild variant="outline">
-              <Link href="/projects">
-                View All Projects <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      <section id="about" className="w-full py-20 md:py-32">
-        <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
-            <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
-                <div>
-                    <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">About DevCollab Hub</h2>
-                    <p className="mt-4 max-w-3xl text-muted-foreground md:text-xl">
-                        DevCollab Hub was born from a simple idea: developers are stronger together. We believe that the best-in-class products are built by teams with diverse skills and a shared passion. Our mission is to break down the barriers to collaboration, making it easier than ever for developers to find each other, share ideas, and build the future of technology.
-                    </p>
-                    <p className="mt-4 max-w-3xl text-muted-foreground md:text-xl">
-                        Whether you're a student looking for a project partner, a professional seeking a new challenge, or a hobbyist with a brilliant idea, DevCollab Hub is your launchpad.
-                    </p>
-                </div>
-                <div className="hidden lg:flex items-center justify-center">
-                    <Image
-                        src="https://picsum.photos/seed/about/1200/800"
-                        alt="A team of developers collaborating"
-                        width={1200}
-                        height={800}
-                        className="rounded-xl shadow-2xl aspect-video object-cover"
-                        data-ai-hint="team collaboration"
-                    />
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[project1, project2, project3].map((project, index) => project && (
+                  <Card key={index} className="h-full bg-card/50 border-border/50 flex flex-col group overflow-hidden transform transition-all duration-300 hover:scale-105 hover:shadow-glow hover:border-secondary/50 animate-fade-in-up" style={{ animationDelay: `${0.4 + index * 0.1}s` }}>
+                      <CardContent className="p-0">
+                          <div className="aspect-video w-full overflow-hidden">
+                              <Image
+                                  src={project.imageUrl}
+                                  alt={project.description}
+                                  width={600}
+                                  height={400}
+                                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                  data-ai-hint={project.imageHint}
+                              />
+                          </div>
+                      </CardContent>
+                      <div className="p-6 flex-grow flex flex-col">
+                          <h3 className="mb-2 text-xl font-bold leading-tight">
+                            {index === 0 && 'AI-Powered Chatbot'}
+                            {index === 1 && 'E-commerce Platform'}
+                            {index === 2 && 'Mobile Fitness App'}
+                          </h3>
+                          <p className="mb-4 line-clamp-2 flex-grow text-muted-foreground">
+                            {index === 0 && 'A cutting-edge chatbot for customer service.'}
+                            {index === 1 && 'Build a scalable online store from scratch.'}
+                            {index === 2 && 'An app to track workouts and nutrition.'}
+                          </p>
+                          <div className="flex flex-wrap gap-2 pt-2">
+                              {index === 0 && <><Badge variant="outline">React</Badge><Badge variant="outline">Node.js</Badge><Badge variant="outline">AI</Badge></>}
+                              {index === 1 && <><Badge variant="outline">Next.js</Badge><Badge variant="outline">Stripe</Badge><Badge variant="outline">GraphQL</Badge></>}
+                              {index === 2 && <><Badge variant="outline">React Native</Badge><Badge variant="outline">Firebase</Badge></>}
+                          </div>
+                      </div>
+                  </Card>
+              ))}
             </div>
-        </div>
-      </section>
-
-    </main>
+             <div className="flex justify-center mt-12 animate-fade-in-up" style={{ animationDelay: '0.8s' }}>
+              <Button asChild variant="outline">
+                <Link href="/projects">
+                  View All Projects <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+        
+        {/* CTA Section */}
+        <section id="cta" className="w-full py-20 md:py-32">
+          <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
+            <div className="relative isolate overflow-hidden rounded-2xl bg-primary/90 px-6 py-24 text-center shadow-2xl sm:px-16 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+              <h2 className="mx-auto max-w-2xl text-3xl font-bold tracking-tight text-primary-foreground sm:text-4xl">
+                Ready to Start Your Next Project?
+              </h2>
+              <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-primary-foreground/80">
+                Join a community of innovators. Find your perfect collaborator and bring your ideas to life. Your journey starts here.
+              </p>
+              <div className="mt-10 flex items-center justify-center gap-x-6">
+                <Button asChild size="lg" variant="secondary">
+                  <Link href={user ? "/projects/new" : "/signup"}>Get Started</Link>
+                </Button>
+                <Button asChild size="lg" variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground">
+                  <Link href="/developers">Learn more <span aria-hidden="true">→</span></Link>
+                </Button>
+              </div>
+              <svg viewBox="0 0 1024 1024" className="absolute left-1/2 top-1/2 -z-10 h-[64rem] w-[64rem] -translate-x-1/2 [mask-image:radial-gradient(closest-side,white,transparent)]" aria-hidden="true">
+                <circle cx="512" cy="512" r="512" fill="url(#gradient-cta)" fillOpacity="0.7"></circle>
+                <defs>
+                  <radialGradient id="gradient-cta">
+                    <stop stopColor="#9D4EDD"></stop>
+                    <stop offset="1" stopColor="#4F3A93"></stop>
+                  </radialGradient>
+                </defs>
+              </svg>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }
