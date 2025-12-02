@@ -69,7 +69,7 @@ export default function HomePage() {
                         alt={heroImage.description}
                         width={1200}
                         height={600}
-                        className="rounded-xl object-contain transition-transform duration-500 group-hover:scale-105"
+                        className="rounded-xl object-cover object-bottom transition-transform duration-500 group-hover:scale-105"
                         priority
                         data-ai-hint={heroImage.imageHint}
                     />
