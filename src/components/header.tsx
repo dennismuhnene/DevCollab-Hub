@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { LogIn, UserPlus, User, LogOut, MessageSquare, Users, LayoutDashboard, Menu, Contact } from 'lucide-react';
+import { LogIn, UserPlus, User, LogOut, MessageSquare, Users, LayoutDashboard, Menu, Contact, PenSquare } from 'lucide-react';
 import Notifications from './notifications';
 import { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
@@ -42,6 +42,7 @@ export default function Header() {
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const isAdmin = user?.email === 'dennis.cmuhnene@gmail.com';
 
   const handleLogout = async () => {
     try {
@@ -66,6 +67,11 @@ export default function Header() {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/messages", label: "Messages", icon: MessageSquare },
   ];
+  
+  const mobileNavLinks = [
+    ...navLinks,
+    { href: "/blogs", label: "Blog", icon: PenSquare },
+  ];
 
   return (
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -77,6 +83,7 @@ export default function Header() {
                 <span className="font-bold hidden sm:inline-block text-[#c5a35a] text-lg">DevCollab Hub</span>
               </Link>
               <div className="hidden md:flex items-center space-x-6">
+                <Link href="/blogs" className="transition-colors hover:text-foreground/80 text-foreground/60">Blog</Link>
                 <ClientOnly>
                   {user && (
                     <>
@@ -138,6 +145,12 @@ export default function Header() {
                           <MessageSquare className="mr-2 h-4 w-4" />
                           <span>Messages</span>
                         </DropdownMenuItem>
+                         {isAdmin && (
+                            <DropdownMenuItem onSelect={() => router.push('/d_blog')}>
+                                <PenSquare className="mr-2 h-4 w-4" />
+                                <span>Blog Dashboard</span>
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onSelect={handleLogout}>
                           <LogOut className="mr-2 h-4 w-4" />
@@ -180,7 +193,13 @@ export default function Header() {
                                 </Link>
                             </div>
                             <div className="flex flex-col space-y-2 p-4 flex-1">
-                                {user && navLinks.map((link) => (
+                                <SheetClose asChild>
+                                    <Link href="/blogs" className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
+                                        <PenSquare className="h-5 w-5" />
+                                        Blog
+                                    </Link>
+                                </SheetClose>
+                                {user && mobileNavLinks.slice(0, -1).map((link) => (
                                     <SheetClose asChild key={link.href}>
                                         <Link href={link.href} className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
                                             <link.icon className="h-5 w-5" />
