@@ -74,7 +74,7 @@ export default function Header() {
             <div className="flex items-center space-x-2 md:space-x-6 text-sm font-medium">
               <Link href="/" className="mr-4 md:mr-6 flex items-center space-x-2">
                 <Image src="/images/devcollab-logo.png" alt="DevCollab Hub Logo" width={32} height={32} className="h-8 w-8" />
-                <span className="font-bold hidden sm:inline-block text-yellow-600">DevCollab Hub</span>
+                <span className="font-bold hidden sm:inline-block text-yellow-600 text-lg">DevCollab Hub</span>
               </Link>
               <div className="hidden md:flex items-center space-x-6">
                 <ClientOnly>
