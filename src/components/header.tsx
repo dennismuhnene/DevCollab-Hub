@@ -14,10 +14,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { LogIn, UserPlus, Code2, User, LogOut, MessageSquare, Users, LayoutDashboard, Menu, Contact } from 'lucide-react';
+import { LogIn, UserPlus, User, LogOut, MessageSquare, Users, LayoutDashboard, Menu, Contact } from 'lucide-react';
 import Notifications from './notifications';
 import { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
+import Image from 'next/image';
 
 function ClientOnly({ children }: { children: React.ReactNode }) {
   const [hasMounted, setHasMounted] = useState(false);
@@ -72,8 +73,8 @@ export default function Header() {
           <nav className="flex flex-1 items-center justify-between">
             <div className="flex items-center space-x-2 md:space-x-6 text-sm font-medium">
               <Link href="/" className="mr-4 md:mr-6 flex items-center space-x-2">
-                <Code2 className="h-6 w-6" />
-                <span className="font-bold hidden sm:inline-block">DevCollab Hub</span>
+                <Image src="/images/devcollab-logo.png" alt="DevCollab Hub Logo" width={24} height={24} className="h-6 w-6" />
+                <span className="font-bold hidden sm:inline-block text-muted-foreground">DevCollab Hub</span>
               </Link>
               <div className="hidden md:flex items-center space-x-6">
                 <ClientOnly>
@@ -169,16 +170,16 @@ export default function Header() {
                         <span className="sr-only">Open menu</span>
                       </Button>
                     </SheetTrigger>
-                    <SheetContent side="left" className="w-3/4">
+                    <SheetContent side="left" className="p-0 w-3/4">
                        <SheetTitle className="sr-only">Menu</SheetTitle>
                         <div className="flex flex-col h-full">
-                            <div className="flex items-center border-b pb-4">
+                            <div className="flex items-center border-b p-4">
                                 <Link href="/" className="flex items-center space-x-2" onClick={() => setIsSheetOpen(false)}>
-                                    <Code2 className="h-6 w-6" />
-                                    <span className="font-bold">DevCollab Hub</span>
+                                    <Image src="/images/devcollab-logo.png" alt="DevCollab Hub Logo" width={24} height={24} className="h-6 w-6" />
+                                    <span className="font-bold text-muted-foreground">DevCollab Hub</span>
                                 </Link>
                             </div>
-                            <div className="flex flex-col space-y-2 pt-4 flex-1">
+                            <div className="flex flex-col space-y-2 p-4 flex-1">
                                 {user && navLinks.map((link) => (
                                     <SheetClose asChild key={link.href}>
                                         <Link href={link.href} className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
@@ -188,7 +189,7 @@ export default function Header() {
                                     </SheetClose>
                                 ))}
                             </div>
-                            <div className="mt-auto border-t pt-4">
+                            <div className="mt-auto border-t p-4">
                                <ClientOnly>
                                 {user ? null : (
                                     <div className="flex flex-col space-y-2">
