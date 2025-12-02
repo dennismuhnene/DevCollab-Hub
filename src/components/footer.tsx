@@ -20,7 +20,7 @@ export default function Footer() {
                             <Image
                                 src="/images/neuralaxis-logo.png"
                                 alt="NeuralAxis Labs Logo"
-                                width={48}
+                                width={64}
                                 height={64}
                                 className="h-16 w-12 rounded-full flex-shrink-0"
                             />
