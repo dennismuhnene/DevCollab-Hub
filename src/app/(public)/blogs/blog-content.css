@@ -1,0 +1,112 @@
+
+.blog-content {
+    color: hsl(var(--foreground));
+    font-size: 1.125rem; /* 18px */
+    line-height: 1.7;
+}
+
+.blog-content > * {
+    font-family: inherit;
+    line-height: inherit;
+    text-align: inherit;
+    font-size: inherit;
+}
+
+.blog-content h1,
+.blog-content h2,
+.blog-content h3,
+.blog-content h4,
+.blog-content h5,
+.blog-content h6 {
+    font-weight: bold;
+    margin-bottom: 1em;
+    margin-top: 1.5em;
+}
+
+.blog-content h1 { font-size: 2.25em; }
+.blog-content h2 { font-size: 1.75em; }
+.blog-content h3 { font-size: 1.5em; }
+.blog-content h4 { font-size: 1.25em; }
+
+
+.blog-content p {
+    margin-bottom: 1.25em;
+}
+
+.blog-content a {
+    color: hsl(var(--primary));
+    text-decoration: underline;
+}
+
+.blog-content ul,
+.blog-content ol {
+    margin-left: 1.5rem;
+    margin-bottom: 1.25em;
+}
+
+.blog-content ul {
+    list-style-type: disc;
+}
+
+.blog-content ol {
+    list-style-type: decimal;
+}
+
+.blog-content li {
+    margin-bottom: 0.5em;
+}
+
+.blog-content blockquote {
+    border-left: 4px solid hsl(var(--primary));
+    padding-left: 1rem;
+    margin: 1.5em 0;
+    font-style: italic;
+    color: hsl(var(--muted-foreground));
+}
+
+.blog-content pre {
+    background-color: hsl(var(--muted));
+    padding: 1rem;
+    margin: 1.5em 0;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    overflow-x: auto;
+    color: hsl(var(--card-foreground));
+}
+
+.blog-content code {
+    background-color: hsl(var(--muted));
+    padding: 0.25em 0.5em;
+    border-radius: 0.25rem;
+    font-family: var(--font-geist-mono);
+    font-size: 0.9em;
+}
+
+.blog-content pre code {
+    background-color: transparent;
+    padding: 0;
+    font-family: inherit;
+}
+
+/* Allow inline styles from Tiptap to always take precedence */
+.blog-content [style] {
+    font-family: var(--tiptap-font-family, inherit) !important;
+    line-height: var(--tiptap-line-height, inherit) !important;
+    text-align: var(--tiptap-text-align, inherit) !important;
+    font-size: var(--tiptap-font-size, inherit) !important;
+}
+
+.blog-content p[style],
+.blog-content h1[style],
+.blog-content h2[style],
+.blog-content h3[style],
+.blog-content h4[style] {
+    font-family: var(--tiptap-font-family, inherit) !important;
+    line-height: var(--tiptap-line-height, inherit) !important;
+    text-align: var(--tiptap-text-align, inherit) !important;
+}
+
+.blog-content span[style] {
+    font-family: var(--tiptap-font-family, inherit) !important;
+    font-size: var(--tiptap-font-size, inherit) !important;
+}

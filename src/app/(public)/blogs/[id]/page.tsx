@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -11,6 +12,7 @@ import Image from 'next/image';
 import { format } from 'date-fns';
 import { Calendar, User, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import '.././blog-content.css';
 
 const WORD_COUNT_LIMIT = 250;
 
@@ -66,12 +68,10 @@ export default function BlogPostPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
         <Skeleton className="h-8 w-1/4 mb-8" />
-        <Skeleton className="h-12 w-3/4 mb-4" />
-        <Skeleton className="h-6 w-1/2 mb-8" />
-        <Skeleton className="w-full h-96 mb-8" />
-        <div className="space-y-4">
+        <Skeleton className="w-full h-80 mb-8" />
+        <div className="space-y-4 max-w-3xl mx-auto">
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-5/6" />
@@ -99,58 +99,65 @@ export default function BlogPostPage() {
 
 
   return (
-    <article className="container mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
-       <div className="mb-8">
-         <Button asChild variant="ghost" className="pl-0">
-             <Link href="/blogs">
-                 <ArrowLeft className="mr-2 h-4 w-4" />
-                 Back to All Posts
-             </Link>
-         </Button>
-       </div>
-      <header className="mb-12 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">{post.title}</h1>
-        <div className="flex justify-center items-center space-x-6 text-muted-foreground">
-            <div className="flex items-center space-x-2">
-                <User className="h-4 w-4" />
-                <span>{post.authorName}</span>
+    <article className="bg-background">
+        {/* Header with Background Image */}
+        <header className="relative w-full h-[50vh] min-h-[300px] text-white">
+            {post.imageUrl && (
+                <Image
+                    src={post.imageUrl}
+                    alt={post.title}
+                    fill
+                    className="object-cover"
+                    priority
+                />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+
+            <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-12 lg:p-16">
+                 <div className="max-w-4xl mx-auto w-full">
+                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">{post.title}</h1>
+                    <div className="flex items-center space-x-6 text-white/90">
+                        <div className="flex items-center space-x-2">
+                            <User className="h-4 w-4" />
+                            <span>{post.authorName}</span>
+                        </div>
+                        {post.createdAt && (
+                            <div className="flex items-center space-x-2">
+                                <Calendar className="h-4 w-4" />
+                                <time dateTime={post.createdAt.toDate().toISOString()}>
+                                    {format(post.createdAt.toDate(), 'PPP')}
+                                </time>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
-            {post.createdAt && (
-                <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4" />
-                    <time dateTime={post.createdAt.toDate().toISOString()}>
-                        {format(post.createdAt.toDate(), 'PPP')}
-                    </time>
+        </header>
+
+        {/* Content Section */}
+        <div className="container mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
+            <div className="mb-8">
+                <Button asChild variant="ghost" className="pl-0">
+                    <Link href="/blogs">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back to All Posts
+                    </Link>
+                </Button>
+            </div>
+
+            <div
+                className="blog-content mx-auto"
+                dangerouslySetInnerHTML={{ __html: contentToShow }}
+            />
+            
+            {!isExpanded && wordCount > WORD_COUNT_LIMIT && (
+                <div className="mt-8 text-center bg-gradient-to-t from-background to-transparent pt-20 -mt-20">
+                <Button size="lg" onClick={() => setIsExpanded(true)}>
+                    Read More
+                </Button>
                 </div>
             )}
         </div>
-      </header>
-
-      {post.imageUrl && (
-        <div className="relative w-full h-96 mb-12 rounded-lg overflow-hidden shadow-lg">
-          <Image
-            src={post.imageUrl}
-            alt={post.title}
-            fill
-            className="object-cover"
-            priority
-          />
-        </div>
-      )}
-
-      <div
-        className="prose-styles-base max-w-none mx-auto"
-        dangerouslySetInnerHTML={{ __html: contentToShow }}
-      />
-      
-       {!isExpanded && wordCount > WORD_COUNT_LIMIT && (
-        <div className="mt-8 text-center bg-gradient-to-t from-background to-transparent pt-20 -mt-20">
-          <Button size="lg" onClick={() => setIsExpanded(true)}>
-            Read More
-          </Button>
-        </div>
-      )}
-
     </article>
   );
 }
