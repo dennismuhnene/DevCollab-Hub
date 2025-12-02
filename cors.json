@@ -18,7 +18,9 @@
       "Authorization",
       "x-goog-resumable",
       "x-goog-upload-protocol",
-      "x-goog-upload-command"
+      "x-goog-upload-command",
+      "x-goog-upload-offset",
+      "x-goog-upload-status"
     ],
     "maxAgeSeconds": 3600
   }
