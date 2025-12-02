@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  DevCollab Hub is a social and professional networking platform designed for software developers and tech enthusiasts to connect, collaborate and create  projects together. Whether you're looking for a co-founder for your next big idea or searching for specific skills to complete your team, DevCollab Hub provides the tools to make it happen.
+  DevCollab Hub is a social and professional networking platform designed for software developers and tech enthusiasts and profesionals to connect, collaborate and create  projects together. Whether you're looking for a co-founder for your next big idea or searching for specific skills to complete your team, DevCollab Hub provides the tools to make it happen.
 </p>
 
 ---
