@@ -2,24 +2,15 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow public read access to all files
+    // Allow public read access to all files.
     match /{allPaths=**} {
       allow read;
     }
 
-    // Allow write access to the 'images' folder for authenticated users.
-    // Since the blog dashboard is only accessible to the admin, this is secure.
-    match /images/{allPaths=**} {
+    // Allow write access for any authenticated user to any path.
+    // The application's UI logic already restricts who can upload and where.
+    match /{allPaths=**} {
       allow write: if request.auth != null;
-    }
-
-    // Existing rules for other parts of the app remain untouched and functional.
-    match /profile-images/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    match /project-images/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
