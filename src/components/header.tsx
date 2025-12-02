@@ -17,6 +17,19 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { LogIn, UserPlus, Code2, User, LogOut, MessageSquare, Users, LayoutDashboard } from 'lucide-react';
 import Notifications from './notifications';
+import { useEffect, useState } from 'react';
+
+function ClientOnly({ children }: { children: React.ReactNode }) {
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+  if (!hasMounted) {
+    return null;
+  }
+  return <>{children}</>;
+}
+
 
 export default function Header() {
   const { user, userProfile, loading } = useAuth();
@@ -25,11 +38,9 @@ export default function Header() {
   const handleLogout = async () => {
     try {
       await auth.signOut();
-      // Redirect immediately after sign-out is initiated.
       router.push('/');
     } catch (error) {
       console.error('Error signing out:', error);
-      // Even if there's an error, try to push the user to the home page.
       router.push('/');
     }
   };
@@ -50,22 +61,24 @@ export default function Header() {
               <Code2 className="h-6 w-6" />
               <span className="font-bold hidden sm:inline-block">DevCollab Hub</span>
             </Link>
-            {user && (
-              <>
-                <Link href="/developers" className="transition-colors hover:text-foreground/80 text-foreground/60">
-                  Discover
-                </Link>
-                <Link href="/projects" className="transition-colors hover:text-foreground/80 text-foreground/60">
-                  My Projects
-                </Link>
-                <Link href="/dashboard" className="transition-colors hover:text-foreground/80 text-foreground/60">
-                  Dashboard
-                </Link>
-                 <Link href="/messages" className="transition-colors hover:text-foreground/80 text-foreground/60">
-                  Messages
-                </Link>
-              </>
-            )}
+            <ClientOnly>
+                {user && (
+                <>
+                    <Link href="/developers" className="transition-colors hover:text-foreground/80 text-foreground/60">
+                    Discover
+                    </Link>
+                    <Link href="/projects" className="transition-colors hover:text-foreground/80 text-foreground/60">
+                    My Projects
+                    </Link>
+                    <Link href="/dashboard" className="transition-colors hover:text-foreground/80 text-foreground/60">
+                    Dashboard
+                    </Link>
+                    <Link href="/messages" className="transition-colors hover:text-foreground/80 text-foreground/60">
+                    Messages
+                    </Link>
+                </>
+                )}
+            </ClientOnly>
           </div>
           <div className="flex items-center space-x-2">
             <Button variant="ghost" asChild>
@@ -74,6 +87,7 @@ export default function Header() {
                 </Link>
             </Button>
             <div className="w-px h-6 bg-border mx-2"></div>
+            <ClientOnly>
             {loading ? (
               <div className="h-8 w-8 animate-pulse rounded-full bg-secondary"></div>
             ) : user ? (
@@ -125,6 +139,7 @@ export default function Header() {
                 </Button>
               </div>
             )}
+            </ClientOnly>
           </div>
         </nav>
       </div>
