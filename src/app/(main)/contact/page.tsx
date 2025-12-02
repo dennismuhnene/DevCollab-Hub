@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState, useFormStatus } from 'react-dom';
 import { Mail, Phone, MapPin, Send, Linkedin, Github } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -70,14 +71,14 @@ function SubmitButton() {
 
 export default function ContactPage() {
     const { toast } = useToast();
-    const [state, formAction] = useFormState(sendEmail, {
+    const [state, formAction] = useActionState(sendEmail, {
         message: '',
         errors: undefined,
     });
     
     useEffect(() => {
         if (state.message) {
-            if(state.errors) {
+            if(state.errors && Object.keys(state.errors).length > 0) {
                  toast({
                     title: 'Error',
                     description: state.message,
@@ -129,6 +130,7 @@ export default function ContactPage() {
                         placeholder="Your full name"
                         required
                       />
+                       {state.errors?.name && <p className="text-sm text-destructive">{state.errors.name[0]}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email *</Label>
@@ -139,6 +141,7 @@ export default function ContactPage() {
                         placeholder="your@email.com"
                         required
                       />
+                       {state.errors?.email && <p className="text-sm text-destructive">{state.errors.email[0]}</p>}
                     </div>
                   </div>
 
@@ -150,6 +153,7 @@ export default function ContactPage() {
                       placeholder="Project discussion, collaboration, etc."
                       required
                     />
+                     {state.errors?.subject && <p className="text-sm text-destructive">{state.errors.subject[0]}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -161,6 +165,7 @@ export default function ContactPage() {
                       rows={6}
                       required
                     />
+                     {state.errors?.message && <p className="text-sm text-destructive">{state.errors.message[0]}</p>}
                   </div>
 
                   <div className="w-full">
@@ -228,3 +233,5 @@ export default function ContactPage() {
     </div>
   );
 }
+
+    
