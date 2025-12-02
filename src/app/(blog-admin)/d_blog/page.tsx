@@ -15,6 +15,7 @@ import {
   doc,
   serverTimestamp,
   Timestamp,
+  getDoc,
 } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase/config';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -41,10 +42,10 @@ import { Plus, Trash2, Save, X, LogOut, Loader2, Upload, Image as ImageIcon, Ext
 import * as mammoth from 'mammoth';
 import type { BlogPost } from '@/types/blog';
 import { format } from 'date-fns';
+import RichContentEditor from '@/components/RichContentEditor';
 
 const CATEGORIES: string[] = ['Web Development', 'Data Engineering', 'Machine Learning', 'DevOps', 'Engineering', 'Full Stack'];
 
-// Adapted from your example to fit the current project's types
 function normalizePostData(doc: any): BlogPost {
   const data = doc.data();
   return {
@@ -74,13 +75,12 @@ export default function BlogAdminPage() {
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [postToDelete, setPostToDelete] = useState<BlogPost | null>(null);
 
-  const initialFormData: Omit<BlogPost, 'id' | 'createdAt' | 'updatedAt' | 'authorId'> = {
+  const initialFormData: Omit<BlogPost, 'id' | 'createdAt' | 'updatedAt' | 'authorId' | 'authorName'> = {
     title: '',
     slug: '',
     content: '',
     excerpt: '',
     imageUrl: '',
-    authorName: user?.displayName || 'Dennis Munene',
     isPublished: false,
     category: '',
   };
@@ -104,7 +104,7 @@ export default function BlogAdminPage() {
       const q = query(collection(db, 'blogs'), where('authorId', '==', user.uid));
       const querySnapshot = await getDocs(q);
       const fetchedPosts = querySnapshot.docs.map(normalizePostData);
-      fetchedPosts.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+      fetchedPosts.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
       setPosts(fetchedPosts);
     } catch (error) {
       console.error('Failed to load posts:', error);
@@ -146,7 +146,6 @@ export default function BlogAdminPage() {
       content: post.content,
       excerpt: post.excerpt,
       imageUrl: post.imageUrl || '',
-      authorName: post.authorName,
       isPublished: post.isPublished,
       category: post.category,
     });
@@ -179,13 +178,14 @@ export default function BlogAdminPage() {
         const docRef = await addDoc(collection(db, 'blogs'), {
           ...dataToSave,
           authorId: user.uid,
+          authorName: user.displayName || 'Dennis Munene',
           createdAt: serverTimestamp(),
         });
         const newPostSnap = await getDoc(docRef);
         setEditingPost(normalizePostData(newPostSnap));
         toast({ title: 'Post Created', description: `The post "${formData.title}" has been successfully created.` });
       }
-      fetchPosts(); // Re-fetch all posts to update the list
+      fetchPosts(); 
     } catch (e) {
       console.error('Failed to save post:', e);
       toast({ title: isUpdating ? 'Update Failed' : 'Creation Failed', description: e instanceof Error ? e.message : 'Could not save the post.', variant: 'destructive' });
@@ -200,10 +200,8 @@ export default function BlogAdminPage() {
     const { id, imageUrl, title } = postToDelete;
 
     try {
-      // Delete from Firestore
       await deleteDoc(doc(db, 'blogs', id));
 
-      // Delete image from Storage
       if (imageUrl) {
         try {
           const imageRef = ref(storage, imageUrl);
@@ -347,9 +345,9 @@ export default function BlogAdminPage() {
                       <CardTitle className="text-2xl">{editingPost ? 'Edit Post' : 'Create New Post'}</CardTitle>
                       <CardDescription>{editingPost ? `Editing "${editingPost.title}"` : 'Fill out the details below.'}</CardDescription>
                     </div>
-                    {editingPost && (
+                    {editingPost && editingPost.isPublished && (
                       <Button variant="outline" size="sm" asChild>
-                        <a href={`/blogs/${editingPost.slug}`} target="_blank" rel="noopener noreferrer">
+                        <a href={`/blogs/${editingPost.id}`} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="h-4 w-4 mr-2" /> View Live
                         </a>
                       </Button>
@@ -375,7 +373,7 @@ export default function BlogAdminPage() {
 
                   <div className="space-y-2 mb-6">
                     <Label>Main Content</Label>
-                    <Textarea id="content" value={formData.content} onChange={(e) => handleInputChange('content', e.target.value)} placeholder="Write your blog post here..." rows={15} />
+                    <RichContentEditor content={formData.content} onChange={(html) => handleInputChange('content', html)} />
                   </div>
 
                   <Card className="bg-muted/50">
