@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEditor, EditorContent, Extension } from '@tiptap/react';
@@ -26,6 +27,7 @@ import {
   Code2,
   Eraser,
   Text,
+  CaseSensitive,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useCallback, useEffect } from 'react';
@@ -43,6 +45,10 @@ declare module '@tiptap/core' {
     lineHeight: {
       setLineHeight: (lineHeight: string) => ReturnType;
       unsetLineHeight: () => ReturnType;
+    };
+    fontSize: {
+      setFontSize: (fontSize: string) => ReturnType;
+      unsetFontSize: () => ReturnType;
     };
   }
 }
@@ -89,7 +95,50 @@ const LineHeight = Extension.create({
     };
   },
 });
-// --- End Custom Extension ---
+
+const FontSize = Extension.create({
+    name: 'fontSize',
+    addOptions() {
+      return {
+        types: ['textStyle'],
+      };
+    },
+    addGlobalAttributes() {
+      return [
+        {
+          types: this.options.types,
+          attributes: {
+            fontSize: {
+              default: null,
+              parseHTML: (element) => element.style.fontSize?.replace(/['"]+/g, ''),
+              renderHTML: (attributes) => {
+                if (!attributes.fontSize) {
+                  return {};
+                }
+                return {
+                  style: `font-size: ${attributes.fontSize}`,
+                };
+              },
+            },
+          },
+        },
+      ];
+    },
+    addCommands() {
+      return {
+        setFontSize: (fontSize: string) => ({ chain }) => {
+          return chain().setMark('textStyle', { fontSize }).run();
+        },
+        unsetFontSize: () => ({ chain }) => {
+          return chain()
+            .setMark('textStyle', { fontSize: null })
+            .removeEmptyTextStyle()
+            .run();
+        },
+      };
+    },
+  });
+// --- End Custom Extensions ---
 
 
 interface RichContentEditorProps {
@@ -105,6 +154,16 @@ const FONT_FAMILIES = [
   { label: 'Verdana', value: 'Verdana, sans-serif' },
   { label: 'Monospace', value: '\'Courier New\', Courier, monospace' },
   { label: 'Cursive', value: 'cursive' },
+];
+
+const FONT_SIZES = [
+    { label: '12px', value: '12px' },
+    { label: '14px', value: '14px' },
+    { label: '16px', value: '16px' },
+    { label: '18px', value: '18px' },
+    { label: '20px', value: '20px' },
+    { label: '24px', value: '24px' },
+    { label: '30px', value: '30px' },
 ];
 
 const LINE_HEIGHTS = [
@@ -150,6 +209,26 @@ const TiptapToolbar = ({ editor }: { editor: any }) => {
         </SelectContent>
       </Select>
       
+       {/* Font Size */}
+       <Select
+        onValueChange={(value) => editor.chain().focus().setFontSize(value).run()}
+        value={editor.getAttributes('textStyle').fontSize || ''}
+      >
+        <SelectTrigger className="w-[120px]">
+           <div className="flex items-center gap-2">
+            <CaseSensitive className="h-4 w-4" />
+            <SelectValue placeholder="Size" />
+          </div>
+        </SelectTrigger>
+        <SelectContent>
+          {FONT_SIZES.map((item) => (
+            <SelectItem key={item.value} value={item.value}>
+              {item.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
       {/* Line Height */}
       <Select
         onValueChange={(value) => editor.chain().focus().setLineHeight(value).run()}
@@ -215,7 +294,8 @@ export default function RichContentEditor({ content, onChange }: RichContentEdit
       Link.configure({ openOnClick: false, autolink: true }),
       TextStyle,
       FontFamily,
-      LineHeight, // Add the custom extension
+      LineHeight,
+      FontSize,
     ],
     content: content,
     onUpdate: ({ editor }) => {
