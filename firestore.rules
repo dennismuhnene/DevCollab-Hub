@@ -54,6 +54,20 @@ service cloud.firestore {
       }
     }
 
+    // BLOGS
+    match /blogs/{blogId} {
+      // Anyone can read a blog post if it is published.
+      allow get: if resource.data.isPublished == true;
+      // Anyone can list published blog posts.
+      allow list: if request.query.get('where')[0][2] == true;
+
+      // Only the admin can create, update, or delete posts.
+      function isAdmin() {
+        return request.auth.token.email == 'dennis.cmuhnene@gmail.com';
+      }
+      allow create, update, delete: if isSignedIn() && isAdmin();
+    }
+
     // MATCHES
     match /matches/{matchId} {
       // PERMISSIVE RULE TO FIX DEPLOYMENT CONFLICT.
