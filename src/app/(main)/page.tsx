@@ -30,19 +30,24 @@ export default function HomePage() {
     <div className="flex flex-col min-h-dvh bg-background text-foreground">
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative w-full pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
-          <div className="absolute inset-0 -z-10">
-            <div className="absolute inset-0 bg-background" />
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
-            <div className="absolute top-1/2 left-1/2 w-[50vw] h-[50vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-[150px]" />
-          </div>
-
-          <div className="container mx-auto max-w-screen-xl px-4 md:px-8 text-center">
+        <section className="relative w-full h-[80vh] min-h-[600px] flex items-center justify-center text-center overflow-hidden">
+          {heroImage && (
+              <Image
+                  src={heroImage.imageUrl}
+                  alt={heroImage.description}
+                  fill
+                  className="object-cover object-bottom"
+                  priority
+                  data-ai-hint={heroImage.imageHint}
+              />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
+          <div className="relative z-10 container mx-auto max-w-screen-xl px-4 md:px-8 text-white">
             <div className="flex flex-col items-center space-y-6">
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tighter !leading-tight animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
                 Find Your Crew, <br /> Build Your Vision
               </h1>
-              <p className="max-w-2xl text-muted-foreground md:text-xl animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+              <p className="max-w-2xl text-lg md:text-xl animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
                 DevCollab Hub is the ultimate platform for developers to connect, collaborate, and create amazing projects together.
               </p>
               <div className="flex flex-col gap-4 min-[400px]:flex-row animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
@@ -61,22 +66,6 @@ export default function HomePage() {
                 )}
               </div>
             </div>
-            {heroImage && (
-              <div className="mt-20 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-                 <div className="relative group aspect-video max-w-4xl mx-auto rounded-xl shadow-2xl shadow-primary/10 border border-border/50 overflow-hidden">
-                    <Image
-                        src={heroImage.imageUrl}
-                        alt={heroImage.description}
-                        width={1200}
-                        height={600}
-                        className="rounded-xl object-cover object-bottom transition-transform duration-500 group-hover:scale-105"
-                        priority
-                        data-ai-hint={heroImage.imageHint}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-                 </div>
-              </div>
-            )}
           </div>
         </section>
 
