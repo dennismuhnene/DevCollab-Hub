@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useActionState, useFormStatus } from 'react-dom';
+import { useFormState, useFormStatus } from 'react-dom';
 import { Mail, Phone, MapPin, Send, Linkedin, Github } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -71,7 +71,7 @@ function SubmitButton() {
 
 export default function ContactPage() {
     const { toast } = useToast();
-    const [state, formAction] = useActionState(sendEmail, {
+    const [state, formAction] = useFormState(sendEmail, {
         message: '',
         errors: undefined,
     });
