@@ -46,9 +46,9 @@ const FONT_FAMILIES = [
   { label: 'Inter', value: 'Inter, sans-serif' },
   { label: 'Arial', value: 'Arial, sans-serif' },
   { label: 'Georgia', value: 'Georgia, serif' },
-  { label: 'Times New Roman', value: "'Times New Roman', Times, serif" },
+  { label: 'Times New Roman', value: '\'Times New Roman\', Times, serif' },
   { label: 'Verdana', value: 'Verdana, sans-serif' },
-  { label: 'Monospace', value: "'Courier New', Courier, monospace" },
+  { label: 'Monospace', value: '\'Courier New\', Courier, monospace' },
   { label: 'Cursive', value: 'cursive' },
 ];
 
