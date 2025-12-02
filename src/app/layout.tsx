@@ -8,6 +8,11 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 export const metadata: Metadata = {
   title: 'DevCollab Hub',
   description: 'Connect with developers and collaborate on exciting projects.',
+  icons: {
+    icon: '/images/devcollab-logo.png',
+    shortcut: '/images/devcollab-logo.png',
+    apple: '/images/devcollab-logo.png',
+  },
 };
 
 export default function RootLayout({
@@ -17,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable} dark`} suppressHydrationWarning>
-      <body className="font-sans antialiased">
+      <body>
         <FirebaseClientProvider>
           {children}
           <Toaster />
