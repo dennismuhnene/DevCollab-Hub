@@ -16,14 +16,66 @@ import '.././blog-content.css';
 
 const WORD_COUNT_LIMIT = 250;
 
-function stripHtmlAndCountWords(html: string) {
-    if (typeof window === 'undefined') return { wordCount: 0, truncatedText: '' };
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const textContent = doc.body.textContent || "";
-    const words = textContent.trim().split(/\s+/);
-    const wordCount = words.filter(word => word.length > 0).length;
-    const truncatedText = words.slice(0, WORD_COUNT_LIMIT).join(' ') + (wordCount > WORD_COUNT_LIMIT ? '...' : '');
-    return { wordCount, truncatedText };
+function truncateHtml(html: string, limit: number): { isTruncated: boolean, html: string } {
+    if (!html) return { isTruncated: false, html: '' };
+
+    let inTag = false;
+    let wordCount = 0;
+    let truncatedHtml = '';
+    let isTruncated = false;
+
+    for (let i = 0; i < html.length; i++) {
+        const char = html[i];
+
+        if (char === '<') {
+            inTag = true;
+        }
+
+        truncatedHtml += char;
+
+        if (char === '>') {
+            inTag = false;
+        }
+
+        if (!inTag && char.match(/\s/)) {
+            wordCount++;
+        }
+        
+        if (wordCount >= limit) {
+            // Find the end of the current word
+            while(i + 1 < html.length && !html[i+1].match(/\s/)) {
+                truncatedHtml += html[++i];
+            }
+            isTruncated = true;
+            break;
+        }
+    }
+
+    if (isTruncated) {
+         // Close any open tags
+        const openTags = [];
+        const tagRegex = /<([a-zA-Z1-6]+)(?:\s+[^>]*)*>/g;
+        let match;
+        while ((match = tagRegex.exec(truncatedHtml)) !== null) {
+            openTags.push(match[1]);
+        }
+
+        const closingTagRegex = /<\/([a-zA-Z1-6]+)>/g;
+        while ((match = closingTagRegex.exec(truncatedHtml)) !== null) {
+            const closingTag = match[1];
+            const index = openTags.lastIndexOf(closingTag);
+            if (index !== -1) {
+                openTags.splice(index, 1);
+            }
+        }
+        
+        while (openTags.length > 0) {
+            truncatedHtml += `</${openTags.pop()}>`;
+        }
+    }
+
+
+    return { isTruncated, html: truncatedHtml };
 }
 
 
@@ -35,8 +87,8 @@ export default function BlogPostPage() {
   const [post, setPost] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [wordCount, setWordCount] = useState(0);
   const [truncatedContent, setTruncatedContent] = useState('');
+  const [isTruncated, setIsTruncated] = useState(false);
 
   useEffect(() => {
     if (!blogId) return;
@@ -50,9 +102,9 @@ export default function BlogPostPage() {
         const postData = { id: postDoc.id, ...postDoc.data() } as BlogPost;
         if (postData.isPublished) {
           setPost(postData);
-          const { wordCount, truncatedText } = stripHtmlAndCountWords(postData.content);
-          setWordCount(wordCount);
-          setTruncatedContent(truncatedText);
+          const { isTruncated, html } = truncateHtml(postData.content, WORD_COUNT_LIMIT);
+          setIsTruncated(isTruncated);
+          setTruncatedContent(html);
         } else {
           setPost(null);
         }
@@ -95,7 +147,7 @@ export default function BlogPostPage() {
     );
   }
 
-  const contentToShow = isExpanded ? post.content : truncatedContent.replace(/\.\.\.$/, '<p class="mt-4 text-center text-lg font-semibold text-muted-foreground">[...continues]</p>');
+  const contentToShow = isExpanded ? post.content : truncatedContent;
 
 
   return (
@@ -150,11 +202,12 @@ export default function BlogPostPage() {
                 dangerouslySetInnerHTML={{ __html: contentToShow }}
             />
             
-            {!isExpanded && wordCount > WORD_COUNT_LIMIT && (
-                <div className="mt-8 text-center bg-gradient-to-t from-background to-transparent pt-20 -mt-20">
-                <Button size="lg" onClick={() => setIsExpanded(true)}>
-                    Read More
-                </Button>
+            {!isExpanded && isTruncated && (
+                 <div className="mt-8 text-center bg-gradient-to-t from-background to-transparent pt-20 -mt-20 relative">
+                    <div className="absolute bottom-0 left-0 w-full h-full bg-gradient-to-t from-background via-background/80 to-transparent"></div>
+                    <Button size="lg" onClick={() => setIsExpanded(true)} className="relative z-10">
+                        Read More
+                    </Button>
                 </div>
             )}
         </div>
