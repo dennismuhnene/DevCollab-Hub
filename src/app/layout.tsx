@@ -9,8 +9,11 @@ export const metadata: Metadata = {
   title: 'DevCollab Hub',
   description: 'Connect with developers and collaborate on exciting projects.',
   icons: {
-    icon: '/images/devcollab-logo.png',
-    shortcut: '/images/devcollab-logo.png',
+    icon: [
+      { url: '/images/devcollab-logo.png', sizes: 'any' },
+      { url: '/images/devcollab-logo.png', type: 'image/png', sizes: '32x32' },
+      { url: '/images/devcollab-logo.png', type: 'image/png', sizes: '16x16' },
+    ],
     apple: '/images/devcollab-logo.png',
   },
 };
