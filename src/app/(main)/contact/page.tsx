@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState, useFormStatus } from 'react-dom';
 import { Mail, Phone, MapPin, Send, Linkedin, Github } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { sendEmail } from '@/app/(main)/contact/actions';
 import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useActionState as useReactActionState } from 'react';
 
 const contactInfo = [
   {
@@ -71,7 +72,7 @@ function SubmitButton() {
 
 export default function ContactPage() {
     const { toast } = useToast();
-    const [state, formAction] = useFormState(sendEmail, {
+    const [state, formAction] = useReactActionState(sendEmail, {
         message: '',
         errors: undefined,
     });
@@ -233,5 +234,3 @@ export default function ContactPage() {
     </div>
   );
 }
-
-    
