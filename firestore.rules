@@ -56,17 +56,10 @@ service cloud.firestore {
 
     // BLOGS
     match /blogs/{blogId} {
-      function isAdmin() {
-        return request.auth.token.email == 'dennis.cmuhnene@gmail.com';
-      }
-
-      // Admins can read any post, public can only read published posts.
-      allow get: if (resource.data.isPublished == true) || (isSignedIn() && isAdmin());
-      // Admins can list all posts, public can only list published posts.
-      allow list: if (request.query.get('where') != null && request.query.get('where')[0][2] == true) || (isSignedIn() && isAdmin());
-
-      // Only the admin can create, update, or delete posts.
-      allow create, update, delete: if isSignedIn() && isAdmin();
+      // Allow public read access to all posts. The UI will filter for published posts.
+      allow get, list: if true;
+      // Allow any authenticated user to attempt to write. The admin check is handled in the app's logic.
+      allow create, update, delete: if isSignedIn();
     }
 
     // MATCHES

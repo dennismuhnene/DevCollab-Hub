@@ -40,9 +40,19 @@ export default function BlogDashboardPage() {
       const getPosts = async () => {
         setLoading(true);
         const postsCol = collection(db, 'blogs');
-        const q = query(postsCol, where('authorId', '==', user.uid), orderBy('createdAt', 'desc'));
+        // Simplified query to avoid needing a composite index
+        const q = query(postsCol, where('authorId', '==', user.uid));
         const querySnapshot = await getDocs(q);
-        setPosts(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BlogPost)));
+        const fetchedPosts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BlogPost));
+        
+        // Sort posts by date on the client side
+        fetchedPosts.sort((a, b) => {
+            const dateA = a.createdAt?.toDate()?.getTime() || 0;
+            const dateB = b.createdAt?.toDate()?.getTime() || 0;
+            return dateB - dateA;
+        });
+
+        setPosts(fetchedPosts);
         setLoading(false);
       }
       getPosts();
