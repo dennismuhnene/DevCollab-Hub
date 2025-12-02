@@ -10,6 +10,7 @@ import { useAuth } from '@/lib/hooks/use-auth';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const WavyDivider = ({ className }: { className?: string }) => (
     <div className={cn("absolute bottom-0 left-0 w-full overflow-hidden leading-none", className)} >
@@ -67,15 +68,14 @@ export default function HomePage() {
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative w-full flex items-center justify-center text-center overflow-hidden bg-background">
-          <div className="relative w-full">
+          <div className="relative w-full h-[80vh]">
             {heroImage && (
-                <div className="relative w-full h-auto">
+                <div className="relative w-full h-full">
                     <Image
                         src={heroImage.imageUrl}
                         alt={heroImage.description}
-                        width={1920}
-                        height={1080}
-                        className="w-full h-auto object-cover object-center"
+                        fill
+                        className="object-cover object-top"
                         quality={100}
                         data-ai-hint={heroImage.imageHint}
                         priority
