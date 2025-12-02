@@ -44,8 +44,11 @@ interface RichContentEditorProps {
 
 const FONT_FAMILIES = [
   { label: 'Inter', value: 'Inter, sans-serif' },
-  { label: 'Serif', value: 'serif' },
-  { label: 'Monospace', value: 'monospace' },
+  { label: 'Arial', value: 'Arial, sans-serif' },
+  { label: 'Georgia', value: 'Georgia, serif' },
+  { label: 'Times New Roman', value: "'Times New Roman', Times, serif" },
+  { label: 'Verdana', value: 'Verdana, sans-serif' },
+  { label: 'Monospace', value: "'Courier New', Courier, monospace" },
   { label: 'Cursive', value: 'cursive' },
 ];
 
@@ -152,15 +155,15 @@ export default function RichContentEditor({ content, onChange }: RichContentEdit
     },
     editorProps: {
       attributes: {
-        class: 'prose dark:prose-invert prose-sm sm:prose-base max-w-none focus:outline-none bg-background rounded-b-md shadow-inner p-8',
+        class: 'prose dark:prose-invert prose-sm sm:prose-base max-w-none focus:outline-none bg-background rounded-b-md border border-t-0 p-4 min-h-[400px]',
       },
     },
   });
 
   return (
-    <div className="bg-muted p-4 rounded-lg">
+    <div>
       <TiptapToolbar editor={editor} />
-      <EditorContent editor={editor} style={{ minHeight: '500px' }}/>
+      <EditorContent editor={editor} />
     </div>
   );
 }
