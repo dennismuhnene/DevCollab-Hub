@@ -12,11 +12,7 @@ export default function BlogAdminLayout({
           baseTheme: dark,
         }}
     >
-      <html lang="en">
-        <body>
-          {children}
-        </body>
-      </html>
+      {children}
     </ClerkProvider>
   );
 }
