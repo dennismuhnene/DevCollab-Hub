@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase/config';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from './ui/input';
@@ -23,61 +23,43 @@ export default function ImageUploader({ onUpload, initialUrl = '', folderPath = 
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;
     }
 
     setUploading(true);
-    setProgress(0);
+    setProgress(50); // Indicate that the process has started
 
     const storageRef = ref(storage, `${folderPath}/${Date.now()}_${file.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
 
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const currentProgress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        setProgress(currentProgress);
-      },
-      (error) => {
-        console.error('Full upload error object:', error); // Detailed logging
-        toast({
-          variant: 'destructive',
-          title: 'Upload failed',
-          description: `Could not upload image: ${error.code} - ${error.message}`,
-        });
-        setUploading(false);
-      },
-      async () => {
-        try {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          setImageUrl(downloadURL);
-          onUpload(downloadURL);
-          toast({ title: 'Image uploaded successfully!' });
-        } catch (error) {
-          console.error('Failed to get download URL:', error);
-          toast({
-            variant: 'destructive',
-            title: 'Update failed',
-            description: 'Could not get the image URL after upload.',
-          });
-        } finally {
-          setUploading(false);
-        }
-      }
-    );
+    try {
+      // Use uploadBytes for a simpler, non-resumable upload
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+
+      setProgress(100);
+      setImageUrl(downloadURL);
+      onUpload(downloadURL);
+      toast({ title: 'Image uploaded successfully!' });
+    } catch (error: any) {
+      console.error('Full upload error object:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Upload failed',
+        description: `Could not upload image: ${error.code} - ${error.message}`,
+      });
+    } finally {
+      setUploading(false);
+      setProgress(0);
+    }
   };
   
   const removeImage = () => {
     setImageUrl('');
     onUpload('');
   };
-
-  const handleLabelClick = () => {
-    fileInputRef.current?.click();
-  }
 
   return (
     <div className="w-full space-y-4">
