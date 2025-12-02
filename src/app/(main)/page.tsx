@@ -4,12 +4,48 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Users, Briefcase, Bot, Handshake, Search } from 'lucide-react';
+import { ArrowRight, Bot, Handshake, Search } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+
+const WavyDivider = ({ className }: { className?: string }) => (
+    <div className={cn("absolute bottom-0 left-0 w-full overflow-hidden leading-none", className)} >
+        <svg
+            data-name="Layer 1"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1200 120"
+            preserveAspectRatio="none"
+            className="relative block h-[60px] md:h-[120px] w-[calc(100%+1.3px)]"
+        >
+            <path
+                d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"
+                className="fill-background"
+            ></path>
+        </svg>
+    </div>
+);
+
+
+const WavyDividerInverted = ({ className }: { className?: string }) => (
+    <div className={cn("absolute top-0 left-0 w-full overflow-hidden leading-none", className)}>
+        <svg
+            data-name="Layer 1"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1200 120"
+            preserveAspectRatio="none"
+            className="relative block h-[60px] md:h-[120px] w-[calc(100%+1.3px)]"
+        >
+            <path
+                d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"
+                className="fill-background"
+            ></path>
+        </svg>
+    </div>
+);
+
 
 export default function HomePage() {
   const { loading, user } = useAuth();
@@ -30,52 +66,58 @@ export default function HomePage() {
     <div className="flex flex-col min-h-dvh bg-background text-foreground">
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative w-full h-[80vh] flex items-center justify-center text-center overflow-hidden">
-          {heroImage && (
-              <div className="absolute inset-0">
-                <Image
-                    src={heroImage.imageUrl}
-                    alt={heroImage.description}
-                    fill
-                    className="object-cover object-center"
-                    quality={100}
-                    data-ai-hint={heroImage.imageHint}
-                />
-              </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
-          <div className="relative z-10 container mx-auto max-w-screen-xl px-4 md:px-8 text-white">
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tighter !leading-tight animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-                Find Your Crew, <br /> Build Your Vision
-              </h1>
-              <p className="max-w-2xl text-lg md:text-xl animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-                DevCollab Hub is the ultimate platform for developers to connect, collaborate, and create amazing projects together.
-              </p>
-              <div className="flex flex-col gap-4 min-[400px]:flex-row animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-                <Button asChild size="lg" className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-shadow">
-                  <Link href={user ? "/developers" : "/login"}>
-                    Explore Collaborators
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Link>
-                </Button>
-                {!user && (
-                    <Button asChild variant="secondary" size="lg" className="shadow-lg shadow-secondary/20 hover:shadow-secondary/40 transition-shadow">
-                    <Link href="/signup">
-                        Join the Hub
-                    </Link>
+        <section className="relative w-full flex items-center justify-center text-center overflow-hidden bg-background">
+          <div className="relative w-full">
+            {heroImage && (
+                <div className="relative w-full h-auto">
+                    <Image
+                        src={heroImage.imageUrl}
+                        alt={heroImage.description}
+                        width={1920}
+                        height={1080}
+                        className="w-full h-auto object-cover object-center"
+                        quality={100}
+                        data-ai-hint={heroImage.imageHint}
+                        priority
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
+                </div>
+            )}
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-4">
+                <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
+                  <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tighter !leading-tight animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+                    Find Your Crew, <br /> Build Your Vision
+                  </h1>
+                  <p className="max-w-2xl mx-auto text-lg md:text-xl mt-4 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                    DevCollab Hub is the ultimate platform for developers to connect, collaborate, and create amazing projects together.
+                  </p>
+                  <div className="mt-8 flex flex-col items-center gap-4 min-[400px]:flex-row justify-center animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+                    <Button asChild size="lg" className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-shadow">
+                      <Link href={user ? "/developers" : "/login"}>
+                        Explore Collaborators
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                      </Link>
                     </Button>
-                )}
+                    {!user && (
+                        <Button asChild variant="secondary" size="lg" className="shadow-lg shadow-secondary/20 hover:shadow-secondary/40 transition-shadow">
+                        <Link href="/signup">
+                            Join the Hub
+                        </Link>
+                        </Button>
+                    )}
+                  </div>
               </div>
+            </div>
           </div>
         </section>
 
         {/* Features Section */}
-        <section id="how-it-works" className="w-full py-20 md:py-32">
+        <section id="how-it-works" className="relative w-full py-20 md:py-32 bg-background">
           <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="text-center space-y-4 mb-16">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">How It Works</h2>
               <p className="max-w-2xl mx-auto text-muted-foreground md:text-xl">
-                Connecting with collaborators is as easy as 1, 2, 3.
+                Connecting with collaborators is quite easy now
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -99,7 +141,8 @@ export default function HomePage() {
         </section>
 
         {/* Featured Projects */}
-        <section id="features" className="w-full py-20 md:py-32 bg-muted/20">
+        <section id="features" className="relative w-full pt-20 md:pt-32 pb-20 md:pb-32 bg-muted/20">
+          <WavyDividerInverted className="fill-muted/20" />
           <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="text-center space-y-4 mb-16">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Featured Projects</h2>
@@ -150,10 +193,11 @@ export default function HomePage() {
               </Button>
             </div>
           </div>
+          <WavyDivider className="fill-background" />
         </section>
         
         {/* CTA Section */}
-        <section id="cta" className="w-full py-20 md:py-32">
+        <section id="cta" className="relative w-full py-20 md:py-32 bg-background">
           <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="relative isolate overflow-hidden rounded-2xl bg-primary/90 px-6 py-24 text-center shadow-2xl sm:px-16 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
               <h2 className="mx-auto max-w-2xl text-3xl font-bold tracking-tight text-primary-foreground sm:text-4xl">

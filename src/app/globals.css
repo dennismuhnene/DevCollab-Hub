@@ -74,4 +74,10 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  .fill-background {
+    fill: hsl(var(--background));
+  }
+  .fill-muted\/20 {
+    fill: hsla(var(--muted), 0.2);
+  }
 }
