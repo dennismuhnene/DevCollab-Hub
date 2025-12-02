@@ -259,9 +259,13 @@ export default function BlogAdminPage() {
       const downloadURL = await getDownloadURL(storageRef);
       handleInputChange('imageUrl', downloadURL);
       toast({ title: 'Image Uploaded' });
-    } catch (error) {
-      console.error('Image upload error:', error);
-      toast({ title: 'Image Upload Failed', variant: 'destructive' });
+    } catch (error: any) {
+      console.error(`Image upload error: Code: ${error.code}, Message: ${error.message}`);
+      toast({ 
+        title: 'Image Upload Failed', 
+        description: `Error: ${error.code}`,
+        variant: 'destructive' 
+      });
     }
   };
 
