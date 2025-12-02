@@ -73,8 +73,8 @@ export default function Header() {
           <nav className="flex flex-1 items-center justify-between">
             <div className="flex items-center space-x-2 md:space-x-6 text-sm font-medium">
               <Link href="/" className="mr-4 md:mr-6 flex items-center space-x-2">
-                <Image src="/images/devcollab-logo.png" alt="DevCollab Hub Logo" width={24} height={24} className="h-6 w-6" />
-                <span className="font-bold hidden sm:inline-block text-muted-foreground">DevCollab Hub</span>
+                <Image src="/images/devcollab-logo.png" alt="DevCollab Hub Logo" width={32} height={32} className="h-8 w-8" />
+                <span className="font-bold hidden sm:inline-block text-yellow-600">DevCollab Hub</span>
               </Link>
               <div className="hidden md:flex items-center space-x-6">
                 <ClientOnly>
@@ -175,8 +175,8 @@ export default function Header() {
                         <div className="flex flex-col h-full">
                             <div className="flex items-center border-b p-4">
                                 <Link href="/" className="flex items-center space-x-2" onClick={() => setIsSheetOpen(false)}>
-                                    <Image src="/images/devcollab-logo.png" alt="DevCollab Hub Logo" width={24} height={24} className="h-6 w-6" />
-                                    <span className="font-bold text-muted-foreground">DevCollab Hub</span>
+                                    <Image src="/images/devcollab-logo.png" alt="DevCollab Hub Logo" width={32} height={32} className="h-8 w-8" />
+                                    <span className="font-bold text-yellow-600">DevCollab Hub</span>
                                 </Link>
                             </div>
                             <div className="flex flex-col space-y-2 p-4 flex-1">

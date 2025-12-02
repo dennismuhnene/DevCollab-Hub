@@ -8,8 +8,8 @@ export default function Footer() {
             <div className="container mx-auto max-w-screen-xl px-4 md:px-8 py-8">
                 <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="flex items-center space-x-2">
-                        <Image src="/images/devcollab-logo.png" alt="DevCollab Hub Logo" width={24} height={24} className="h-6 w-6" />
-                        <span className="font-bold text-muted-foreground">DevCollab Hub</span>
+                        <Image src="/images/devcollab-logo.png" alt="DevCollab Hub Logo" width={32} height={32} className="h-8 w-8" />
+                        <span className="font-bold text-yellow-600">DevCollab Hub</span>
                     </div>
 
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">

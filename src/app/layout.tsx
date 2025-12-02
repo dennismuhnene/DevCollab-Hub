@@ -8,6 +8,9 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 export const metadata: Metadata = {
   title: 'DevCollab Hub',
   description: 'Connect with developers and collaborate on exciting projects.',
+  icons: {
+    icon: '/images/devcollab-logo.png',
+  },
 };
 
 export default function RootLayout({
