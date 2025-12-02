@@ -23,6 +23,7 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  AlignJustify,
   Link as LinkIcon,
   Code2,
   Eraser,
@@ -267,6 +268,7 @@ const TiptapToolbar = ({ editor }: { editor: any }) => {
       <Button onClick={() => editor.chain().focus().setTextAlign('left').run()} variant={editor.isActive({ textAlign: 'left' }) ? 'secondary' : 'ghost'} size="icon" type="button" title="Align Left"><AlignLeft /></Button>
       <Button onClick={() => editor.chain().focus().setTextAlign('center').run()} variant={editor.isActive({ textAlign: 'center' }) ? 'secondary' : 'ghost'} size="icon" type="button" title="Align Center"><AlignCenter /></Button>
       <Button onClick={() => editor.chain().focus().setTextAlign('right').run()} variant={editor.isActive({ textAlign: 'right' }) ? 'secondary' : 'ghost'} size="icon" type="button" title="Align Right"><AlignRight /></Button>
+      <Button onClick={() => editor.chain().focus().setTextAlign('justify').run()} variant={editor.isActive({ textAlign: 'justify' }) ? 'secondary' : 'ghost'} size="icon" type="button" title="Align Justify"><AlignJustify /></Button>
 
       {/* Advanced */}
       <Button onClick={() => editor.chain().focus().toggleBlockquote().run()} variant={editor.isActive('blockquote') ? 'secondary' : 'ghost'} size="icon" type="button" title="Blockquote"><Quote /></Button>
