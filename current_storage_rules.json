@@ -15,6 +15,12 @@
     },
     {
       "members": [
+        "serviceAccount:studio-4315631326-4e84c@studio-4315631326-4e84c.iam.gserviceaccount.com"
+      ],
+      "role": "roles/storage.admin"
+    },
+    {
+      "members": [
         "allAuthenticatedUsers"
       ],
       "role": "roles/storage.objectCreator"
