@@ -21,7 +21,7 @@ export default function Footer() {
                                 alt="NeuralAxis Labs Logo"
                                 width={64}
                                 height={64}
-                                className="h-16 w-10 rounded-full flex-shrink-0"
+                                className="h-16 w-12 rounded-full flex-shrink-0"
                             />
                             <span>NeuralAxis Labs</span>
                         </a>
