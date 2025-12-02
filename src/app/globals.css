@@ -81,3 +81,22 @@
     fill: hsla(var(--muted), 0.2);
   }
 }
+
+/* Base styles for rendered HTML content */
+.prose-styles {
+  @apply text-foreground text-lg leading-relaxed;
+}
+.prose-styles h1, .prose-styles h2, .prose-styles h3 {
+  @apply font-bold tracking-tight mb-4 mt-8;
+}
+.prose-styles h1 { @apply text-4xl; }
+.prose-styles h2 { @apply text-3xl; }
+.prose-styles h3 { @apply text-2xl; }
+.prose-styles p { @apply mb-4; }
+.prose-styles a { @apply text-primary underline; }
+.prose-styles ul, .prose-styles ol { @apply pl-6 mb-4; }
+.prose-styles li { @apply mb-2; }
+.prose-styles blockquote { @apply border-l-4 border-primary pl-4 italic text-muted-foreground; }
+.prose-styles pre { @apply bg-muted p-4 rounded-md text-sm; }
+.prose-styles code { @apply bg-muted px-1 py-0.5 rounded-sm font-mono text-sm; }
+.prose-styles pre code { @apply bg-transparent p-0; }

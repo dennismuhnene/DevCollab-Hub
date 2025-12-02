@@ -52,6 +52,7 @@ const LineHeight = Extension.create({
   addOptions() {
     return {
       types: ['heading', 'paragraph'],
+      defaultLineHeight: '1.5',
     };
   },
   addGlobalAttributes() {
