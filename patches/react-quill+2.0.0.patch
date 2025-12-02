@@ -1,0 +1,55 @@
+diff --git a/node_modules/react-quill/lib/index.js b/node_modules/react-quill/lib/index.js
+index 7253de5..423b725 100644
+--- a/node_modules/react-quill/lib/index.js
++++ b/node_modules/react-quill/lib/index.js
+@@ -1,5 +1,6 @@
+ 'use strict';
+ 
+ var React = require('react');
++var ReactDOM = require('react-dom');
+ var Quill = require('quill');
+ var PropTypes = require('prop-types');
+ 
+@@ -436,7 +437,7 @@
+ 	},
+ 
+ 	getEditingArea: function(){
+-		return this.editingArea;
++		return this.editingArea.current;
+ 	},
+ 
+ 	getEditor: function(){
+@@ -464,7 +465,7 @@
+ 	},
+ 
+ 	setEditorSelection: function(editor, range) {
+-		if (range && this.hasFocus()) {
++		if (range) {
+ 			editor.setSelection(range);
+ 		}
+ 	},
+@@ -481,7 +482,7 @@
+ 
+ 		return React.createElement('div', {
+ 			id: this.props.id,
+-			ref: (el) => { this.editingArea = el },
++			ref: this.editingArea,
+ 			style: this.props.style,
+ 			className: ['quill', ...classes].join(' '),
+ 			dangerouslySetInnerHTML: { __html: this.getEditorContents() },
+diff --git a/node_modules/react-quill/lib/index.d.ts b/node_modules/react-quill/lib/index.d.ts
+index 585c544..2ac7e4d 100644
+--- a/node_modules/react-quill/lib/index.dts
++++ b/node_modules/react-quill/lib/index.d.ts
+@@ -142,7 +142,7 @@
+   render(): JSX.Element;
+ 
+   /**
+-   * The DOM node for the editor container.
++   * The React-ref for the editor container.
+    */
+-  editingArea: HTMLDivElement;
++  editingArea: React.RefObject<HTMLDivElement>;
+ }
+ 
+ export default ReactQuill;
