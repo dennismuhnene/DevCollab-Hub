@@ -17,8 +17,8 @@ import {
   Timestamp,
   getDoc,
 } from 'firebase/firestore';
-import { db, storage } from '@/lib/firebase/config';
-import { ref, refFromURL, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { db, storage, auth } from '@/lib/firebase/config';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -204,7 +204,7 @@ export default function BlogAdminPage() {
 
       if (imageUrl) {
         try {
-          const imageRef = refFromURL(storage, imageUrl);
+          const imageRef = ref(storage, imageUrl);
           await deleteObject(imageRef);
         } catch (storageError: any) {
           if (storageError.code !== 'storage/object-not-found') {
