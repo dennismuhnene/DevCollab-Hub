@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, getDocs, limit, startAfter, DocumentSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, limit, startAfter, DocumentSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { BlogPost } from '@/types/blog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,15 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 
 const POSTS_PER_PAGE = 6;
-
-// Helper to sort posts client-side
-const sortPosts = (posts: BlogPost[]): BlogPost[] => {
-  return posts.sort((a, b) => {
-    const timeA = a.createdAt instanceof Timestamp ? a.createdAt.toMillis() : new Date(a.createdAt as any).getTime();
-    const timeB = b.createdAt instanceof Timestamp ? b.createdAt.toMillis() : new Date(b.createdAt as any).getTime();
-    return timeB - timeA;
-  });
-};
 
 export default function BlogsPage() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -35,18 +26,17 @@ export default function BlogsPage() {
     }
 
     try {
-      // Simplified query without the orderBy clause that was causing the index error
       const postsQuery = initialLoad
         ? query(
             collection(db, 'blogs'),
             where('isPublished', '==', true),
-            orderBy('createdAt', 'desc'), // Keep sorting for pagination to work correctly
+            orderBy('createdAt', 'desc'),
             limit(POSTS_PER_PAGE)
           )
         : query(
             collection(db, 'blogs'),
             where('isPublished', '==', true),
-            orderBy('createdAt', 'desc'), // Keep sorting for pagination to work correctly
+            orderBy('createdAt', 'desc'),
             startAfter(lastVisible),
             limit(POSTS_PER_PAGE)
           );
@@ -54,7 +44,6 @@ export default function BlogsPage() {
       const querySnapshot = await getDocs(postsQuery);
       const newPosts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BlogPost));
 
-      // Sorting is handled by the query now, just append new posts
       setPosts(prevPosts => initialLoad ? newPosts : [...prevPosts, ...newPosts]);
 
       const lastDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
