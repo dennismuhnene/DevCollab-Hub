@@ -75,7 +75,7 @@ export default function HomePage() {
                         src={heroImage.imageUrl}
                         alt={heroImage.description}
                         fill
-                        className="object-cover object-top"
+                        className="object-cover object-bottom"
                         quality={100}
                         data-ai-hint={heroImage.imageHint}
                         priority
