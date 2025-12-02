@@ -72,7 +72,7 @@ export default function BlogForm({ blogPost }: BlogFormProps) {
       // Create new post
       const newPost = {
         ...data,
-        authorId: user.id,
+        authorId: user.id, // Use clerk user id
         authorName: user.fullName || user.emailAddresses[0].emailAddress,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
