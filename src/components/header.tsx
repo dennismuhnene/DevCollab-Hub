@@ -64,11 +64,11 @@ export default function Header() {
                  <Link href="/messages" className="transition-colors hover:text-foreground/80 text-foreground/60">
                   Messages
                 </Link>
-                <Link href="/contact" className="transition-colors hover:text-foreground/80 text-foreground/60">
-                  Contact
-                </Link>
               </>
             )}
+            <Link href="/contact" className="transition-colors hover:text-foreground/80 text-foreground/60">
+              Contact
+            </Link>
           </div>
           <div className="flex items-center space-x-2">
             {loading ? (
