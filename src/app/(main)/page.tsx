@@ -30,20 +30,22 @@ export default function HomePage() {
     <div className="flex flex-col min-h-dvh bg-background text-foreground">
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative w-full h-[80vh] min-h-[600px] flex items-center justify-center text-center overflow-hidden">
+        <section className="relative w-full flex items-center justify-center text-center">
           {heroImage && (
-              <Image
-                  src={heroImage.imageUrl}
-                  alt={heroImage.description}
-                  fill
-                  className="object-cover object-bottom"
-                  priority
-                  data-ai-hint={heroImage.imageHint}
-              />
+              <div className="w-full">
+                <Image
+                    src={heroImage.imageUrl}
+                    alt={heroImage.description}
+                    width={1920}
+                    height={1080}
+                    className="object-cover w-full h-auto"
+                    priority
+                    data-ai-hint={heroImage.imageHint}
+                />
+              </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
-          <div className="relative z-10 container mx-auto max-w-screen-xl px-4 md:px-8 text-white">
-            <div className="flex flex-col items-center space-y-6">
+          <div className="absolute inset-0 flex flex-col items-center justify-center space-y-6 z-10 container mx-auto max-w-screen-xl px-4 md:px-8 text-white">
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tighter !leading-tight animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
                 Find Your Crew, <br /> Build Your Vision
               </h1>
@@ -65,7 +67,6 @@ export default function HomePage() {
                     </Button>
                 )}
               </div>
-            </div>
           </div>
         </section>
 
