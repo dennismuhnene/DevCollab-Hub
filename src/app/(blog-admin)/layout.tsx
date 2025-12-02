@@ -7,7 +7,7 @@ import { Loader2 } from 'lucide-react';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
 
-const ADMIN_EMAIL = 'dennis.cmuhenene@gmail.com';
+const ADMIN_EMAIL = 'dennis.cmuhnene@gmail.com';
 
 export default function BlogAdminLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();

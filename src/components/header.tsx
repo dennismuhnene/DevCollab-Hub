@@ -42,7 +42,7 @@ export default function Header() {
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const isAdmin = user?.email === 'dennis.cmuhenene@gmail.com';
+  const isAdmin = user?.email === 'dennis.cmuhnene@gmail.com';
 
   const handleLogout = async () => {
     try {
