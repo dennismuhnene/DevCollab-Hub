@@ -4,21 +4,21 @@
 import { ReactNode, useEffect } from 'react';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useRouter } from 'next/navigation';
-import Header from '@/components/header';
-import Footer from '@/components/footer';
 import { Loader2 } from 'lucide-react';
 
-function AuthRedirect({ children }: { children: ReactNode }) {
+export default function AuthLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading && user) {
-      console.log('Auth state changed: User found. Redirecting to /developers...');
       router.push('/developers');
     }
   }, [user, loading, router]);
 
+  // While checking for the user, show a loading spinner.
+  // If the user is found, the useEffect above will trigger a redirect.
+  // The destination page (/developers) will then show its own loading state.
   if (loading || user) {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
@@ -28,19 +28,11 @@ function AuthRedirect({ children }: { children: ReactNode }) {
     );
   }
 
-  console.log('Auth state changed: No user found. Showing auth page.');
-  return <>{children}</>;
-}
-
-
-export default function AuthLayout({ children }: { children: ReactNode }) {
+  // If no user is found and loading is complete, show the login/signup form.
   return (
     <div className="flex min-h-screen flex-col">
-      {/* The main Header and Footer are part of the RootLayout now, 
-          so we don't need them duplicated here. If you want a specific
-          header/footer ONLY for auth pages, you can add them back. */}
       <main className="flex flex-1 items-center justify-center bg-background/50 py-12">
-        <AuthRedirect>{children}</AuthRedirect>
+        {children}
       </main>
     </div>
   );
