@@ -88,4 +88,10 @@ Follow these instructions to get a copy of the project up and running on your lo
 
 ---
 
-This project was bootstrapped and developed in [Firebase Studio](https://firebase.studio/).
+<p align="center">
+  <a href="https://neuralaxislabs.com" target="_blank" rel="noopener noreferrer">
+    <img src="/public/images/neuralaxis-logo.png" alt="NeuralAxis Labs Logo" width="64"/>
+  </a>
+  <br />
+  This project was developed by <strong>NeuralAxis Labs</strong>.
+</p>
