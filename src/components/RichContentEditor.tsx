@@ -28,7 +28,7 @@ import {
   Eraser,
 } from 'lucide-react';
 import { Button } from './ui/button';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import {
   Select,
   SelectContent,
@@ -159,6 +159,13 @@ export default function RichContentEditor({ content, onChange }: RichContentEdit
       },
     },
   });
+
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content, false);
+    }
+  }, [content, editor]);
+
 
   return (
     <div>
