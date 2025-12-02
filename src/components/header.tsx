@@ -14,16 +14,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { LogIn, UserPlus, Code2, User, LogOut, MessageSquare, Users, LayoutDashboard, Menu } from 'lucide-react';
+import { LogIn, UserPlus, Code2, User, LogOut, MessageSquare, Users, LayoutDashboard, Menu, Contact } from 'lucide-react';
 import Notifications from './notifications';
 import { useEffect, useState } from 'react';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
 
 function ClientOnly({ children }: { children: React.ReactNode }) {
   const [hasMounted, setHasMounted] = useState(false);
   useEffect(() => {
     setHasMounted(true);
   }, []);
+
   if (!hasMounted) {
     return (
         <div className="flex items-center space-x-2">
@@ -34,6 +35,7 @@ function ClientOnly({ children }: { children: React.ReactNode }) {
   }
   return <>{children}</>;
 }
+
 
 export default function Header() {
   const { user, userProfile, loading } = useAuth();
@@ -58,10 +60,10 @@ export default function Header() {
   };
 
   const navLinks = [
-    { href: "/developers", label: "Discover" },
-    { href: "/projects", label: "My Projects" },
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/messages", label: "Messages" },
+    { href: "/developers", label: "Discover", icon: Users },
+    { href: "/projects", label: "My Projects", icon: LayoutDashboard },
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/messages", label: "Messages", icon: MessageSquare },
   ];
 
   return (
@@ -88,12 +90,14 @@ export default function Header() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-                <Button variant="ghost" asChild>
-                    <Link href="/contact">
-                    Contact
-                    </Link>
-                </Button>
-                <div className="w-px h-6 bg-border mx-2"></div>
+              <div className="hidden md:flex items-center space-x-2">
+                  <Button variant="ghost" asChild>
+                      <Link href="/contact">
+                      Contact
+                      </Link>
+                  </Button>
+                  <div className="w-px h-6 bg-border"></div>
+              </div>
               
               <ClientOnly>
                 {loading ? (
@@ -142,7 +146,7 @@ export default function Header() {
                     </DropdownMenu>
                   </>
                 ) : (
-                  <div className='space-x-2'>
+                  <div className='hidden md:flex items-center space-x-2'>
                     <Button variant="ghost" asChild>
                       <Link href="/login">
                         <LogIn className="mr-2 h-4 w-4" />
@@ -165,20 +169,56 @@ export default function Header() {
                         <span className="sr-only">Open menu</span>
                       </Button>
                     </SheetTrigger>
-                    <SheetContent side="left">
-                        <div className="flex flex-col space-y-4">
-                            <Link href="/" className="flex items-center space-x-2" onClick={() => setIsSheetOpen(false)}>
-                                <Code2 className="h-6 w-6" />
-                                <span className="font-bold">DevCollab Hub</span>
-                            </Link>
-                            <div className="flex flex-col space-y-2 pt-4">
+                    <SheetContent side="left" className="w-3/4">
+                       <SheetTitle className="sr-only">Menu</SheetTitle>
+                        <div className="flex flex-col h-full">
+                            <div className="flex items-center border-b pb-4">
+                                <Link href="/" className="flex items-center space-x-2" onClick={() => setIsSheetOpen(false)}>
+                                    <Code2 className="h-6 w-6" />
+                                    <span className="font-bold">DevCollab Hub</span>
+                                </Link>
+                            </div>
+                            <div className="flex flex-col space-y-2 pt-4 flex-1">
                                 {user && navLinks.map((link) => (
                                     <SheetClose asChild key={link.href}>
-                                        <Link href={link.href} className="text-lg font-medium text-foreground/80 hover:text-foreground">
-                                        {link.label}
+                                        <Link href={link.href} className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
+                                            <link.icon className="h-5 w-5" />
+                                            {link.label}
                                         </Link>
                                     </SheetClose>
                                 ))}
+                            </div>
+                            <div className="mt-auto border-t pt-4">
+                               <ClientOnly>
+                                {user ? null : (
+                                    <div className="flex flex-col space-y-2">
+                                        <SheetClose asChild>
+                                            <Button variant="ghost" asChild>
+                                            <Link href="/login">
+                                                <LogIn className="mr-2 h-4 w-4" />
+                                                Sign In
+                                            </Link>
+                                            </Button>
+                                        </SheetClose>
+                                        <SheetClose asChild>
+                                            <Button asChild>
+                                            <Link href="/signup">
+                                                <UserPlus className="mr-2 h-4 w-4" />
+                                                Sign Up
+                                            </Link>
+                                            </Button>
+                                        </SheetClose>
+                                    </div>
+                                )}
+                               </ClientOnly>
+                                <SheetClose asChild>
+                                    <Button variant="outline" className="w-full mt-4" asChild>
+                                        <Link href="/contact">
+                                            <Contact className="mr-2 h-4 w-4" />
+                                            Contact
+                                        </Link>
+                                    </Button>
+                                </SheetClose>
                             </div>
                         </div>
                     </SheetContent>
