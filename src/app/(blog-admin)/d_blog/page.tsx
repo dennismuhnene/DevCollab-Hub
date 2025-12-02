@@ -254,7 +254,7 @@ export default function BlogAdminPage() {
     if (!file || !user) return;
     toast({ title: 'Uploading Image...' });
     try {
-      const storageRef = ref(storage, `images/${user.uid}/${Date.now()}-${file.name}`);
+      const storageRef = ref(storage, `blog-images/${user.uid}/${Date.now()}-${file.name}`);
       const snapshot = await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(snapshot.ref);
       handleInputChange('imageUrl', downloadURL);
