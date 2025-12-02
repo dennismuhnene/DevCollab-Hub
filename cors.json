@@ -1,9 +1,11 @@
+
 [
   {
     "origin": [
       "http://localhost:9002",
       "https://6000-firebase-studio-1762274740510.cluster-ikslh4rdsnbqsvu5nw3v4dqjj2.cloudworkstations.dev",
-      "https://9000-firebase-studio-1762274740510.cluster-ikslh4rdsnbqsvu5nw3v4dqjj2.cloudworkstations.dev"
+      "https://9000-firebase-studio-1762274740510.cluster-ikslh4rdsnbqsvu5nw3v4dqjj2.cloudworkstations.dev",
+      "https://9003-firebase-studio-1762274740510.cluster-ikslh4rdsnbqsvu5nw3v4dqjj2.cloudworkstations.dev"
     ],
     "method": [
       "GET",
