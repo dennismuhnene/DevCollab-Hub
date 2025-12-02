@@ -9,24 +9,24 @@
 </p>
 
 <p align="center">
-  DevCollab Hub is a social and professional networking platform designed for software developers and tech enthusiasts to connect, collaborate, and create amazing projects together. Whether you're looking for a co-founder for your next big idea or searching for specific skills to complete your team, DevCollab Hub provides the tools to make it happen.
+  DevCollab Hub is a social and professional networking platform designed for software developers and tech enthusiasts to connect, collaborate and create amazing projects together. Whether you're looking for a co-founder for your next big idea or searching for specific skills to complete your team, DevCollab Hub provides the tools to make it happen.
 </p>
 
 ---
 
 ## ✨ Key Features
 
-- **🧑‍💻 Developer Profiles:** Create a rich profile showcasing your skills, tech stack, experience, and project portfolio.
+- **🧑‍💻 Developer Profiles:** Create a rich profile showcasing your skills, tech stack, experience and project portfolio.
 - **📁 Project Listings:** Post your project ideas, detailing the required skills and technologies to attract the right talent.
 - **🔍 Smart Discovery:** Browse and filter through a network of developers and projects to find the perfect match for your needs.
 - **🤝 AI-Powered Matching:** Get intelligent recommendations for potential collaborators based on your profile and project requirements.
 - **💬 Real-Time Chat:** Once matched, connect and communicate instantly with your new collaborators through private messaging.
-- **🤖 AI-Enhanced Insights:** Leverage AI to generate compelling project descriptions, summarize profiles, and get conversation starters for your new matches.
+- **🤖 AI-Enhanced Insights:** Leverage AI to generate compelling project descriptions, summarize profiles and get conversation starters for your new matches.
 - **🔒 Secure Authentication:** Standard email/password authentication powered by Firebase.
 
 ## 🚀 Tech Stack
 
-This project is built with a modern, scalable, and powerful tech stack:
+This project is built with a modern, scalable and powerful tech stack:
 
 - **Framework:** [Next.js](https://nextjs.org/) (App Router)
 - **Language:** [TypeScript](https://www.typescriptlang.org/)
