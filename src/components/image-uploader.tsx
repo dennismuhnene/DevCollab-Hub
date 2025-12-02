@@ -42,10 +42,11 @@ export default function ImageUploader({ onUpload, initialUrl = '', folderPath = 
         setProgress(currentProgress);
       },
       (error) => {
+        console.error('Full upload error object:', error); // Detailed logging
         toast({
           variant: 'destructive',
           title: 'Upload failed',
-          description: `Could not upload image: ${error.message}`,
+          description: `Could not upload image: ${error.code} - ${error.message}`,
         });
         setUploading(false);
       },
@@ -56,10 +57,11 @@ export default function ImageUploader({ onUpload, initialUrl = '', folderPath = 
           onUpload(downloadURL);
           toast({ title: 'Image uploaded successfully!' });
         } catch (error) {
+          console.error('Failed to get download URL:', error);
           toast({
             variant: 'destructive',
             title: 'Update failed',
-            description: 'Could not get the image URL.',
+            description: 'Could not get the image URL after upload.',
           });
         } finally {
           setUploading(false);
