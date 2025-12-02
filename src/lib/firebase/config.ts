@@ -16,6 +16,9 @@ export const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app);
+
+// Correctly initialize storage with the '.appspot.com' bucket name format.
+// This is the specific fix for the 'storage/unauthorized' error.
+const storage = getStorage(app, `gs://${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.appspot.com`);
 
 export { app, auth, db, storage };
