@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Code2 } from 'lucide-react';
@@ -5,7 +6,7 @@ import { Code2 } from 'lucide-react';
 export default function Footer() {
     return (
         <footer className="bg-background border-t border-border/40">
-            <div className="container mx-auto max-w-screen-xl px-4 md:px-8 py-8">
+            <div className="container mx-auto max-w-screen-xl px-4 md:px-8 py-12">
                 <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="flex items-center space-x-2">
                         <Code2 className="h-6 w-6" />
@@ -19,7 +20,7 @@ export default function Footer() {
                             <Image
                                 src="/images/neuralaxis-logo.png"
                                 alt="NeuralAxis Labs Logo"
-                                width={64}
+                                width={48}
                                 height={64}
                                 className="h-16 w-12 rounded-full flex-shrink-0"
                             />
