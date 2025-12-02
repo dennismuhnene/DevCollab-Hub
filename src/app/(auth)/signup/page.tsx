@@ -77,7 +77,8 @@ export default function SignupPage() {
         title: 'Account created!',
         description: 'Welcome to DevCollab Hub.',
       });
-      router.push('/developers');
+      // The redirect is handled by the auth state listener.
+      // router.push('/developers');
     } catch (error: any) {
       let errorMessage = 'An unexpected error occurred.';
       if (error.code === 'auth/email-already-in-use') {

@@ -21,7 +21,6 @@ import {
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { LogIn, Eye, EyeOff } from 'lucide-react';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -47,14 +46,13 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
     try {
-      // NON-BLOCKING: We don't await the result.
-      // The onAuthStateChanged listener will handle the redirect.
       await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({
         title: 'Login successful!',
         description: "Welcome back to DevCollab Hub.",
       });
-      router.push('/developers');
+      // The redirect is handled by the auth state listener.
+      // router.push('/developers');
     } catch (error: any) {
       let errorMessage = 'An unexpected error occurred.';
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
