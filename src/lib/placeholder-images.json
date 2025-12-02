@@ -9,19 +9,19 @@
     {
       "id": "project-1",
       "description": "Project image for a web application",
-      "imageUrl": "https://images.unsplash.com/photo-1595623654300-b27329804025?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx0ZWNobm9sb2d5JTIwY29kZXxlbnwwfHx8fDE3NjIyNzA4NzR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "/images/ai-chatbot.png",
       "imageHint": "technology code"
     },
     {
       "id": "project-2",
       "description": "Project image for a mobile app",
-      "imageUrl": "https://images.unsplash.com/photo-1710993012000-f109972e3b8f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxtb2JpbGUlMjBpbnRlcmZhY2V8ZW58MHx8fHwxNzYyMjA3OTkwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "/images/e-commerce.png",
       "imageHint": "mobile interface"
     },
     {
       "id": "project-3",
       "description": "Project image for a data science project",
-      "imageUrl": "https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxkYXRhJTIwdmlzdWFsaXphdGlvbnxlbnwwfHx8fDE3NjIxODI3NTB8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "/images/mobile-fit.png",
       "imageHint": "data visualization"
     },
     {
@@ -33,7 +33,7 @@
     {
       "id": "hero-image",
       "description": "Hero image for the landing page",
-      "imageUrl": "https://images.unsplash.com/photo-1552664730-d307ca884978?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxkaXZlcnNlJTIwZGV2ZWxvcGVycyUyMGNvbGxhYm9yYXRpbmd8ZW58MHx8fHwxNzYyMzY5NzMwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "/images/devcollab-hero.png",
       "imageHint": "diverse developers collaborating"
     }
   ]
