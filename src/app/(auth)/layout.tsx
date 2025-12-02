@@ -36,11 +36,12 @@ function AuthRedirect({ children }: { children: ReactNode }) {
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
+      {/* The main Header and Footer are part of the RootLayout now, 
+          so we don't need them duplicated here. If you want a specific
+          header/footer ONLY for auth pages, you can add them back. */}
       <main className="flex flex-1 items-center justify-center bg-background/50 py-12">
         <AuthRedirect>{children}</AuthRedirect>
       </main>
-      <Footer />
     </div>
   );
 }
