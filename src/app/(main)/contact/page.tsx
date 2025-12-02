@@ -1,7 +1,8 @@
 
 'use client';
 
-import { useActionState, useFormStatus } from 'react-dom';
+import { useEffect } from 'react';
+import { useFormStatus } from 'react-dom';
 import { Mail, Phone, MapPin, Send, Linkedin, Github } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { sendEmail } from '@/app/(main)/contact/actions';
-import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useActionState as useReactActionState } from 'react';
 
@@ -30,7 +30,7 @@ const contactInfo = [
   {
     icon: MapPin,
     title: 'Location',
-    value: 'Remote / Global',
+    value: 'Global',
     href: null,
   },
 ];
