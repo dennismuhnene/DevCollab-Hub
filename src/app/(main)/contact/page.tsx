@@ -103,7 +103,7 @@ export default function ContactPage() {
             Get In Touch
           </Badge>
           <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">
-            We're Here to Help
+            Contact Us
           </h1>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
             Have a question about the platform, a feature suggestion, or need support with your account? Fill out the form below and the DevCollab Hub team will get back to you.

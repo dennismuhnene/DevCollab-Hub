@@ -66,11 +66,14 @@ export default function Header() {
                 </Link>
               </>
             )}
-            <Link href="/contact" className="transition-colors hover:text-foreground/80 text-foreground/60">
-              Contact
-            </Link>
           </div>
           <div className="flex items-center space-x-2">
+            <Button variant="ghost" asChild>
+                <Link href="/contact">
+                    Contact
+                </Link>
+            </Button>
+            <div className="w-px h-6 bg-border mx-2"></div>
             {loading ? (
               <div className="h-8 w-8 animate-pulse rounded-full bg-secondary"></div>
             ) : user ? (
