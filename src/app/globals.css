@@ -4,66 +4,65 @@
 
 @layer base {
   :root {
-    --background: 240 8% 97%; /* Light Grey */
-    --foreground: 240 10% 3.9%; /* Dark Grey */
+    --background: 20 14% 97%;
+    --foreground: 20 14% 9%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card: 20 14% 97%;
+    --card-foreground: 20 14% 9%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    --popover: 20 14% 97%;
+    --popover-foreground: 20 14% 9%;
 
-    --primary: 258 48% 41%; /* #4F3A93 */
-    --primary-foreground: 0 0% 98%;
+    --primary: 35 91% 50%; /* Gold/Orange */
+    --primary-foreground: 20 14% 9%;
 
-    --secondary: 279 69% 61%; /* #9D4EDD */
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 25 80% 55%; /* Shiny Orange */
+    --secondary-foreground: 20 14% 9%;
 
-    --muted: 240 5% 90%;
-    --muted-foreground: 240 5% 45%;
+    --muted: 20 10% 90%;
+    --muted-foreground: 20 10% 45%;
 
-    --accent: 240 5% 96%;
-    --accent-foreground: 240 10% 3.9%;
+    --accent: 20 10% 92%;
+    --accent-foreground: 20 14% 9%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
-    --ring: 258 48% 41%;
+    --border: 20 10% 85%;
+    --input: 20 10% 85%;
+    --ring: 35 91% 50%;
 
     --radius: 0.5rem;
   }
 
   .dark {
-    /* Keeping this block for shadcn, but root variables will dominate */
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    --background: 20 14% 4%; /* Near Black */
+    --foreground: 20 5% 94%;
 
-    --card: 240 5% 10%;
-    --card-foreground: 0 0% 98%;
+    --card: 20 10% 8%;
+    --card-foreground: 20 5% 94%;
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 20 14% 4%;
+    --popover-foreground: 20 5% 94%;
 
-    --primary: 258 48% 55%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 38 92% 50%; /* Gold */
+    --primary-foreground: 38 100% 10%;
 
-    --secondary: 279 69% 61%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 25 84% 55%; /* Shiny Orange */
+    --secondary-foreground: 25 100% 10%;
 
-    --muted: 240 4% 15%;
-    --muted-foreground: 240 5% 65%;
+    --muted: 20 10% 12%;
+    --muted-foreground: 20 5% 64%;
 
-    --accent: 279 69% 61%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 20 14% 12%;
+    --accent-foreground: 20 5% 94%;
 
     --destructive: 0 63% 31%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 4% 18%;
-    --input: 240 4% 18%;
-    --ring: 258 48% 55%;
+    --border: 20 14% 12%;
+    --input: 20 14% 12%;
+    --ring: 38 92% 50%;
   }
 }
 
