@@ -3,28 +3,11 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Match any files in the profile-images directory
-    match /profile-images/{userId}/{allPaths=**} {
-      // Allow public read access
-      allow read;
-      // Allow write access only for the authenticated user who owns the folder
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
+    // Allow read access on all files
+    allow read;
+    
+    // Allow write access for any authenticated user on any file
+    allow write: if request.auth != null;
 
-    // Match any files in the project-images directory
-    match /project-images/{userId}/{allPaths=**} {
-      // Allow public read access
-      allow read;
-      // Allow write access only for the authenticated user who owns the folder
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Match any files in the blog-images directory
-    match /blog-images/{allPaths=**} {
-      // Allow public read access
-      allow read;
-      // ONLY allow write access for the specific admin user UID
-      allow write: if request.auth != null && request.auth.uid == 'Jv4XV8flpAgUqJpd2P7SKr3PijX2';
-    }
   }
 }
