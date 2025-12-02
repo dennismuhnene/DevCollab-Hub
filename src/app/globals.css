@@ -4,14 +4,14 @@
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    --background: 240 8% 97%; /* Light Grey */
+    --foreground: 240 10% 3.9%; /* Dark Grey */
 
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
 
     --primary: 258 48% 41%; /* #4F3A93 */
     --primary-foreground: 0 0% 98%;
@@ -19,23 +19,24 @@
     --secondary: 279 69% 61%; /* #9D4EDD */
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 240 4% 15%;
-    --muted-foreground: 240 5% 65%;
+    --muted: 240 5% 90%;
+    --muted-foreground: 240 5% 45%;
 
-    --accent: 279 69% 61%; /* #9D4EDD */
-    --accent-foreground: 0 0% 98%;
+    --accent: 240 5% 96%;
+    --accent-foreground: 240 10% 3.9%;
 
-    --destructive: 0 63% 31%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 4% 18%;
-    --input: 240 4% 18%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
     --ring: 258 48% 41%;
 
     --radius: 0.5rem;
   }
 
   .dark {
+    /* Keeping this block for shadcn, but root variables will dominate */
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
 
@@ -45,16 +46,16 @@
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 258 48% 55%; /* Lighter Indigo for dark mode */
+    --primary: 258 48% 55%;
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 279 69% 61%; /* #9D4EDD */
+    --secondary: 279 69% 61%;
     --secondary-foreground: 0 0% 98%;
 
     --muted: 240 4% 15%;
     --muted-foreground: 240 5% 65%;
 
-    --accent: 279 69% 61%; /* #9D4EDD */
+    --accent: 279 69% 61%;
     --accent-foreground: 0 0% 98%;
 
     --destructive: 0 63% 31%;

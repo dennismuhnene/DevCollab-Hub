@@ -32,7 +32,7 @@ export default function HomePage() {
         <section className="relative w-full pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
           <div className="absolute inset-0 -z-10">
             <div className="absolute inset-0 bg-background" />
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10" />
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
             <div className="absolute top-1/2 left-1/2 w-[50vw] h-[50vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-[150px]" />
           </div>
 
@@ -62,7 +62,7 @@ export default function HomePage() {
             </div>
             {heroImage && (
               <div className="mt-20 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-                 <div className="relative group aspect-video max-w-4xl mx-auto rounded-xl shadow-2xl shadow-primary/10 border border-border overflow-hidden">
+                 <div className="relative group aspect-video max-w-4xl mx-auto rounded-xl shadow-2xl shadow-primary/10 border border-border/50 overflow-hidden">
                     <Image
                         src={heroImage.imageUrl}
                         alt={heroImage.description}
@@ -72,7 +72,7 @@ export default function HomePage() {
                         priority
                         data-ai-hint={heroImage.imageHint}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
                  </div>
               </div>
             )}
@@ -109,7 +109,7 @@ export default function HomePage() {
         </section>
 
         {/* Featured Projects */}
-        <section id="features" className="w-full py-20 md:py-32 bg-background/50">
+        <section id="features" className="w-full py-20 md:py-32 bg-muted/20">
           <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="text-center space-y-4 mb-16">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Featured Projects</h2>
