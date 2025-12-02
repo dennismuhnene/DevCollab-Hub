@@ -14,9 +14,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { LogIn, UserPlus, Code2, User, LogOut, MessageSquare, Users, LayoutDashboard } from 'lucide-react';
+import { LogIn, UserPlus, Code2, User, LogOut, MessageSquare, Users, LayoutDashboard, Menu } from 'lucide-react';
 import Notifications from './notifications';
 import { useEffect, useState } from 'react';
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 
 function ClientOnly({ children }: { children: React.ReactNode }) {
   const [hasMounted, setHasMounted] = useState(false);
@@ -24,8 +25,6 @@ function ClientOnly({ children }: { children: React.ReactNode }) {
     setHasMounted(true);
   }, []);
   if (!hasMounted) {
-    // Render a placeholder or null on the server to prevent hydration mismatch
-    // The placeholder should occupy the same space if possible to avoid layout shifts
     return (
         <div className="flex items-center space-x-2">
             <div className="h-8 w-20 animate-pulse rounded-md bg-muted"></div>
@@ -39,6 +38,7 @@ function ClientOnly({ children }: { children: React.ReactNode }) {
 export default function Header() {
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -57,6 +57,13 @@ export default function Header() {
       .join('');
   };
 
+  const navLinks = [
+    { href: "/developers", label: "Discover" },
+    { href: "/projects", label: "My Projects" },
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/messages", label: "Messages" },
+  ];
+
   return (
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto flex h-14 max-w-7xl items-center px-4">
@@ -66,33 +73,27 @@ export default function Header() {
                 <Code2 className="h-6 w-6" />
                 <span className="font-bold hidden sm:inline-block">DevCollab Hub</span>
               </Link>
-              <ClientOnly>
-                {user && (
-                  <>
-                    <Link href="/developers" className="transition-colors hover:text-foreground/80 text-foreground/60 hidden sm:inline-block">
-                      Discover
-                    </Link>
-                    <Link href="/projects" className="transition-colors hover:text-foreground/80 text-foreground/60 hidden sm:inline-block">
-                      My Projects
-                    </Link>
-                    <Link href="/dashboard" className="transition-colors hover:text-foreground/80 text-foreground/60 hidden md:inline-block">
-                      Dashboard
-                    </Link>
-                    <Link href="/messages" className="transition-colors hover:text-foreground/80 text-foreground/60 hidden md:inline-block">
-                      Messages
-                    </Link>
-                  </>
-                )}
-              </ClientOnly>
+              <div className="hidden md:flex items-center space-x-6">
+                <ClientOnly>
+                  {user && (
+                    <>
+                      {navLinks.map((link) => (
+                        <Link key={link.href} href={link.href} className="transition-colors hover:text-foreground/80 text-foreground/60">
+                          {link.label}
+                        </Link>
+                      ))}
+                    </>
+                  )}
+                </ClientOnly>
+              </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Button variant="ghost" asChild>
-                <Link href="/contact">
-                  Contact
-                </Link>
-              </Button>
-              
-              <div className="w-px h-6 bg-border mx-2"></div>
+                <Button variant="ghost" asChild>
+                    <Link href="/contact">
+                    Contact
+                    </Link>
+                </Button>
+                <div className="w-px h-6 bg-border mx-2"></div>
               
               <ClientOnly>
                 {loading ? (
@@ -156,6 +157,33 @@ export default function Header() {
                   </div>
                 )}
               </ClientOnly>
+              <div className="md:hidden">
+                 <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                    <SheetTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <Menu className="h-5 w-5" />
+                        <span className="sr-only">Open menu</span>
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent side="left">
+                        <div className="flex flex-col space-y-4">
+                            <Link href="/" className="flex items-center space-x-2" onClick={() => setIsSheetOpen(false)}>
+                                <Code2 className="h-6 w-6" />
+                                <span className="font-bold">DevCollab Hub</span>
+                            </Link>
+                            <div className="flex flex-col space-y-2 pt-4">
+                                {user && navLinks.map((link) => (
+                                    <SheetClose asChild key={link.href}>
+                                        <Link href={link.href} className="text-lg font-medium text-foreground/80 hover:text-foreground">
+                                        {link.label}
+                                        </Link>
+                                    </SheetClose>
+                                ))}
+                            </div>
+                        </div>
+                    </SheetContent>
+                  </Sheet>
+              </div>
             </div>
           </nav>
         </div>
