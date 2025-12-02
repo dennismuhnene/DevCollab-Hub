@@ -33,7 +33,7 @@
     {
       "id": "hero-image",
       "description": "Hero image for the landing page",
-      "imageUrl": "/images/devcollab-hero.png",
+      "imageUrl": "/images/devcollab-hero.png?v=2",
       "imageHint": "diverse developers collaborating"
     }
   ]
