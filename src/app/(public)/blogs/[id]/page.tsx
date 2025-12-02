@@ -8,7 +8,6 @@ import type { BlogPost } from '@/types/blog';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { format } from 'date-fns';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar, User } from 'lucide-react';
 
 export default function BlogPostPage() {
@@ -31,11 +30,9 @@ export default function BlogPostPage() {
         if (postData.isPublished) {
           setPost(postData);
         } else {
-          // Handle case where post is not published
           setPost(null);
         }
       } else {
-        // Handle post not found
         setPost(null);
       }
       setLoading(false);
@@ -44,10 +41,6 @@ export default function BlogPostPage() {
     fetchPost();
   }, [blogId]);
 
-  const getInitials = (name?: string) => {
-    if (!name) return 'A';
-    return name.split(' ').map((n) => n[0]).join('');
-  };
 
   if (loading) {
     return (
@@ -102,7 +95,7 @@ export default function BlogPostPage() {
 
       <div
         className="prose dark:prose-invert prose-lg max-w-none mx-auto"
-        dangerouslySetInnerHTML={{ __html: post.content.replace(/\n/g, '<br />') }}
+        dangerouslySetInnerHTML={{ __html: post.content }}
       />
     </article>
   );

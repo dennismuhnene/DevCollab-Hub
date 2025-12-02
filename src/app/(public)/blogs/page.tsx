@@ -9,12 +9,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { format } from 'date-fns';
-import { Badge } from '@/components/ui/badge';
-
 
 const BlogCard = ({ post }: { post: BlogPost }) => {
     return (
-        <Card className="h-full transform transition-all duration-300 hover:shadow-xl dark:hover:shadow-primary/20 flex flex-col">
+        <Card className="h-full transform transition-all duration-300 hover:shadow-xl dark:hover:shadow-primary/20 flex flex-col group">
             <Link href={`/blogs/${post.id}`} className="block h-full flex flex-col">
                 <CardHeader className="p-0">
                     <div className="aspect-[16/9] w-full overflow-hidden rounded-t-lg">
@@ -35,7 +33,7 @@ const BlogCard = ({ post }: { post: BlogPost }) => {
                         </CardDescription>
                     )}
                     <p className="mb-4 line-clamp-3 flex-grow text-foreground/80">
-                        {post.content.substring(0, 150)}{post.content.length > 150 ? '...' : ''}
+                        {post.content.replace(/<[^>]*>?/gm, '').substring(0, 150)}...
                     </p>
                 </CardContent>
             </Link>

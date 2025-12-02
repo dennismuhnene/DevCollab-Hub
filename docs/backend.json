@@ -261,69 +261,29 @@
       },
       "required": ["id", "type", "fromUserId", "read", "timestamp"]
     },
-     "Blog": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Blog",
-      "description": "Represents a single blog post.",
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the blog post."
+    "BlogPost": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "BlogPost",
+        "type": "object",
+        "description": "Represents a single blog post.",
+        "properties": {
+          "id": { "type": "string", "description": "Unique identifier for the blog post." },
+          "title": { "type": "string", "description": "The title of the blog post." },
+          "content": { "type": "string", "description": "The main content of the blog post in Markdown or HTML format." },
+          "imageUrl": { "type": "string", "description": "URL of the featured image for the blog post.", "format": "uri" },
+          "authorId": { "type": "string", "description": "The UID of the author." },
+          "authorName": { "type": "string", "description": "The display name of the author." },
+          "createdAt": { "type": "string", "description": "Timestamp indicating when the post was created.", "format": "date-time" },
+          "updatedAt": { "type": "string", "description": "Timestamp indicating when the post was last updated.", "format": "date-time" },
+          "isPublished": { "type": "boolean", "description": "Whether the blog post is visible to the public." }
         },
-        "title": {
-          "type": "string",
-          "description": "The title of the blog post."
-        },
-        "content": {
-          "type": "string",
-          "description": "The main content of the blog post in Markdown or HTML."
-        },
-        "imageUrl": {
-          "type": "string",
-          "format": "uri",
-          "description": "URL for the blog post's feature image."
-        },
-        "authorId": {
-          "type": "string",
-          "description": "The Clerk user ID of the author."
-        },
-        "authorName": {
-          "type": "string",
-          "description": "The name of the author."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Timestamp when the post was created."
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Timestamp when the post was last updated."
-        },
-        "isPublished": {
-          "type": "boolean",
-          "description": "Whether the post is visible to the public."
-        }
-      },
-      "required": [
-        "id",
-        "title",
-        "content",
-        "authorId",
-        "authorName",
-        "createdAt",
-        "updatedAt",
-        "isPublished"
-      ]
-    }
+        "required": ["id", "title", "content", "authorId", "authorName", "createdAt", "updatedAt", "isPublished"]
+      }
   },
   "auth": {
     "providers": [
       "password",
-      "anonymous",
-      "clerk"
+      "anonymous"
     ]
   },
   "firestore": {
@@ -377,9 +337,9 @@
       {
         "path": "/blogs/{blogId}",
         "definition": {
-            "entityName": "Blog",
-            "schema": { "$ref": "#/entities/Blog"},
-            "description": "Stores blog post documents."
+          "entityName": "BlogPost",
+          "schema": { "$ref": "#/entities/BlogPost" },
+          "description": "Stores individual blog posts."
         }
       }
     ]
