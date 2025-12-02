@@ -253,12 +253,34 @@ export default function BlogAdminPage() {
   const handleImageUpload = async (file: File) => {
     if (!file || !user) return;
     toast({ title: 'Uploading Image...' });
+  
+    // Keep track of the old image URL to delete it later
+    const oldImageUrl = formData.imageUrl;
+  
     try {
       const storageRef = ref(storage, `blog-images/${user.uid}/${Date.now()}-${file.name}`);
       const snapshot = await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(snapshot.ref);
+  
+      // Set the new URL in the form
       handleInputChange('imageUrl', downloadURL);
       toast({ title: 'Image Uploaded' });
+  
+      // If there was an old image, delete it from storage
+      if (oldImageUrl && oldImageUrl.startsWith('https://firebasestorage.googleapis.com')) {
+        try {
+          const oldImageRef = ref(storage, oldImageUrl);
+          await deleteObject(oldImageRef);
+          toast({ title: 'Old image removed successfully.' });
+        } catch (deleteError: any) {
+          // Log an error if the old image couldn't be deleted, but don't block the user
+          // It might fail if the file doesn't exist, which is okay.
+          if (deleteError.code !== 'storage/object-not-found') {
+            console.warn('Failed to delete old image:', deleteError);
+            toast({ title: 'Could not remove the old image', description: deleteError.message, variant: 'default' });
+          }
+        }
+      }
     } catch (error: any) {
       console.error(`Image upload error: Code: ${error.code}, Message: ${error.message}`);
       toast({ 
