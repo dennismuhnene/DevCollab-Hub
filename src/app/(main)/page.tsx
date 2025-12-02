@@ -32,13 +32,12 @@ export default function HomePage() {
         {/* Hero Section */}
         <section className="relative w-full flex items-center justify-center text-center">
           {heroImage && (
-              <div className="w-full">
+              <div className="w-full h-[80vh] overflow-hidden">
                 <Image
                     src={heroImage.imageUrl}
                     alt={heroImage.description}
-                    width={1920}
-                    height={1080}
-                    className="object-cover w-full h-auto"
+                    fill
+                    className="object-cover object-center"
                     priority
                     data-ai-hint={heroImage.imageHint}
                 />
