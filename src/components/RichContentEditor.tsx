@@ -1,6 +1,6 @@
 "use client";
 
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, Extension } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Highlight from '@tiptap/extension-highlight';
 import TextAlign from '@tiptap/extension-text-align';
@@ -11,7 +11,6 @@ import {
   Bold,
   Italic,
   Strikethrough,
-  Code,
   Heading1,
   Heading2,
   Heading3,
@@ -26,6 +25,7 @@ import {
   Link as LinkIcon,
   Code2,
   Eraser,
+  Text,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useCallback, useEffect } from 'react';
@@ -36,6 +36,60 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+
+// --- Custom Tiptap Extension for Line Height ---
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    lineHeight: {
+      setLineHeight: (lineHeight: string) => ReturnType;
+      unsetLineHeight: () => ReturnType;
+    };
+  }
+}
+
+const LineHeight = Extension.create({
+  name: 'lineHeight',
+  addOptions() {
+    return {
+      types: ['heading', 'paragraph'],
+    };
+  },
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          lineHeight: {
+            default: null,
+            parseHTML: (element) => element.style.lineHeight,
+            renderHTML: (attributes) => {
+              if (!attributes.lineHeight) {
+                return {};
+              }
+              return { style: `line-height: ${attributes.lineHeight}` };
+            },
+          },
+        },
+      },
+    ];
+  },
+  addCommands() {
+    return {
+      setLineHeight: (lineHeight: string) => ({ commands }) => {
+        return this.options.types.every((type) =>
+          commands.updateAttributes(type, { lineHeight })
+        );
+      },
+      unsetLineHeight: () => ({ commands }) => {
+        return this.options.types.every((type) =>
+          commands.resetAttributes(type, 'lineHeight')
+        );
+      },
+    };
+  },
+});
+// --- End Custom Extension ---
+
 
 interface RichContentEditorProps {
   content: string;
@@ -52,11 +106,11 @@ const FONT_FAMILIES = [
   { label: 'Cursive', value: 'cursive' },
 ];
 
-const FONT_SIZES = [
-  { label: 'Small', value: '0.8rem' },
-  { label: 'Regular', value: '1rem' },
-  { label: 'Large', value: '1.2rem' },
-  { label: 'Extra Large', value: '1.5rem' },
+const LINE_HEIGHTS = [
+    { label: 'Single', value: '1' },
+    { label: '1.5', value: '1.5' },
+    { label: 'Double', value: '2' },
+    { label: '2.5', value: '2.5' },
 ];
 
 
@@ -68,19 +122,11 @@ const TiptapToolbar = ({ editor }: { editor: any }) => {
   const setLink = useCallback(() => {
     const previousUrl = editor.getAttributes('link').href;
     const url = window.prompt('URL', previousUrl);
-
-    // cancelled
-    if (url === null) {
-      return;
-    }
-
-    // empty
+    if (url === null) return;
     if (url === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run();
       return;
     }
-
-    // update link
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   }, [editor]);
 
@@ -98,6 +144,26 @@ const TiptapToolbar = ({ editor }: { editor: any }) => {
           {FONT_FAMILIES.map((font) => (
             <SelectItem key={font.value} value={font.value} style={{ fontFamily: font.value }}>
               {font.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      
+      {/* Line Height */}
+      <Select
+        onValueChange={(value) => editor.chain().focus().setLineHeight(value).run()}
+        value={editor.getAttributes('paragraph').lineHeight || editor.getAttributes('heading').lineHeight || ''}
+      >
+        <SelectTrigger className="w-[120px]">
+           <div className="flex items-center gap-2">
+            <Text className="h-4 w-4" />
+            <SelectValue placeholder="Spacing" />
+          </div>
+        </SelectTrigger>
+        <SelectContent>
+          {LINE_HEIGHTS.map((item) => (
+            <SelectItem key={item.value} value={item.value}>
+              {item.label}
             </SelectItem>
           ))}
         </SelectContent>
@@ -148,6 +214,7 @@ export default function RichContentEditor({ content, onChange }: RichContentEdit
       Link.configure({ openOnClick: false, autolink: true }),
       TextStyle,
       FontFamily,
+      LineHeight, // Add the custom extension
     ],
     content: content,
     onUpdate: ({ editor }) => {
