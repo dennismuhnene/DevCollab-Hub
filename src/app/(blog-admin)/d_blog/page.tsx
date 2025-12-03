@@ -74,6 +74,8 @@ export default function BlogAdminPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [postToDelete, setPostToDelete] = useState<BlogPost | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
   const initialFormData: Omit<BlogPost, 'id' | 'createdAt' | 'updatedAt' | 'authorId' | 'authorName'> = {
     title: '',
@@ -135,6 +137,8 @@ export default function BlogAdminPage() {
   const resetForm = () => {
     setEditingPost(null);
     setFormData(initialFormData);
+    setImageFile(null);
+    setImagePreviewUrl(null);
     titleInputRef.current?.focus();
   };
 
@@ -149,6 +153,8 @@ export default function BlogAdminPage() {
       isPublished: post.isPublished,
       category: post.category,
     });
+    setImageFile(null);
+    setImagePreviewUrl(post.imageUrl || null);
     titleInputRef.current?.focus();
   };
 
@@ -164,8 +170,30 @@ export default function BlogAdminPage() {
     setIsSaving(true);
     const isUpdating = !!editingPost;
 
+    let finalImageUrl = editingPost?.imageUrl || '';
+    const oldImageUrl = editingPost?.imageUrl;
+
+    if (imageFile) {
+        toast({ title: 'Uploading image...' });
+        const storageRef = ref(storage, `blog-images/${user.uid}/${Date.now()}_${imageFile.name}`);
+        try {
+            const snapshot = await uploadBytes(storageRef, imageFile);
+            finalImageUrl = await getDownloadURL(snapshot.ref);
+            toast({ title: 'Image uploaded!' });
+        } catch (error) {
+            console.error("Image upload failed", error);
+            toast({ variant: 'destructive', title: 'Image Upload Failed' });
+            setIsSaving(false);
+            return;
+        }
+    } else if (!imagePreviewUrl && oldImageUrl) {
+      // This means the image was removed but not replaced
+      finalImageUrl = '';
+    }
+
     const dataToSave = {
       ...formData,
+      imageUrl: finalImageUrl,
       updatedAt: serverTimestamp(),
     };
 
@@ -173,7 +201,20 @@ export default function BlogAdminPage() {
       if (isUpdating) {
         const postRef = doc(db, 'blogs', editingPost.id);
         await updateDoc(postRef, dataToSave);
+        
+        // If a new image was uploaded (or image was removed) and there was an old one, delete the old one.
+        if ((imageFile || !imagePreviewUrl) && oldImageUrl && oldImageUrl.startsWith('https://firebasestorage.googleapis.com')) {
+           try {
+              const oldImageRef = ref(storage, oldImageUrl);
+              await deleteObject(oldImageRef);
+           } catch (deleteError: any) {
+              if (deleteError.code !== 'storage/object-not-found') {
+                console.warn("Could not delete old image:", deleteError);
+              }
+           }
+        }
         toast({ title: 'Post Updated', description: `The post "${formData.title}" has been successfully updated.` });
+
       } else {
         const docRef = await addDoc(collection(db, 'blogs'), {
           ...dataToSave,
@@ -191,6 +232,7 @@ export default function BlogAdminPage() {
       toast({ title: isUpdating ? 'Update Failed' : 'Creation Failed', description: e instanceof Error ? e.message : 'Could not save the post.', variant: 'destructive' });
     } finally {
       setIsSaving(false);
+      setImageFile(null); // Reset image file state
     }
   };
 
@@ -202,7 +244,7 @@ export default function BlogAdminPage() {
     try {
       await deleteDoc(doc(db, 'blogs', id));
 
-      if (imageUrl) {
+      if (imageUrl && imageUrl.startsWith('https://firebasestorage.googleapis.com')) {
         try {
           const imageRef = ref(storage, imageUrl);
           await deleteObject(imageRef);
@@ -250,46 +292,15 @@ export default function BlogAdminPage() {
     }
   };
 
-  const handleImageUpload = async (file: File) => {
-    if (!file || !user) return;
-    toast({ title: 'Uploading Image...' });
-  
-    // Keep track of the old image URL to delete it later
-    const oldImageUrl = formData.imageUrl;
-  
-    try {
-      const storageRef = ref(storage, `blog-images/${user.uid}/${Date.now()}-${file.name}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(snapshot.ref);
-  
-      // Set the new URL in the form
-      handleInputChange('imageUrl', downloadURL);
-      toast({ title: 'Image Uploaded' });
-  
-      // If there was an old image, delete it from storage
-      if (oldImageUrl && oldImageUrl.startsWith('https://firebasestorage.googleapis.com')) {
-        try {
-          const oldImageRef = ref(storage, oldImageUrl);
-          await deleteObject(oldImageRef);
-          toast({ title: 'Old image removed successfully.' });
-        } catch (deleteError: any) {
-          // Log an error if the old image couldn't be deleted, but don't block the user
-          // It might fail if the file doesn't exist, which is okay.
-          if (deleteError.code !== 'storage/object-not-found') {
-            console.warn('Failed to delete old image:', deleteError);
-            toast({ title: 'Could not remove the old image', description: deleteError.message, variant: 'default' });
-          }
-        }
-      }
-    } catch (error: any) {
-      console.error(`Image upload error: Code: ${error.code}, Message: ${error.message}`);
-      toast({ 
-        title: 'Image Upload Failed', 
-        description: `Error: ${error.code}`,
-        variant: 'destructive' 
-      });
+  const handleImageFileSelect = (file: File | null) => {
+    setImageFile(file);
+    if (file) {
+      setImagePreviewUrl(URL.createObjectURL(file));
+    } else {
+      setImagePreviewUrl(null);
     }
   };
+  
 
   if (authLoading || !isAdmin) {
     return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
@@ -410,9 +421,9 @@ export default function BlogAdminPage() {
                       <div className="space-y-2">
                         <Label>Featured Image</Label>
                         <div className="flex items-center gap-2">
-                          <Input id="image-upload" type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} className="hidden" />
+                          <Input id="image-upload" type="file" accept="image/*" onChange={(e) => handleImageFileSelect(e.target.files?.[0] || null)} className="hidden" />
                           <Button variant="outline" asChild><Label htmlFor="image-upload" className="cursor-pointer w-full"><ImageIcon className="h-4 w-4 mr-2" /> Upload</Label></Button>
-                          {formData.imageUrl && <Image src={formData.imageUrl} alt="Preview" width={48} height={48} className="w-12 h-12 object-cover rounded-lg border" unoptimized />}
+                          {imagePreviewUrl && <Image src={imagePreviewUrl} alt="Preview" width={48} height={48} className="w-12 h-12 object-cover rounded-lg border" unoptimized />}
                         </div>
                       </div>
 
