@@ -21,25 +21,20 @@ function truncateHtml(html: string, limit: number): { isTruncated: boolean, html
 
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
-    const allElements = doc.body.querySelectorAll('*');
-
-    let wordCount = 0;
-    let isTruncated = false;
     
-    const words = doc.body.innerText.trim().split(/\s+/);
-    if (words.length > limit) {
-        isTruncated = true;
-    }
-
-    if (!isTruncated) {
+    const words = doc.body.innerText.trim().split(/\s+/).filter(Boolean);
+    if (words.length <= limit) {
         return { isTruncated: false, html: html };
     }
-    
-    const nodesToKeep: Node[] = [];
+
     let currentWordCount = 0;
+    const nodesToDelete: Node[] = [];
 
     function traverse(node: Node) {
-        if (currentWordCount >= limit) return;
+        if (currentWordCount >= limit) {
+            nodesToDelete.push(node);
+            return;
+        }
 
         if (node.nodeType === Node.TEXT_NODE) {
             const text = node.textContent || '';
@@ -55,19 +50,14 @@ function truncateHtml(html: string, limit: number): { isTruncated: boolean, html
             }
         } else if (node.nodeType === Node.ELEMENT_NODE) {
             for (const child of Array.from(node.childNodes)) {
-                if (currentWordCount < limit) {
-                    traverse(child);
-                } else {
-                    // Remove nodes beyond the word limit
-                    if(child.parentNode) {
-                        child.parentNode.removeChild(child);
-                    }
-                }
+                traverse(child);
             }
         }
     }
 
     traverse(doc.body);
+
+    nodesToDelete.forEach(node => node.parentNode?.removeChild(node));
     
     return { isTruncated: true, html: doc.body.innerHTML };
 }
@@ -96,13 +86,13 @@ export default function BlogPostPage() {
         if (cachedPost) {
           const parsedPost = JSON.parse(cachedPost, (key, value) => {
             // Firestore Timestamps need to be converted back from string
-            if (key === 'createdAt' || key === 'updatedAt') {
+            if ((key === 'createdAt' || key === 'updatedAt') && value) {
               return new Date(value);
             }
             return value;
           });
           
-          // Re-create Timestamp objects for compatibility with the rest of the app
+          // Re-create Timestamp-like objects for compatibility
            const postDataWithTimestamps = {
              ...parsedPost,
              createdAt: { toDate: () => parsedPost.createdAt },
@@ -129,7 +119,13 @@ export default function BlogPostPage() {
           setupContent(postData);
           // 3. Save to cache
           try {
-            sessionStorage.setItem(`blog_${blogId}`, JSON.stringify(postData));
+            // When stringifying, convert Timestamp to a serializable format (ISO string)
+            const cacheablePost = {
+              ...postData,
+              createdAt: postData.createdAt.toDate().toISOString(),
+              updatedAt: postData.updatedAt.toDate().toISOString(),
+            }
+            sessionStorage.setItem(`blog_${blogId}`, JSON.stringify(cacheablePost));
           } catch (error) {
             console.warn('Could not write to session storage', error);
           }
