@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
-import { doc, deleteDoc, serverTimestamp, collection, updateDoc, addDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, collection, updateDoc, addDoc } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase/config';
-import { ref, deleteObject } from 'firebase/storage';
+import { ref, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,11 +31,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
+
 
 const professionalSkills = [
   'Problem Solving',
@@ -78,6 +79,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
   const [loading, setLoading] = useState(false);
   const [techStackInput, setTechStackInput] = useState('');
   const [isAiPending, startAiTransition] = useTransition();
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const {
     register,
@@ -103,6 +105,15 @@ export default function ProjectForm({ project }: ProjectFormProps) {
   const techStack = watch('requiredTechStack') || [];
   const skills = watch('requiredSkills') || [];
   const collaborationOpenValue = watch('collaborationOpen');
+  const imageUrlValue = watch('imageUrl');
+
+  useEffect(() => {
+    // When the form loads with an existing project, ensure the imageUrl is set.
+    if (project?.imageUrl) {
+      setValue('imageUrl', project.imageUrl);
+    }
+  }, [project, setValue]);
+
 
   const handleTechStackAdd = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && techStackInput.trim()) {
@@ -156,24 +167,67 @@ export default function ProjectForm({ project }: ProjectFormProps) {
     }
     setLoading(true);
 
-    if (project) {
-      // Update existing project
-      const projectRef = doc(db, 'projects', project.id);
-      updateDocumentNonBlocking(projectRef, { ...data, updatedAt: serverTimestamp() });
-      toast({ title: 'Project updated successfully!' });
-      router.push(`/projects/${project.id}`);
-    } else {
-      // Create new project
-      const newProject = {
-        ...data,
-        ownerId: user.uid,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        interests: [],
-      };
-      const docRef = await addDocumentNonBlocking(collection(db, 'projects'), newProject);
-      toast({ title: 'Project created successfully!' });
-      router.push(`/projects/${docRef.id}`);
+    let finalImageUrl = project?.imageUrl || '';
+    const oldImageUrl = project?.imageUrl; // Keep track of the old image
+
+    // If a new image file has been selected, upload it
+    if (imageFile) {
+        toast({ title: 'Uploading image...' });
+        const storageRef = ref(storage, `project-images/${user.uid}/${Date.now()}_${imageFile.name}`);
+        try {
+            const snapshot = await uploadBytes(storageRef, imageFile);
+            finalImageUrl = await getDownloadURL(snapshot.ref);
+            toast({ title: 'Image uploaded!' });
+        } catch (error) {
+            console.error("Image upload failed", error);
+            toast({ variant: 'destructive', title: 'Image Upload Failed', description: 'Could not upload the new image.' });
+            setLoading(false);
+            return;
+        }
+    }
+    
+    const projectData = { ...data, imageUrl: finalImageUrl };
+
+    try {
+      if (project) {
+        // Update existing project
+        const projectRef = doc(db, 'projects', project.id);
+        await updateDoc(projectRef, { ...projectData, updatedAt: serverTimestamp() });
+
+        // If a new image was uploaded and there was an old one, delete the old one.
+        if (imageFile && oldImageUrl && oldImageUrl.startsWith('https://firebasestorage.googleapis.com')) {
+           try {
+              const oldImageRef = ref(storage, oldImageUrl);
+              await deleteObject(oldImageRef);
+              toast({ title: 'Old image removed.' });
+           } catch (deleteError: any) {
+              if (deleteError.code !== 'storage/object-not-found') {
+                console.warn("Could not delete old image:", deleteError);
+              }
+           }
+        }
+
+        toast({ title: 'Project updated successfully!' });
+        router.push(`/projects/${project.id}`);
+
+      } else {
+        // Create new project
+        const newProject = {
+          ...projectData,
+          ownerId: user.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          interestedUsers: [],
+          matchedUsers: [],
+        };
+        const docRef = await addDoc(collection(db, 'projects'), newProject);
+        toast({ title: 'Project created successfully!' });
+        router.push(`/projects/${docRef.id}`);
+      }
+    } catch (e) {
+      console.error("Error saving project:", e);
+      toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the project.' });
+      setLoading(false);
     }
   };
 
@@ -183,14 +237,14 @@ export default function ProjectForm({ project }: ProjectFormProps) {
 
     try {
       // Delete image from storage if it exists
-      if (project.imageUrl) {
+      if (project.imageUrl && project.imageUrl.startsWith('https://firebasestorage.googleapis.com')) {
         const imageRef = ref(storage, project.imageUrl);
-        await deleteObject(imageRef);
+        await deleteObject(imageRef).catch(err => console.warn("Image deletion failed, may not exist", err));
       }
       
       // Delete project document from firestore
       const projectRef = doc(db, 'projects', project.id);
-      deleteDocumentNonBlocking(projectRef);
+      await deleteDoc(projectRef);
 
       toast({ title: 'Project deleted successfully' });
       router.push('/projects');
@@ -344,9 +398,8 @@ export default function ProjectForm({ project }: ProjectFormProps) {
             <div className="space-y-2">
               <Label>Project Image</Label>
               <ImageUploader
-                onUpload={(url) => setValue('imageUrl', url, { shouldValidate: true, shouldDirty: true })}
-                initialUrl={project?.imageUrl}
-                folderPath={`project-images/${user?.uid}`}
+                 onFileSelect={setImageFile}
+                 initialUrl={imageUrlValue}
               />
             </div>
 
