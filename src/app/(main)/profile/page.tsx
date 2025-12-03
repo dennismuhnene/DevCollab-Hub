@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ProfileForm from '@/components/profile-form';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { doc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import { db, storage, auth } from '@/lib/firebase/config';
@@ -42,9 +42,8 @@ export default function ProfilePage() {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !user) {
+    if (!file || !user || !userProfile) {
       if (!user) {
-        console.error('Upload error: User is not authenticated.');
         toast({
           variant: 'destructive',
           title: 'Authentication Error',
@@ -56,6 +55,8 @@ export default function ProfilePage() {
 
     setUploading(true);
     setProgress(0);
+    
+    const oldImageUrl = userProfile.photoURL;
 
     const storageRef = ref(storage, `profile-images/${user.uid}/${file.name}`);
     const uploadTask = uploadBytesResumable(storageRef, file);
@@ -79,11 +80,23 @@ export default function ProfilePage() {
         const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
 
         const userDocRef = doc(db, 'users', user.uid);
-        // Use non-blocking update to get contextual errors
         updateDocumentNonBlocking(userDocRef, { photoURL: downloadURL });
 
         if (auth.currentUser) {
             await updateProfile(auth.currentUser, { photoURL: downloadURL });
+        }
+
+        // Delete the old image if it exists and is a firebase storage URL
+        if (oldImageUrl && oldImageUrl.startsWith('https://firebasestorage.googleapis.com')) {
+           try {
+              const oldImageRef = ref(storage, oldImageUrl);
+              await deleteObject(oldImageRef);
+           } catch (deleteError: any) {
+              // It's okay if the object doesn't exist, we just log other errors.
+              if (deleteError.code !== 'storage/object-not-found') {
+                console.warn("Could not delete old profile picture:", deleteError);
+              }
+           }
         }
 
         toast({ title: 'Profile picture updated successfully!' });
