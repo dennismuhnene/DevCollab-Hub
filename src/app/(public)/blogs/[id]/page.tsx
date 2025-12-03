@@ -19,63 +19,57 @@ const WORD_COUNT_LIMIT = 250;
 function truncateHtml(html: string, limit: number): { isTruncated: boolean, html: string } {
     if (!html) return { isTruncated: false, html: '' };
 
-    let inTag = false;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const allElements = doc.body.querySelectorAll('*');
+
     let wordCount = 0;
-    let truncatedHtml = '';
     let isTruncated = false;
+    
+    const words = doc.body.innerText.trim().split(/\s+/);
+    if (words.length > limit) {
+        isTruncated = true;
+    }
 
-    for (let i = 0; i < html.length; i++) {
-        const char = html[i];
+    if (!isTruncated) {
+        return { isTruncated: false, html: html };
+    }
+    
+    const nodesToKeep: Node[] = [];
+    let currentWordCount = 0;
 
-        if (char === '<') {
-            inTag = true;
-        }
+    function traverse(node: Node) {
+        if (currentWordCount >= limit) return;
 
-        truncatedHtml += char;
-
-        if (char === '>') {
-            inTag = false;
-        }
-
-        if (!inTag && char.match(/\s/)) {
-            wordCount++;
-        }
-        
-        if (wordCount >= limit) {
-            // Find the end of the current word
-            while(i + 1 < html.length && !html[i+1].match(/\s/)) {
-                truncatedHtml += html[++i];
+        if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent || '';
+            const nodeWords = text.trim().split(/\s+/).filter(Boolean);
+            
+            if (currentWordCount + nodeWords.length > limit) {
+                const wordsToTake = limit - currentWordCount;
+                const partialText = nodeWords.slice(0, wordsToTake).join(' ');
+                node.textContent = partialText + '...';
+                currentWordCount = limit;
+            } else {
+                currentWordCount += nodeWords.length;
             }
-            isTruncated = true;
-            break;
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            for (const child of Array.from(node.childNodes)) {
+                if (currentWordCount < limit) {
+                    traverse(child);
+                } else {
+                    // Remove nodes beyond the word limit
+                    if(child.parentNode) {
+                        child.parentNode.removeChild(child);
+                    }
+                }
+            }
         }
     }
 
-    if (isTruncated) {
-         // Close any open tags
-        const openTags = [];
-        const tagRegex = /<([a-zA-Z1-6]+)(?:\s+[^>]*)*>/g;
-        let match;
-        while ((match = tagRegex.exec(truncatedHtml)) !== null) {
-            openTags.push(match[1]);
-        }
-
-        const closingTagRegex = /<\/([a-zA-Z1-6]+)>/g;
-        while ((match = closingTagRegex.exec(truncatedHtml)) !== null) {
-            const closingTag = match[1];
-            const index = openTags.lastIndexOf(closingTag);
-            if (index !== -1) {
-                openTags.splice(index, 1);
-            }
-        }
-        
-        while (openTags.length > 0) {
-            truncatedHtml += `</${openTags.pop()}>`;
-        }
-    }
-
-
-    return { isTruncated, html: truncatedHtml };
+    traverse(doc.body);
+    
+    return { isTruncated: true, html: doc.body.innerHTML };
 }
 
 
@@ -95,6 +89,36 @@ export default function BlogPostPage() {
 
     const fetchPost = async () => {
       setLoading(true);
+
+      // 1. Check cache first
+      try {
+        const cachedPost = sessionStorage.getItem(`blog_${blogId}`);
+        if (cachedPost) {
+          const parsedPost = JSON.parse(cachedPost, (key, value) => {
+            // Firestore Timestamps need to be converted back from string
+            if (key === 'createdAt' || key === 'updatedAt') {
+              return new Date(value);
+            }
+            return value;
+          });
+          
+          // Re-create Timestamp objects for compatibility with the rest of the app
+           const postDataWithTimestamps = {
+             ...parsedPost,
+             createdAt: { toDate: () => parsedPost.createdAt },
+             updatedAt: { toDate: () => parsedPost.updatedAt },
+           } as BlogPost
+           
+          setPost(postDataWithTimestamps);
+          setupContent(postDataWithTimestamps);
+          setLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.warn('Could not read from session storage', error);
+      }
+
+      // 2. If not in cache, fetch from Firestore
       const postDocRef = doc(db, 'blogs', blogId);
       const postDoc = await getDoc(postDocRef);
 
@@ -102,9 +126,13 @@ export default function BlogPostPage() {
         const postData = { id: postDoc.id, ...postDoc.data() } as BlogPost;
         if (postData.isPublished) {
           setPost(postData);
-          const { isTruncated, html } = truncateHtml(postData.content, WORD_COUNT_LIMIT);
-          setIsTruncated(isTruncated);
-          setTruncatedContent(html);
+          setupContent(postData);
+          // 3. Save to cache
+          try {
+            sessionStorage.setItem(`blog_${blogId}`, JSON.stringify(postData));
+          } catch (error) {
+            console.warn('Could not write to session storage', error);
+          }
         } else {
           setPost(null);
         }
@@ -113,6 +141,13 @@ export default function BlogPostPage() {
       }
       setLoading(false);
     };
+
+    const setupContent = (postData: BlogPost) => {
+      const { isTruncated, html } = truncateHtml(postData.content, WORD_COUNT_LIMIT);
+      setIsTruncated(isTruncated);
+      setTruncatedContent(html);
+    };
+
 
     fetchPost();
   }, [blogId]);
