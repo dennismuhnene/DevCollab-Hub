@@ -66,24 +66,25 @@ export default function Header() {
     { href: "/projects", label: "My Projects", icon: LayoutDashboard },
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/messages", label: "Messages", icon: MessageSquare },
+    { href: "/blogs", label: "Blog", icon: PenSquare },
+    { href: "/contact", label: "Contact", icon: Contact },
   ];
   
   const mobileNavLinks = [
     ...navLinks,
-    { href: "/blogs", label: "Blog", icon: PenSquare },
   ];
 
   return (
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto flex h-14 max-w-7xl items-center px-4">
           <nav className="flex flex-1 items-center justify-between">
+            {/* Left side */}
             <div className="flex items-center space-x-2 md:space-x-6 text-sm font-medium">
               <Link href="/" className="mr-4 md:mr-6 flex items-center space-x-2">
                 <Image src="/images/devcollab-logo.png" alt="DevCollab Hub Logo" width={32} height={32} className="h-8 w-8" />
                 <span className="font-bold hidden sm:inline-block text-[#c5a35a] text-lg">DevCollab Hub</span>
               </Link>
               <div className="hidden md:flex items-center space-x-6">
-                <Link href="/blogs" className="transition-colors hover:text-foreground/80 text-foreground/60">Blog</Link>
                 <ClientOnly>
                   {user && (
                     <>
@@ -97,16 +98,18 @@ export default function Header() {
                 </ClientOnly>
               </div>
             </div>
+
+            {/* Center (only for logged-out users on desktop) */}
+            <div className="hidden md:flex absolute left-1/2 -translate-x-1/2">
+                <ClientOnly>
+                    {!user && (
+                        <Link href="/blogs" className="text-sm font-medium transition-colors hover:text-foreground/80 text-foreground/60">Blog</Link>
+                    )}
+                </ClientOnly>
+            </div>
+
+            {/* Right side */}
             <div className="flex items-center space-x-2">
-              <div className="hidden md:flex items-center space-x-2">
-                  <Button variant="ghost" asChild>
-                      <Link href="/contact">
-                      Contact
-                      </Link>
-                  </Button>
-                  <div className="w-px h-6 bg-border"></div>
-              </div>
-              
               <ClientOnly>
                 {loading ? (
                   <div className="h-8 w-8 animate-pulse rounded-full bg-muted"></div>
@@ -162,6 +165,12 @@ export default function Header() {
                 ) : (
                   <div className='hidden md:flex items-center space-x-2'>
                     <Button variant="ghost" asChild>
+                        <Link href="/contact">
+                        Contact
+                        </Link>
+                    </Button>
+                    <div className="w-px h-6 bg-border"></div>
+                    <Button variant="ghost" asChild>
                       <Link href="/login">
                         <LogIn className="mr-2 h-4 w-4" />
                         Sign In
@@ -193,24 +202,35 @@ export default function Header() {
                                 </Link>
                             </div>
                             <div className="flex flex-col space-y-2 p-4 flex-1">
-                                <SheetClose asChild>
-                                    <Link href="/blogs" className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
-                                        <PenSquare className="h-5 w-5" />
-                                        Blog
-                                    </Link>
-                                </SheetClose>
-                                {user && mobileNavLinks.slice(0, -1).map((link) => (
-                                    <SheetClose asChild key={link.href}>
-                                        <Link href={link.href} className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
-                                            <link.icon className="h-5 w-5" />
-                                            {link.label}
-                                        </Link>
-                                    </SheetClose>
-                                ))}
+                                {user ? (
+                                     mobileNavLinks.map((link) => (
+                                        <SheetClose asChild key={link.href}>
+                                            <Link href={link.href} className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
+                                                <link.icon className="h-5 w-5" />
+                                                {link.label}
+                                            </Link>
+                                        </SheetClose>
+                                    ))
+                                ) : (
+                                    <>
+                                        <SheetClose asChild>
+                                            <Link href="/blogs" className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
+                                                <PenSquare className="h-5 w-5" />
+                                                Blog
+                                            </Link>
+                                        </SheetClose>
+                                         <SheetClose asChild>
+                                            <Link href="/contact" className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
+                                                <Contact className="h-5 w-5" />
+                                                Contact
+                                            </Link>
+                                        </SheetClose>
+                                    </>
+                                )}
                             </div>
                             <div className="mt-auto border-t p-4">
                                <ClientOnly>
-                                {user ? null : (
+                                {!user && (
                                     <div className="flex flex-col space-y-2">
                                         <SheetClose asChild>
                                             <Button variant="ghost" asChild>
@@ -231,14 +251,6 @@ export default function Header() {
                                     </div>
                                 )}
                                </ClientOnly>
-                                <SheetClose asChild>
-                                    <Button variant="outline" className="w-full mt-4" asChild>
-                                        <Link href="/contact">
-                                            <Contact className="mr-2 h-4 w-4" />
-                                            Contact
-                                        </Link>
-                                    </Button>
-                                </SheetClose>
                             </div>
                         </div>
                     </SheetContent>
