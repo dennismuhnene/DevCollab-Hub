@@ -14,14 +14,19 @@ import { updateProfile } from 'firebase/auth';
 import { db, storage, auth } from '@/lib/firebase/config';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
-import { Camera } from 'lucide-react';
+import { Camera, Save, X, Loader2 } from 'lucide-react';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Button } from '@/components/ui/button';
+import Image from 'next/image';
 
 export default function ProfilePage() {
   const { user, userProfile, loading, reloadUserProfile } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -30,6 +35,13 @@ export default function ProfilePage() {
       router.push('/login');
     }
   }, [user, loading, router]);
+  
+  useEffect(() => {
+    if (userProfile?.photoURL) {
+      setImagePreview(userProfile.photoURL);
+    }
+  }, [userProfile?.photoURL]);
+
 
   const getInitials = (name?: string) => {
     if (!name) return 'U';
@@ -37,19 +49,37 @@ export default function ProfilePage() {
   };
 
   const handleAvatarClick = () => {
+    if (uploading || newImageFile) return;
     fileInputRef.current?.click();
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !user || !userProfile) {
-      if (!user) {
-        toast({
-          variant: 'destructive',
-          title: 'Authentication Error',
-          description: 'You must be logged in to upload an image.',
-        });
-      }
+    if (file) {
+      setNewImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCancelUpdate = () => {
+    setNewImageFile(null);
+    setImagePreview(userProfile?.photoURL || null);
+    if(fileInputRef.current) {
+        fileInputRef.current.value = "";
+    }
+  };
+
+  const handleSaveImage = () => {
+    if (!newImageFile || !user || !userProfile) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No image selected or user not authenticated.',
+      });
       return;
     }
 
@@ -57,9 +87,8 @@ export default function ProfilePage() {
     setProgress(0);
     
     const oldImageUrl = userProfile.photoURL;
-
-    const storageRef = ref(storage, `profile-images/${user.uid}/${file.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+    const storageRef = ref(storage, `profile-images/${user.uid}/${newImageFile.name}`);
+    const uploadTask = uploadBytesResumable(storageRef, newImageFile);
 
     uploadTask.on(
       'state_changed',
@@ -86,13 +115,11 @@ export default function ProfilePage() {
             await updateProfile(auth.currentUser, { photoURL: downloadURL });
         }
 
-        // Delete the old image if it exists and is a firebase storage URL
         if (oldImageUrl && oldImageUrl.startsWith('https://firebasestorage.googleapis.com')) {
            try {
               const oldImageRef = ref(storage, oldImageUrl);
               await deleteObject(oldImageRef);
            } catch (deleteError: any) {
-              // It's okay if the object doesn't exist, we just log other errors.
               if (deleteError.code !== 'storage/object-not-found') {
                 console.warn("Could not delete old profile picture:", deleteError);
               }
@@ -100,11 +127,13 @@ export default function ProfilePage() {
         }
 
         toast({ title: 'Profile picture updated successfully!' });
-        reloadUserProfile(); 
         setUploading(false);
+        setNewImageFile(null);
+        reloadUserProfile(); 
       }
     );
   };
+
 
   if (loading || !userProfile) {
     return (
@@ -127,17 +156,30 @@ export default function ProfilePage() {
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex flex-col md:flex-row items-start space-y-6 md:space-y-0 md:space-x-8 mb-8">
-        <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
+        <div className="relative group" onClick={handleAvatarClick}>
             <Avatar className="h-32 w-32 border-4 border-background shadow-md">
-                <AvatarImage src={userProfile.photoURL} alt={userProfile.name} />
-                <AvatarFallback className="text-4xl">{getInitials(userProfile.name)}</AvatarFallback>
+                {imagePreview ? (
+                    <Image src={imagePreview} alt={userProfile.name} width={128} height={128} className="object-cover" />
+                ) : (
+                    <AvatarFallback className="text-4xl">{getInitials(userProfile.name)}</AvatarFallback>
+                )}
             </Avatar>
-            <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <Camera className="h-8 w-8 text-white" />
-            </div>
+            {!newImageFile && !uploading && (
+                <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                    <Camera className="h-8 w-8 text-white" />
+                </div>
+            )}
+            
+            {newImageFile && !uploading && (
+                 <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center gap-2">
+                    <Button size="icon" onClick={handleSaveImage}><Save className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="destructive" onClick={handleCancelUpdate}><X className="h-4 w-4" /></Button>
+                </div>
+            )}
+
             {uploading && (
                 <div className="absolute inset-0 rounded-full flex items-center justify-center bg-black/70">
-                    <Progress value={progress} className="h-2 w-3/4" />
+                    <Loader2 className="h-8 w-8 text-white animate-spin" />
                 </div>
             )}
             <input
