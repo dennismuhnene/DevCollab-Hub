@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -382,7 +383,7 @@ export default function BlogAdminPage() {
                       <CardTitle className="text-2xl">{editingPost ? 'Edit Post' : 'Create New Post'}</CardTitle>
                       <CardDescription>{editingPost ? `Editing "${editingPost.title}"` : 'Fill out the details below.'}</CardDescription>
                     </div>
-                    {editingPost && editingPost.isPublished && (
+                    {editingPost && formData.isPublished && (
                       <Button variant="outline" size="sm" asChild>
                         <a href={`/blogs/${editingPost.id}`} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="h-4 w-4 mr-2" /> View Live
