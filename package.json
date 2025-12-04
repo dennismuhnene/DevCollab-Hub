@@ -11,7 +11,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "get:users": "tsx src/scripts/get-users.ts",
-    "postinstall": "patch-package"
+    "test": "next build"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",

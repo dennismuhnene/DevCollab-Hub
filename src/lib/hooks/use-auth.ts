@@ -28,9 +28,15 @@ export const useAuth = () => {
   }, [user]);
 
   useEffect(() => {
-    if (!isUserLoading) {
+    if (isUserLoading) {
+      setLoading(true);
+    } else if (user) {
       setLoading(true);
       fetchUserProfile();
+    } else {
+      // Handle the case where the user is not logged in.
+      setUserProfile(null);
+      setLoading(false);
     }
   }, [user, isUserLoading, fetchUserProfile, key]);
 
@@ -38,11 +44,11 @@ export const useAuth = () => {
     setKey(prevKey => prevKey + 1);
   }, []);
 
-  return { 
-    user, 
-    userProfile, 
-    loading: loading || isUserLoading, 
+  return {
+    user,
+    userProfile,
+    loading,
     error: userError,
-    reloadUserProfile 
+    reloadUserProfile
   };
 };

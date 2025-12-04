@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/config';
 import { useRouter } from 'next/navigation';
@@ -57,6 +57,7 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
       await updateProfile(user, { displayName: data.name });
+      await sendEmailVerification(user);
 
       const userDocRef = doc(db, 'users', user.uid);
       const userData = {
@@ -75,10 +76,9 @@ export default function SignupPage() {
 
       toast({
         title: 'Account created!',
-        description: 'Welcome to DevCollab Hub.',
+        description: 'A verification email has been sent. Please check your inbox.',
       });
-      // The redirect is handled by the auth state listener.
-      // router.push('/developers');
+      router.push('/verify-email');
     } catch (error: any) {
       let errorMessage = 'An unexpected error occurred.';
       if (error.code === 'auth/email-already-in-use') {

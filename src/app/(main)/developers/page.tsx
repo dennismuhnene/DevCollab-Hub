@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useTransition, useMemo } from 'react';
@@ -156,33 +157,35 @@ export default function DiscoverDevelopersPage() {
       });
       return;
     }
-
-    startAiSortTransition(async () => {
+  
+    const performAiSort = async () => {
       try {
-        const developerDescriptions = allDevelopers.map(dev => 
+        const developerDescriptions = allDevelopers.map(dev =>
           `Name: ${dev.name}, Bio: ${dev.bio || 'Not provided'}, Skills: ${(dev.skills || []).join(', ') || 'None'}, Tech Stack: ${(dev.techStack || []).join(', ')}, Experience: ${dev.yearsOfExperience || 0} years`
         );
-
+  
         const recommendedOrder = await getUserRecommendations({
           userSkills: userProfile.skills || [],
           projectDescriptions: developerDescriptions,
         });
-        
+  
         const sortedDevelopers = recommendedOrder.map(rec => {
           return allDevelopers.find(dev => {
             const devDescription = `Name: ${dev.name}, Bio: ${dev.bio || 'Not provided'}, Skills: ${(dev.skills || []).join(', ') || 'None'}, Tech Stack: ${(dev.techStack || []).join(', ')}, Experience: ${dev.yearsOfExperience || 0} years`;
             return devDescription === rec;
           });
         }).filter((dev): dev is UserProfile => dev !== undefined);
-
+  
         const recommendedIds = new Set(sortedDevelopers.map(d => d.uid));
         const otherDevelopers = allDevelopers.filter(dev => !recommendedIds.has(dev.uid));
-
+  
         const finalSortedList = [...sortedDevelopers, ...otherDevelopers];
-        
-        setAllDevelopers(finalSortedList);
-        resetFilters();
-
+  
+        startAiSortTransition(() => {
+          setAllDevelopers(finalSortedList);
+          resetFilters();
+        });
+  
         toast({
           title: 'Developers Sorted!',
           description: 'Developers have been sorted by relevance to your profile.',
@@ -195,7 +198,9 @@ export default function DiscoverDevelopersPage() {
           description: 'Could not sort developers at this time. Please try again later.',
         });
       }
-    });
+    };
+  
+    performAiSort();
   };
 
   const DeveloperListSkeleton = () => (
@@ -219,7 +224,7 @@ export default function DiscoverDevelopersPage() {
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-12 text-center">
-        <h1 className="text-4xl font-bold tracking-tight font-headline">Discover Developers</h1>
+        <h1 className="text-4xl font-bold tracking-tight font-headline">Discover your Tribe</h1>
         <p className="mt-3 text-lg text-muted-foreground">Find and connect with talented developers from across the platform.</p>
       </div>
 

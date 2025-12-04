@@ -194,41 +194,29 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
   };
 
   const handleDeleteAccount = async () => {
-    if (!auth.currentUser) {
-        toast({ variant: 'destructive', title: 'Not authenticated' });
-        return;
-    }
     setLoading(true);
-
     try {
-        const idToken = await auth.currentUser.getIdToken(true);
-        const response = await fetch("https://deleteuseraccount-k2sep2gqrq-uc.a.run.app", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${idToken}`,
-            },
-        });
-
-        if (!response.ok) {
-            const errorData = await response.text();
-            throw new Error(errorData || 'Failed to delete account.');
-        }
-
-        toast({ title: 'Account deleted successfully' });
-        // The onAuthStateChanged listener in useAuth will handle the redirect
-        // by setting the user to null, which will cause a redirect to '/'.
-        // No need for router.push here.
-        await auth.signOut(); // Signing out ensures a clean state transition
-        router.push('/');
+      const functions = getFunctions(auth.app);
+      const deleteUserCallable = httpsCallable(functions, 'deleteUserAccount');
+      
+      await deleteUserCallable();
+      
+      toast({ title: 'Account deleted successfully' });
+      
+      // The onAuthStateChanged listener will handle the redirect
+      // after the user is effectively signed out from the backend deletion.
+      // But we can also proactively sign out on the client.
+      await auth.signOut();
+      router.push('/');
 
     } catch (error: any) {
-        console.error("Account deletion error:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Error deleting account',
-            description: error.message || 'An unknown error occurred.',
-        });
+      console.error("Account deletion error:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Error deleting account',
+        description: error.message || 'An unknown error occurred.',
+      });
+    } finally {
         setLoading(false);
     }
   };
