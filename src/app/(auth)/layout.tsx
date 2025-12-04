@@ -14,12 +14,14 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user) {
+    // If auth is loaded and the user is logged in and verified, they shouldn't be here.
+    if (!loading && user && user.emailVerified) {
       router.push('/developers');
     }
   }, [user, loading, router]);
 
-  if (loading || (!loading && user)) {
+  // While checking auth or if we are about to redirect a logged-in user, show a loader.
+  if (loading || (user && user.emailVerified)) {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -28,6 +30,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
     );
   }
 
+  // If the user is not loading and is not logged in/verified, show the auth pages.
   return (
     <div className="flex min-h-screen w-full flex-col">
       <Header />

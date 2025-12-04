@@ -1,91 +1,59 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * import {onCall} from "firebase-functions/v2/https";
- * import {onDocumentWritten} from "firebase-functions/v2/firestore";
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
 
-import {onRequest} from "firebase-functions/v2/https";
+import * as functions from "firebase-functions";
 import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
-import {getFirestore, FieldValue} from "firebase-admin/firestore";
-import {getAuth} from "firebase-admin/auth";
-import * as cors from "cors";
-
-// Start writing functions
-// https://firebase.google.com/docs/functions/typescript
+import {getFirestore} from "firebase-admin/firestore";
+import {getAuth, UserRecord} from "firebase-admin/auth";
 
 // Initialize firebase-admin
 admin.initializeApp();
 
 const adminDb = getFirestore();
-const corsHandler = cors({origin: true});
-
 
 /**
  * A secure HTTP-callable function to initiate the user deletion process.
+ * This is an `onCall` function, designed to be invoked directly from the client SDK.
  */
-export const deleteUserAccount = onRequest({
-  // This allows us to check auth status
-  invoker: "private",
-}, async (req, res) => {
-  corsHandler(req, res, async () => {
-    logger.info("deleteUserAccount function triggered", {
-      headers: req.headers,
-    });
+export const deleteUserAccount = functions.https.onCall(async (data, context) => {
+  // Check if the user is authenticated.
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'The function must be called while authenticated.'
+    );
+  }
 
-    if (req.method !== "POST") {
-      res.status(405).send("Method Not Allowed");
-      return;
-    }
+  const uid = context.auth.uid;
+  logger.info(`Authenticated user UID: ${uid}. Proceeding with deletion.`);
 
-    const authHeader = req.headers.authorization || "";
-    const idToken = authHeader.split("Bearer ")[1];
+  try {
+    // This call will trigger the onUserAccountDeleted function
+    await getAuth().deleteUser(uid);
+    logger.info(`Successfully initiated deletion for user ${uid}.`);
+    
+    // Return a success message to the client. This is the critical part.
+    return {
+      message: `Successfully initiated deletion for user ${uid}.`,
+    };
 
-    if (!idToken) {
-      logger.warn("Authorization token not found.");
-      res.status(401).send("Unauthorized");
-      return;
-    }
-
-    try {
-      // Verify the user's ID token
-      const decodedToken = await getAuth().verifyIdToken(idToken);
-      const uid = decodedToken.uid;
-      logger.info(`Token verified for UID: ${uid}. Proceeding with deletion.`);
-
-      // This call will trigger the onUserAccountDeleted function
-      await getAuth().deleteUser(uid);
-
-      res.status(200).send({
-        message: `Successfully initiated deletion for user ${uid}.`,
-      });
-    } catch (error) {
-      logger.error("Error in deleteUserAccount function:", error);
-      if (error instanceof Error && "code" in error) {
-        const firebaseError = error as { code: string; message: string };
-        if (firebaseError.code === "auth/id-token-expired") {
-          res.status(401).send("Unauthorized: ID token has expired.");
-        } else if (firebaseError.code === "auth/user-not-found") {
-           res.status(404).send("User not found.");
-        } else {
-          res.status(500).send("Internal Server Error");
-        }
-      } else {
-        res.status(500).send("Internal Server Error");
-      }
-    }
-  });
+  } catch (error: any) {
+    logger.error("Error in deleteUserAccount function:", error);
+    // Throw an HttpsError to send a structured error back to the client.
+    throw new functions.https.HttpsError(
+      'internal',
+      'An error occurred while trying to delete the user.',
+      error.message
+    );
+  }
 });
+
 
 
 /**
  * A background Cloud Function that triggers when a Firebase Auth user
  * is deleted. It performs a "cascade delete" of all associated Firestore data.
  */
-export const onUserAccountDeleted = admin.auth.user().onDelete(async (user) => {
+export const onUserAccountDeleted = functions.auth.user().onDelete(async (user: UserRecord) => {
   const uid = user.uid;
   logger.info(`Starting cascade delete for user: ${uid}`);
   const batch = adminDb.batch();
@@ -112,10 +80,6 @@ export const onUserAccountDeleted = admin.auth.user().onDelete(async (user) => {
     matchesSnapshot.forEach((doc) => {
       batch.delete(doc.ref);
       logger.info(`Scheduled deletion for match: ${doc.ref.path}`);
-      // Note: Subcollections like "messages" are NOT automatically deleted.
-      // For a full cleanup, a more complex recursive delete on the subcollection
-      // would be needed here, but for this app's purpose, deleting the match
-      // effectively removes it from the UI.
     });
   }
 
@@ -127,3 +91,4 @@ export const onUserAccountDeleted = admin.auth.user().onDelete(async (user) => {
     logger.error(`Error committing cascade delete for user ${uid}:`, error);
   }
 });
+

@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -46,25 +47,52 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      
+      if (!userCredential.user.emailVerified) {
+        // Automatically send a verification email for unverified users trying to log in.
+        await sendEmailVerification(userCredential.user);
+        
+        toast({
+            variant: 'destructive',
+            title: 'Email Not Verified',
+            description: 'A new verification email has been sent. You must verify your email address before logging in.',
+        });
+        
+        router.push('/verify-email');
+        setLoading(false);
+        return;
+      }
+
       toast({
         title: 'Login successful!',
         description: "Welcome back to DevCollab Hub.",
       });
-      // The redirect is handled by the auth state listener.
-      // router.push('/developers');
+      router.push('/developers');
+      
     } catch (error: any) {
-      let errorMessage = 'An unexpected error occurred.';
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        errorMessage = 'Invalid email or password. Please try again.';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Please enter a valid email address.';
+      let errorMessage = 'An unexpected error occurred. Please try again.';
+      switch (error.code) {
+        case 'auth/user-not-found':
+          errorMessage = 'Cannot find a user with that email. Please sign up first.';
+          break;
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+          errorMessage = 'Invalid email or password. Please try again.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Please enter a valid email address.';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many failed login attempts. Please try again later.';
+          break;
       }
       toast({
         variant: 'destructive',
         title: 'Login failed',
         description: errorMessage,
       });
+    } finally {
       setLoading(false);
     }
   };
