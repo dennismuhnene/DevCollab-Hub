@@ -60,7 +60,7 @@ export interface Message {
 
 export interface Notification {
     id?: string;
-    type: 'interest' | 'match' | 'message';
+    type: 'interest' | 'match' | 'message' | 'rejection';
     // from who
     fromUserId: string;
     fromUserName: string;

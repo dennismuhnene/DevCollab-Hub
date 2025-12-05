@@ -221,6 +221,36 @@ export default function ProjectDetailsPage() {
     }
   };
 
+  const handleReject = async (interestedUser: UserWithId) => {
+    if (!user || !userProfile || !project) return;
+
+    try {
+      const projectRef = doc(db, 'projects', project.id);
+      updateDocumentNonBlocking(projectRef, {
+        interestedUsers: arrayRemove(interestedUser.id),
+        updatedAt: serverTimestamp(),
+      });
+
+      await addNotification(interestedUser.id, {
+        type: 'rejection',
+        fromUserId: user.uid,
+        fromUserName: userProfile.name,
+        projectId: project.id,
+        projectTitle: project.title,
+        read: false,
+      });
+
+      toast({
+        title: 'Developer Rejected',
+        description: `We\'ve notified ${interestedUser.name} that you\'ve declined their request to join the project at this time.`,
+      });
+    } catch (error) {
+      console.error("Failed to reject developer:", error);
+      toast({ variant: 'destructive', title: 'Rejection Failed', description: error instanceof Error ? error.message : 'An unknown error occurred.' });
+    }
+  };
+
+
   const handleGoToMessage = async (matchedUserId: string) => {
     if (!user || !project) return;
   
@@ -365,9 +395,15 @@ export default function ProjectDetailsPage() {
                               <AvatarImage src={interested.photoURL} />
                               <AvatarFallback>{getInitials(interested.name)}</AvatarFallback>
                             </Avatar>
-                            <Link href={`/developers/${interested.id}`} className="font-medium hover:underline">{interested.name}</Link>
+                            <span className="font-medium">{interested.name}</span>
                           </div>
-                          <Button size="sm" onClick={() => handleMatch(interested)}>Match</Button>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href={`/developers/${interested.id}`}>Profile</Link>
+                            </Button>
+                            <Button size="sm" onClick={() => handleMatch(interested)}>Match</Button>
+                            <Button variant="destructive" size="sm" onClick={() => handleReject(interested)}>Reject</Button>
+                          </div>
                         </li>
                       ))}
                     </ul>
