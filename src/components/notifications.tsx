@@ -25,7 +25,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from './ui/button';
-import { Bell, Hand, MessageSquare, UserCheck } from 'lucide-react';
+import { Bell, Hand, MessageSquare, UserCheck, XCircle } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
@@ -94,6 +94,8 @@ export default function Notifications() {
       router.push(`/projects/${notification.projectId}`);
     } else if (notification.type === 'match' && notification.matchId) {
        await openChat(notification.matchId, router);
+    } else if (notification.type === 'rejection') {
+      // No navigation, just mark as read
     }
   };
 
@@ -118,6 +120,7 @@ export default function Notifications() {
         case 'interest': return <Hand className="h-4 w-4 text-yellow-500" />;
         case 'match': return <UserCheck className="h-4 w-4 text-green-500" />;
         case 'message': return <MessageSquare className="h-4 w-4 text-blue-500" />;
+        case 'rejection': return <XCircle className="h-4 w-4 text-red-500" />;
         default: return <Bell className="h-4 w-4" />;
     }
   }
@@ -130,6 +133,8 @@ export default function Notifications() {
         return <p>You matched with <span className="font-semibold">{notification.fromUserName}</span> for project <span className="font-semibold">{notification.projectTitle}</span>!</p>;
       case 'message':
         return <p><span className="font-semibold">{notification.fromUserName}</span> sent you a message: <span className="italic">"{notification.messageSnippet}"</span></p>;
+      case 'rejection':
+        return <p>Your interest in the project <span className="font-semibold">{notification.projectTitle}</span> was declined for now.</p>;
       default:
         return <p>You have a new notification.</p>;
     }
