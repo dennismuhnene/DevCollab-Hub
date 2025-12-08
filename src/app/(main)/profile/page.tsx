@@ -14,10 +14,22 @@ import { updateProfile } from 'firebase/auth';
 import { db, storage, auth } from '@/lib/firebase/config';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
-import { Camera, Save, X, Loader2 } from 'lucide-react';
+import { Camera, Save, X, Loader2, Link as LinkIcon } from 'lucide-react';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
+import Link from 'next/link';
+import { ExternalLink } from '@/types';
+
+const socialIcons = {
+  github: "/icons/github.svg",
+  gitlab: "/icons/gitlab.svg",
+  bitbucket: "/icons/bitbucket.svg",
+  linkedin: "/icons/linkedin.svg",
+  twitter: "/icons/twitter.svg",
+  default: "/icons/link.svg",
+};
+
 
 export default function ProfilePage() {
   const { user, userProfile, loading, reloadUserProfile } = useAuth();
@@ -134,6 +146,13 @@ export default function ProfilePage() {
     );
   };
 
+  const allLinks: ExternalLink[] = [
+    userProfile?.versionControl,
+    userProfile?.socials,
+    userProfile?.portfolioUrl ? { type: 'portfolio', url: userProfile.portfolioUrl } : undefined,
+    ...(userProfile?.extraLinks || [])
+  ].filter((link): link is ExternalLink => link !== undefined);
+
 
   if (loading || !userProfile) {
     return (
@@ -204,6 +223,24 @@ export default function ProfilePage() {
       </div>
       
       <div className="space-y-8">
+        {allLinks.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>External Links</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-4">
+              {allLinks.map((link, index) => (
+                <Button key={index} variant="outline" asChild>
+                  <Link href={link.url} target="_blank">
+                    <LinkIcon className="mr-2 h-4 w-4" />
+                    {link.type}
+                  </Link>
+                </Button>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>Edit Profile</CardTitle>

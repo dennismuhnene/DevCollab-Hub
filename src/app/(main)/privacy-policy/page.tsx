@@ -28,6 +28,9 @@ export default function PrivacyPolicyPage() {
             "Professional skills (skills)",
             "Years of experience",
             "Collaboration status (open or closed to collaboration)",
+            "Collaboration goals (e.g., seeking paid work, finding a co-founder)",
+            "Commitment level (e.g., part-time, full-time)",
+            "External links (e.g., GitHub, portfolio, social media)",
           ]
         },
         {
@@ -54,10 +57,11 @@ export default function PrivacyPolicyPage() {
         },
         {
           subtitle: "1.5 AI Insights Data",
-          description: "To generate AI-powered insights for project owners the platform may process:",
+          description: "To generate on-demand, AI-powered insights for project owners, the platform processes aggregated and anonymized data from your own profile and the profiles of developers who have shown interest in your projects. This data includes:",
           points: [
-            "Aggregated and anonymized data from user profiles that have viewed interacted with or matched with a project",
-            "This processing does not access message content and does not identify users individually.",
+            "Professional details such as skills, tech stack, years of experience, collaboration goals, and commitment levels.",
+            "This feature is user-initiated and does not run automatically.",
+            "The analysis does not access private message content and does not identify individual users in its output.",
           ]
         },
         {
