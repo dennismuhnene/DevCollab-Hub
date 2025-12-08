@@ -1,4 +1,4 @@
-# DevCollab Hub
+clear# DevCollab Hub
 
 <p align="center">
   <img src="https://picsum.photos/seed/logo/600/300" alt="DevCollab Hub Banner" data-ai-hint="developer collaboration abstract" />

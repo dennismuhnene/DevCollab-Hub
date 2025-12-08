@@ -18,8 +18,8 @@ const contactInfo = [
   {
     icon: Mail,
     title: 'Email',
-    value: 'dennis_chomba@outlook.com',
-    href: 'mailto:dennis_chomba@outlook.com',
+    value: 'Use the form',
+    href: null,
   },
   {
     icon: Phone,
@@ -193,7 +193,7 @@ export default function ContactPage() {
                         {info.value}
                       </a>
                     ) : (
-                      <p className="text-muted-foreground">{info.value}</p>
+                      <p className={`text-muted-foreground ${info.title === 'Email' ? 'italic' : ''}`}>{info.value}</p>
                     )}
                   </CardContent>
                 </Card>
