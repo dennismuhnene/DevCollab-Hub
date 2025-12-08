@@ -150,8 +150,24 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
   const versionControlType = watch('versionControl')?.type || '';
   const socialsType = watch('socials')?.type || '';
   
+  // Helper for safe error messages
+  function getErrorMessage(err: any) {
+    return err && typeof err === "object" && "message" in err ? (err.message as string) : null;
+  }
+
   useEffect(() => {
     if (userProfile) {
+      // Normalize and narrow types from possibly looser external types (ExternalLink) to the strict unions
+      const normalizedVersionControl: { type: 'github' | 'gitlab' | 'bitbucket'; url: string } =
+        userProfile.versionControl && ['github','gitlab','bitbucket'].includes((userProfile.versionControl as any).type)
+          ? (userProfile.versionControl as unknown as { type: 'github' | 'gitlab' | 'bitbucket'; url: string })
+          : { type: 'github', url: '' };
+
+      const normalizedSocials: { type: 'linkedin' | 'twitter' | 'tiktok' | 'discord'; url: string } =
+        userProfile.socials && ['linkedin','twitter','tiktok','discord'].includes((userProfile.socials as any).type)
+          ? (userProfile.socials as unknown as { type: 'linkedin' | 'twitter' | 'tiktok' | 'discord'; url: string })
+          : { type: 'linkedin', url: '' };
+
       reset({
         name: userProfile.name || '',
         bio: userProfile.bio || '',
@@ -161,13 +177,9 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
         openForCollaboration: userProfile.openForCollaboration === false ? false : true,
         collaborationGoals: userProfile.collaborationGoals || [],
         commitmentLevel: userProfile.commitmentLevel || '',
-        versionControl: userProfile.versionControl && ['github','gitlab','bitbucket'].includes(userProfile.versionControl.type)
-          ? userProfile.versionControl
-          : { type: 'github', url: '' },
+        versionControl: normalizedVersionControl,
         portfolioUrl: userProfile.portfolioUrl || '',
-        socials: userProfile.socials && ['linkedin','twitter','tiktok','discord'].includes(userProfile.socials.type)
-          ? userProfile.socials
-          : { type: 'linkedin', url: '' },
+        socials: normalizedSocials,
         extraLinks: userProfile.extraLinks || [],
       });
     }
@@ -269,20 +281,277 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
     <>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         <div className="space-y-6">
-          {/* Name, Experience, Skills, Tech Stack, Bio, Collaboration Settings... */}
-          {/* Keep all your existing JSX here unchanged */}
-          {/* Just replace all error usages with getErrorMessage() */}
-          
-          {errors.name && <p className="text-sm text-destructive">{getErrorMessage(errors.name)}</p>}
-          {errors.yearsOfExperience && <p className="text-sm text-destructive">{getErrorMessage(errors.yearsOfExperience)}</p>}
-          {errors.skills && <p className="text-sm text-destructive">{getErrorMessage(errors.skills)}</p>}
-          {errors.versionControl?.url && <p className="text-sm text-destructive">{getErrorMessage(errors.versionControl?.url)}</p>}
-          {errors.portfolioUrl && <p className="text-sm text-destructive">{getErrorMessage(errors.portfolioUrl)}</p>}
-          {errors.socials?.url && <p className="text-sm text-destructive">{getErrorMessage(errors.socials?.url)}</p>}
-          {errors.extraLinks?.[fields.length -1] && <p className="text-sm text-destructive">{getErrorMessage(errors.extraLinks[fields.length - 1]?.url) || getErrorMessage(errors.extraLinks[fields.length - 1]?.type)}</p>}
-          
+            <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input id="name" {...register('name')} />
+                {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="yearsOfExperience">Years of Experience</Label>
+                <Input id="yearsOfExperience" type="number" step="0.5" {...register('yearsOfExperience')} />
+                <p className="text-sm text-muted-foreground pt-1">
+                    Use decimals for half-year increments (e.g., 2.5). For less than a year, use decimals (e.g. 0.5 for 6 months).
+                </p>
+                {errors.yearsOfExperience && <p className="text-sm text-destructive">{errors.yearsOfExperience.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Skills</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" className="w-full justify-between">
+                    <span className="truncate">
+                      {skills.length > 0 ? skills.join(', ') : 'Select up to 5 skills...'}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search skills..." />
+                    <CommandEmpty>No skill found.</CommandEmpty>
+                    <CommandList>
+                      <CommandGroup>
+                        {professionalSkills.map((skill) => (
+                          <CommandItem
+                            key={skill}
+                            value={skill}
+                            onSelect={() => {
+                              const currentSkills = getValues('skills') || [];
+                              if (currentSkills.includes(skill)) {
+                                setValue('skills', currentSkills.filter((s) => s !== skill), { shouldDirty: true, shouldValidate: true });
+                              } else if(currentSkills.length < 5) {
+                                setValue('skills', [...currentSkills, skill], { shouldDirty: true, shouldValidate: true });
+                              } else {
+                                toast({ variant: "destructive", title: "Skill limit reached", description: "You can only select up to 5 skills." })
+                              }
+                            }}
+                          >
+                            <Check className={cn('mr-2 h-4 w-4', (getValues('skills') || []).includes(skill) ? 'opacity-100' : 'opacity-0')} />
+                            {skill}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <div className="flex flex-wrap gap-1 pt-2">
+                {skills.map((skill) => (
+                  <Badge key={skill} variant="secondary" className="flex items-center gap-1">
+                    {skill}
+                    <button type="button" onClick={() => setValue('skills', skills.filter((s) => s !== skill), { shouldDirty: true })} className="rounded-full hover:bg-muted-foreground/20">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+              {errors.skills && <p className="text-sm text-destructive">{errors.skills.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="tech-stack-input">Tech Stack</Label>
+                <div className="flex flex-wrap gap-2 rounded-md border p-2">
+                {techStack.map((tech) => (
+                    <div key={tech} className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
+                    {tech}
+                    <button type="button" onClick={() => handleTechStackRemove(tech)}><X className="h-4 w-4" /></button>
+                    </div>
+                ))}
+                <Input
+                    id="tech-stack-input"
+                    value={techStackInput}
+                    onChange={(e) => setTechStackInput(e.target.value)}
+                    onKeyDown={handleTechStackAdd}
+                    placeholder="Type a technology and press Enter"
+                    className="flex-1 border-none shadow-none focus-visible:ring-0"
+                />
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                    <Label htmlFor="bio">Bio</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={handleGenerateBio} disabled={isAiPending}>
+                    {isAiPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />}
+                    Generate with AI
+                    </Button>
+                </div>
+                <Textarea id="bio" {...register('bio')} rows={5} />
+            </div>
+
+            <Card>
+                <CardHeader><CardTitle>Collaboration Settings</CardTitle></CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex items-center space-x-3 rounded-md border p-4">
+                        <Switch 
+                            id="openForCollaboration"
+                            checked={openForCollaboration}
+                            onCheckedChange={(checked) => setValue('openForCollaboration', checked, { shouldValidate: true, shouldDirty: true })}
+                        />
+                        <div className="space-y-0.5">
+                            <Label htmlFor="openForCollaboration" className="text-base">Collaboration Status</Label>
+                            <p className="text-sm text-muted-foreground">
+                            {openForCollaboration ? "Open for Collaboration" : "Not seeking colabs"}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Collaboration Goals</Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <Button variant="outline" role="combobox" className="w-full justify-between">
+                                <span className="truncate">
+                                {collaborationGoals.length > 0 ? collaborationGoals.join(', ') : 'Select your goals...'}
+                                </span>
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                            <Command>
+                                <CommandInput placeholder="Search goals..." />
+                                <CommandEmpty>No goal found.</CommandEmpty>
+                                <CommandList>
+                                <CommandGroup>
+                                    {collaborationGoalsOptions.map((goal) => (
+                                    <CommandItem
+                                        key={goal}
+                                        value={goal}
+                                        onSelect={() => {
+                                        const currentGoals = getValues('collaborationGoals') || [];
+                                        if (currentGoals.includes(goal)) {
+                                            setValue('collaborationGoals', currentGoals.filter((g) => g !== goal), { shouldDirty: true, shouldValidate: true });
+                                        } else {
+                                            setValue('collaborationGoals', [...currentGoals, goal], { shouldDirty: true, shouldValidate: true });
+                                        }
+                                        }}
+                                    >
+                                        <Check className={cn('mr-2 h-4 w-4', collaborationGoals.includes(goal) ? 'opacity-100' : 'opacity-0')} />
+                                        {goal}
+                                    </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                                </CommandList>
+                            </Command>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="commitment-level">Commitment Level</Label>
+                        <Select value={commitmentLevel || ''} onValueChange={(value) => setValue('commitmentLevel', value, { shouldValidate: true, shouldDirty: true })}>
+                            <SelectTrigger><SelectValue placeholder="Select your commitment level" /></SelectTrigger>
+                            <SelectContent>
+                                {commitmentLevelOptions.map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </CardContent>
+            </Card>
+
+             <div className="space-y-4 rounded-md border p-4">
+                <h3 className="text-lg font-medium">External Links</h3>
+                
+                <div className="space-y-2">
+                    <Label htmlFor="version-control-url">Version Control (Required)</Label>
+                    <div className="flex gap-2">
+                        <Select value={versionControlType || 'github'} onValueChange={(value) => setValue('versionControl.type', value as any, { shouldValidate: true, shouldDirty: true })}>
+                            <SelectTrigger className="w-[120px]"><SelectValue placeholder="Select type" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="github">GitHub</SelectItem>
+                                <SelectItem value="gitlab">GitLab</SelectItem>
+                                <SelectItem value="bitbucket">Bitbucket</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Input id="version-control-url" placeholder="https://github.com/username" {...register('versionControl.url')} />
+                    </div>
+                    {errors.versionControl?.url && <p className="text-sm text-destructive">{errors.versionControl.url.message}</p>}
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="portfolio-url">Portfolio Website</Label>
+                    <Input id="portfolio-url" placeholder="https://your-portfolio.com" {...register('portfolioUrl')} />
+                    {errors.portfolioUrl && <p className="text-sm text-destructive">{errors.portfolioUrl.message}</p>}
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="socials-url">Socials</Label>
+                    <div className="flex gap-2">
+                        <Select value={socialsType || 'linkedin'} onValueChange={(value) => setValue('socials.type', value as any, { shouldValidate: true, shouldDirty: true })}>
+                             <SelectTrigger className="w-[120px]"><SelectValue placeholder="Select type" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="linkedin">LinkedIn</SelectItem>
+                                <SelectItem value="twitter">Twitter</SelectItem>
+                                <SelectItem value="tiktok">TikTok</SelectItem>
+                                <SelectItem value="discord">Discord</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Input id="socials-url" placeholder="https://linkedin.com/in/username" {...register('socials.url')} />
+                    </div>
+                    {errors.socials?.url && <p className="text-sm text-destructive">{errors.socials.url.message}</p>}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Extra Links</Label>
+                  <div className="space-y-2">
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="flex gap-2 items-start">
+                        <Input placeholder="Link Title (e.g. My Blog)" {...register(`extraLinks.${index}.type`)} />
+                        <Input placeholder="https://..." {...register(`extraLinks.${index}.url`)} />
+                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4"/></Button>
+                    </div>
+                  ))}
+                  </div>
+                   {errors.extraLinks?.[fields.length -1] && <p className="text-sm text-destructive">{getErrorMessage(errors.extraLinks[fields.length - 1]?.url) || getErrorMessage(errors.extraLinks[fields.length - 1]?.type) || getErrorMessage(errors.extraLinks[fields.length - 1])}</p>}
+                  {fields.length < 3 && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => append({ type: '', url: '' })}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Link
+                    </Button>
+                  )}
+                </div>
+            </div>
         </div>
+        <Button type="submit" disabled={loading} className="w-full md:w-auto">
+          {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : 'Save All Changes'}
+        </Button>
       </form>
+
+      <div className="mt-12 border-t border-destructive/20 pt-6">
+        <h3 className="text-lg font-semibold text-destructive">Danger Zone</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Deleting your account is a permanent action and cannot be undone.
+        </p>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" disabled={loading}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete My Account
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete your authentication record and all of your associated data, including projects and chats.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteAccount}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Continue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </>
   );
 }
