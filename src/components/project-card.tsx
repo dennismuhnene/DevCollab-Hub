@@ -27,7 +27,7 @@ export default function ProjectCard({ project, owner }: ProjectCardProps) {
           <div className="aspect-[3/2] w-full overflow-hidden rounded-t-lg">
             <Image
               src={project.imageUrl || defaultProjectImage}
-              alt={project.title}
+              alt={project.title || 'Project image'}
               width={600}
               height={400}
               className="h-full w-full object-cover"
@@ -44,8 +44,8 @@ export default function ProjectCard({ project, owner }: ProjectCardProps) {
             <div>
               <h4 className="font-semibold text-xs mb-2 flex items-center gap-1.5"><Code className="w-3.5 h-3.5" /> Tech Stack</h4>
               <div className="flex flex-wrap gap-1.5">
-                {project.requiredTechStack?.slice(0, 4).map((tech) => (
-                  <Badge key={tech} variant="secondary">{tech}</Badge>
+                {project.requiredTechStack?.slice(0, 4).map((tech, index) => (
+                  <Badge key={`${tech}-${index}`} variant="secondary">{tech}</Badge>
                 ))}
                 {project.requiredTechStack && project.requiredTechStack.length > 4 && (
                     <Badge variant="outline">+{project.requiredTechStack.length - 4} more</Badge>
@@ -55,8 +55,8 @@ export default function ProjectCard({ project, owner }: ProjectCardProps) {
             <div>
               <h4 className="font-semibold text-xs mb-2 flex items-center gap-1.5"><BrainCircuit className="w-3.5 h-3.5" /> Skills</h4>
               <div className="flex flex-wrap gap-1.5">
-                {project.requiredSkills?.slice(0, 3).map((skill) => (
-                  <Badge key={skill} variant="outline">{skill}</Badge>
+                {project.requiredSkills?.slice(0, 3).map((skill, index) => (
+                  <Badge key={`${skill}-${index}`} variant="outline">{skill}</Badge>
                 ))}
               </div>
             </div>
@@ -67,7 +67,7 @@ export default function ProjectCard({ project, owner }: ProjectCardProps) {
         <CardFooter className="p-4 pt-0 border-t mt-4">
           <Link href={`/developers/${owner.uid}`} className="flex items-center gap-3 w-full hover:bg-secondary/50 rounded-md p-2 -m-2 transition-colors">
             <Avatar className="h-10 w-10">
-              <AvatarImage src={owner.photoURL} alt={owner.name} />
+              <AvatarImage src={owner.photoURL} alt={owner.name || 'Owner avatar'} />
               <AvatarFallback>{getInitials(owner.name)}</AvatarFallback>
             </Avatar>
             <div>

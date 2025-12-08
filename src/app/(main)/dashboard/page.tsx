@@ -45,8 +45,6 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [isAiInsightsLoading, startAiInsightsTransition] = useTransition();
   const [aiInsights, setAiInsights] = useState<GetProfileInsightsOutput | null>(null);
-  const [hasFetched, setHasFetched] = useState(false);
-
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -55,57 +53,76 @@ export default function DashboardPage() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (!user || !userProfile || hasFetched) return;
-    
+    if (!user || !userProfile) return;
+
+    const CACHE_KEY_PROJECTS = `dashboard_myProjects_${user.uid}`;
+    const CACHE_KEY_DEVS = `dashboard_recommendedDevelopers_${user.uid}`;
+    const CACHE_KEY_INTERESTED = `dashboard_interestedUsers_${user.uid}`;
+
     const fetchData = async () => {
       setLoadingData(true);
-      
-      const projectsCol = collection(db, 'projects');
-      const q = query(projectsCol, where('ownerId', '==', user.uid));
-      const querySnapshot = await getDocs(q);
-      const projects = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
-      setMyProjects(projects);
+      try {
+        const cachedProjects = sessionStorage.getItem(CACHE_KEY_PROJECTS);
+        const cachedDevs = sessionStorage.getItem(CACHE_KEY_DEVS);
+        const cachedInterested = sessionStorage.getItem(CACHE_KEY_INTERESTED);
 
-      const allInterestedUserIds = new Set<string>();
-      projects.forEach(p => p.interestedUsers?.forEach(uid => allInterestedUserIds.add(uid)));
+        if (cachedProjects && cachedDevs && cachedInterested) {
+            setMyProjects(JSON.parse(cachedProjects));
+            setRecommendedDevelopers(JSON.parse(cachedDevs));
+            setInterestedUsersByProject(JSON.parse(cachedInterested));
+        } else {
+          const projectsCol = collection(db, 'projects');
+          const q = query(projectsCol, where('ownerId', '==', user.uid));
+          const querySnapshot = await getDocs(q);
+          const projects = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+          setMyProjects(projects);
+          sessionStorage.setItem(CACHE_KEY_PROJECTS, JSON.stringify(projects));
 
-      if (allInterestedUserIds.size > 0) {
-        const interestedUsersProfiles: UserProfile[] = [];
-        const userChunks = Array.from(allInterestedUserIds).reduce((acc: string[][], curr: string, i: number) => {
-          const chunkIndex = Math.floor(i / 30);
-          if (!acc[chunkIndex]) acc[chunkIndex] = [];
-          acc[chunkIndex].push(curr);
-          return acc;
-        }, []);
+          const allInterestedUserIds = new Set<string>();
+          projects.forEach(p => p.interestedUsers?.forEach(uid => allInterestedUserIds.add(uid)));
 
-        const userPromises = userChunks.map(chunk => getDocs(query(collection(db, 'users'), where(documentId(), 'in', chunk))));
-        const userSnapshots = await Promise.all(userPromises);
-        userSnapshots.forEach(snap => snap.docs.forEach(d => interestedUsersProfiles.push({ uid: d.id, ...d.data() } as UserProfile)));
-        
-        const interestedUsersData: Record<string, InterestedUser[]> = {};
-        for (const project of projects) {
-            interestedUsersData[project.id] = (project.interestedUsers || [])
-            .map(uid => interestedUsersProfiles.find(p => p.uid === uid))
-            .filter((u): u is InterestedUser => u !== undefined);
+          if (allInterestedUserIds.size > 0) {
+            const interestedUsersProfiles: UserProfile[] = [];
+            const userChunks = Array.from(allInterestedUserIds).reduce((acc: string[][], curr: string, i: number) => {
+              const chunkIndex = Math.floor(i / 30);
+              if (!acc[chunkIndex]) acc[chunkIndex] = [];
+              acc[chunkIndex].push(curr);
+              return acc;
+            }, []);
+
+            const userPromises = userChunks.map(chunk => getDocs(query(collection(db, 'users'), where(documentId(), 'in', chunk))));
+            const userSnapshots = await Promise.all(userPromises);
+            userSnapshots.forEach(snap => snap.docs.forEach(d => interestedUsersProfiles.push({ uid: d.id, ...d.data() } as UserProfile)));
+            
+            const interestedUsersData: Record<string, InterestedUser[]> = {};
+            for (const project of projects) {
+                interestedUsersData[project.id] = (project.interestedUsers || [])
+                .map(uid => interestedUsersProfiles.find(p => p.uid === uid))
+                .filter((u): u is InterestedUser => u !== undefined);
+            }
+            setInterestedUsersByProject(interestedUsersData);
+            sessionStorage.setItem(CACHE_KEY_INTERESTED, JSON.stringify(interestedUsersData));
+          }
+
+          const usersCol = collection(db, 'users');
+          const usersQuery = query(usersCol, limit(5));
+          const usersSnapshot = await getDocs(usersQuery);
+          const devs = usersSnapshot.docs
+            .map(d => ({ uid: d.id, ...(d.data() as any) } as UserProfile))
+            .filter(d => d.uid !== user.uid)
+            .slice(0, 4);
+          setRecommendedDevelopers(devs);
+          sessionStorage.setItem(CACHE_KEY_DEVS, JSON.stringify(devs));
         }
-        setInterestedUsersByProject(interestedUsersData);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not load dashboard data. Please try again later." });
       }
-
-      const usersCol = collection(db, 'users');
-      const usersQuery = query(usersCol, limit(5));
-      const usersSnapshot = await getDocs(usersQuery);
-      const devs = usersSnapshot.docs
-        .map(d => ({ uid: d.id, ...(d.data() as any) } as UserProfile))
-        .filter(d => d.uid !== user.uid)
-        .slice(0, 4);
-      setRecommendedDevelopers(devs);
-      
       setLoadingData(false);
-      setHasFetched(true);
     };
 
     fetchData();
-  }, [user, userProfile, hasFetched]);
+  }, [user, userProfile, toast]);
 
   const handleGenerateInsights = () => {
     if (!user || !userProfile) return;
@@ -182,8 +199,14 @@ export default function DashboardPage() {
       setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId: matchId });
       setShowMatchModal(true);
       
-      setInterestedUsersByProject(prev => ({ ...prev, [project.id]: prev[project.id]?.filter(u => u.uid !== interestedUser.uid) }));
-      setMyProjects(prevProjects => prevProjects.map(p => p.id === project.id ? { ...p, interestedUsers: p.interestedUsers?.filter(uid => uid !== interestedUser.uid), matchedUsers: [...(p.matchedUsers || []), interestedUser.uid] } : p));
+      const updatedInterested = { ...interestedUsersByProject, [project.id]: interestedUsersByProject[project.id]?.filter(u => u.uid !== interestedUser.uid) };
+      setInterestedUsersByProject(updatedInterested);
+      sessionStorage.setItem(`dashboard_interestedUsers_${user.uid}`, JSON.stringify(updatedInterested));
+
+      const updatedProjects = myProjects.map(p => p.id === project.id ? { ...p, interestedUsers: p.interestedUsers?.filter(uid => uid !== interestedUser.uid), matchedUsers: [...(p.matchedUsers || []), interestedUser.uid] } : p);
+      setMyProjects(updatedProjects);
+      sessionStorage.setItem(`dashboard_myProjects_${user.uid}`, JSON.stringify(updatedProjects));
+
     } catch (error) {
       console.error("Failed to create match:", error);
       toast({ variant: 'destructive', title: 'Matching Failed', description: error instanceof Error ? error.message : 'Could not create a match. Please try again.' });
@@ -278,7 +301,7 @@ export default function DashboardPage() {
                       <CardContent><ul className="space-y-4">{interestedUsersByProject[project.id]?.map(interestedUser => <li key={interestedUser.uid} className="flex flex-col sm:flex-row items-center justify-between gap-4"><div className="flex items-center space-x-3"><Avatar><AvatarImage src={interestedUser.photoURL} /><AvatarFallback>{getInitials(interestedUser.name)}</AvatarFallback></Avatar><span>{interestedUser.name}</span></div><div className="flex items-center gap-2"><Button variant="outline" size="sm" asChild><Link href={`/developers/${interestedUser.uid}`}>View Profile</Link></Button><Button size="sm" onClick={() => handleMatch(project, interestedUser)}>Match</Button></div></li>)}</ul></CardContent>
                     </Card>
                 )
-              ))}
+              ))} 
             </section>
           )}
 
@@ -295,21 +318,20 @@ export default function DashboardPage() {
                         
                         {userProfile.openForCollaboration && (userProfile.collaborationGoals?.length || userProfile.commitmentLevel) && <Card><CardHeader><CardTitle className="flex items-center"><Handshake className="mr-2 h-5 w-5 text-primary"/> Collaboration Preferences</CardTitle></CardHeader><CardContent className="space-y-4 pt-4">{userProfile.collaborationGoals && userProfile.collaborationGoals.length > 0 && <div><h3 className="font-semibold mb-2 flex items-center"><Target className="mr-2 h-4 w-4"/> Goals</h3><div className="flex flex-wrap gap-2">{userProfile.collaborationGoals.map(goal => <Badge key={goal} variant="default">{goal}</Badge>)}</div></div>}{userProfile.commitmentLevel && <div><h3 className="font-semibold mb-2">Commitment</h3><p className="text-muted-foreground">{userProfile.commitmentLevel}</p></div>}</CardContent></Card>}
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div><h3 className="flex items-center text-xl font-semibold mb-4"><BrainCircuit className="mr-2 h-5 w-5" /> Skills</h3>{userProfile.skills && userProfile.skills.length > 0 ? <div className="flex flex-wrap gap-2">{userProfile.skills.map((skill) => <Badge key={skill} variant="secondary">{skill}</Badge>)}</div> : <p className="text-muted-foreground text-sm">No professional skills listed.</p>}</div><div><h3 className="flex items-center text-xl font-semibold mb-4"><Code className="mr-2 h-5 w-5" /> Tech Stack</h3>{userProfile.techStack && userProfile.techStack.length > 0 ? <div className="flex flex-wrap gap-2">{userProfile.techStack.map((tech) => <Badge key={tech} variant="outline">{tech}</Badge>)}</div> : <p className="text-muted-foreground text-sm">No technologies listed.</p>}</div></div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <div>
+                            <h3 className="flex items-center text-xl font-semibold mb-4"><BrainCircuit className="mr-2 h-5 w-5" /> Skills</h3>
+                            {userProfile.skills && userProfile.skills.length > 0 ? <div className="flex flex-wrap gap-2">{userProfile.skills.map((skill) => <Badge key={skill} variant="secondary">{skill}</Badge>)}</div> : <p className="text-muted-foreground text-sm">No professional skills listed.</p>}
+                          </div>
+                          <div>
+                            <h3 className="flex items-center text-xl font-semibold mb-4"><Code className="mr-2 h-5 w-5" /> Tech Stack</h3>
+                            {userProfile.techStack && userProfile.techStack.length > 0 ? <div className="flex flex-wrap gap-2">{userProfile.techStack.map((tech) => <Badge key={tech} variant="outline">{tech}</Badge>)}</div> : <p className="text-muted-foreground text-sm">No tech stack listed.</p>}
+                          </div>
+                        </div>
 
-                        {allLinks.length > 0 && <div><h3 className="flex items-center text-xl font-semibold mb-4"><LinkIcon className="mr-2 h-5 w-5"/> Links</h3><div className="flex flex-wrap gap-3">{allLinks.map((link, index) => <Button asChild key={index} variant="outline"><Link href={link.url} target="_blank" rel="noopener noreferrer"><span className="capitalize">{link.type}</span></Link></Button>)}</div></div>}
-
-                       <div><h3 className="text-xl font-semibold mb-4">Projects</h3>{myProjects.length > 0 ? <div className="space-y-4">{myProjects.map(project => <Card key={project.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 gap-4"><div className="flex-1"><Link href={`/projects/${project.id}`} className="font-semibold hover:underline">{project.title}</Link><p className="text-sm text-muted-foreground line-clamp-1">{project.description}</p></div>{project.collaborationOpen ? <Badge variant="default" className='ml-4 flex-shrink-0'><BadgeCheck className="mr-2 h-4 w-4"/>Open to Collab</Badge> : <Badge variant="secondary" className='ml-4 flex-shrink-0'><BadgeX className="mr-2 h-4 w-4"/>Closed</Badge>}</Card>)}</div> : <p className="text-muted-foreground text-center py-4">No projects created yet.</p>}</div>
-                  </CardContent>
+                        <div className="mt-6 text-center"><Button variant="secondary" asChild><Link href="/developers">Browse All Developers</Link></Button></div>
+                   </CardContent>
                 </Card>
-            </section>
-          </div>
-
-          <div className="space-y-8">
-            <section>
-               <div className="flex items-center mb-6"><Users className="h-7 w-7 text-primary mr-3" /><h2 className="text-3xl font-bold tracking-tight">Connect with Developers</h2></div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">{recommendedDevelopers.map(dev => <Card key={dev.uid} className="transition-all hover:shadow-md overflow-hidden"><CardContent className="p-4 flex items-center justify-start gap-4"><Avatar className="h-12 w-12 flex-shrink-0"><AvatarImage src={dev.photoURL} alt={dev.name} /><AvatarFallback>{getInitials(dev.name)}</AvatarFallback></Avatar><div className="flex-1 overflow-hidden"><p className="font-semibold truncate" title={dev.name}>{dev.name}</p></div><Button size="sm" variant="outline" asChild className="flex-shrink-0"><Link href={`/developers/${dev.uid}`}>Profile</Link></Button></CardContent></Card>)}</div>
-                <div className="mt-6 text-center"><Button variant="secondary" asChild><Link href="/developers">Browse All Developers</Link></Button></div>
             </section>
           </div>
         </div>

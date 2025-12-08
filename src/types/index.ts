@@ -39,6 +39,10 @@ export interface Project {
   updatedAt?: Timestamp;
   interestedUsers?: string[];
   matchedUsers?: string[];
+  projectStage?: string;
+  roleRequirements?: string;
+  incentives?: string;
+  projectLinks?: ExternalLink[];
 }
 
 export interface Match {

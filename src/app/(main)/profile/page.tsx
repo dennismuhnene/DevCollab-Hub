@@ -30,7 +30,6 @@ const socialIcons = {
   default: "/icons/link.svg",
 };
 
-
 export default function ProfilePage() {
   const { user, userProfile, loading, reloadUserProfile } = useAuth();
   const router = useRouter();
@@ -42,18 +41,37 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
+  // FIX: prevent SSR hydration mismatch
+  const [cachedProfile, setCachedProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const cached = sessionStorage.getItem("userProfileCache");
+      if (cached) {
+        setCachedProfile(JSON.parse(cached));
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
     }
   }, [user, loading, router]);
-  
+
+  useEffect(() => {
+    if (userProfile) {
+      sessionStorage.setItem("userProfileCache", JSON.stringify(userProfile));
+    }
+  }, [userProfile]);
+
   useEffect(() => {
     if (userProfile?.photoURL) {
       setImagePreview(userProfile.photoURL);
+    } else if (cachedProfile?.photoURL) {
+      setImagePreview(cachedProfile.photoURL);
     }
   }, [userProfile?.photoURL]);
-
 
   const getInitials = (name?: string) => {
     if (!name) return 'U';
@@ -79,7 +97,7 @@ export default function ProfilePage() {
 
   const handleCancelUpdate = () => {
     setNewImageFile(null);
-    setImagePreview(userProfile?.photoURL || null);
+    setImagePreview(userProfile?.photoURL || cachedProfile?.photoURL || null);
     if(fileInputRef.current) {
         fileInputRef.current.value = "";
     }
@@ -153,8 +171,9 @@ export default function ProfilePage() {
     ...(userProfile?.extraLinks || [])
   ].filter((link): link is ExternalLink => link !== undefined);
 
+  const finalProfile = userProfile || cachedProfile;
 
-  if (loading || !userProfile) {
+  if (loading && !finalProfile) {
     return (
       <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex items-center space-x-4 mb-8">
@@ -172,15 +191,19 @@ export default function ProfilePage() {
     );
   }
 
+  if (!finalProfile) {
+    return null;
+  }
+
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex flex-col md:flex-row items-start space-y-6 md:space-y-0 md:space-x-8 mb-8">
         <div className="relative group" onClick={handleAvatarClick}>
             <Avatar className="h-32 w-32 border-4 border-background shadow-md">
                 {imagePreview ? (
-                    <Image src={imagePreview} alt={userProfile.name} width={128} height={128} className="object-cover" />
+                    <Image src={imagePreview} alt={finalProfile.name} width={128} height={128} className="object-cover" />
                 ) : (
-                    <AvatarFallback className="text-4xl">{getInitials(userProfile.name)}</AvatarFallback>
+                    <AvatarFallback className="text-4xl">{getInitials(finalProfile.name)}</AvatarFallback>
                 )}
             </Avatar>
             {!newImageFile && !uploading && (
@@ -212,10 +235,10 @@ export default function ProfilePage() {
         </div>
 
         <div className="flex-1 pt-4">
-          <h1 className="text-4xl font-bold">{userProfile.name}</h1>
-          <p className="text-muted-foreground text-lg">{userProfile.email}</p>
+          <h1 className="text-4xl font-bold">{finalProfile.name}</h1>
+          <p className="text-muted-foreground text-lg">{finalProfile.email}</p>
           <div className="mt-4 flex flex-wrap gap-2">
-            {userProfile.skills?.map((skill) => (
+            {finalProfile.skills?.map((skill: string) => (
               <Badge key={skill} variant="secondary">{skill}</Badge>
             ))}
           </div>
@@ -247,7 +270,7 @@ export default function ProfilePage() {
             <CardDescription>Update your personal information and skills.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ProfileForm userProfile={userProfile} />
+            <ProfileForm userProfile={finalProfile} />
           </CardContent>
         </Card>
       </div>
