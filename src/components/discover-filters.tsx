@@ -57,7 +57,7 @@ export function DiscoverFilters({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-gray-700 mb-4">
             Years of Experience: {experienceRange[0]} - {experienceRange[1]} years
           </label>
           <Slider
