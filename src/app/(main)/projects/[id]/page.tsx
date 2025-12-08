@@ -75,7 +75,7 @@ export default function ProjectDetailsPage() {
   }, [projectError, toast, router]);
 
   useEffect(() => {
-    if (!project) return;
+    if (!project || !user) return;
     
     setLoadingUsers(true);
 
@@ -242,7 +242,7 @@ export default function ProjectDetailsPage() {
 
       toast({
         title: 'Developer Rejected',
-        description: `We\'ve notified ${interestedUser.name} that you\'ve declined their request to join the project at this time.`,
+        description: `We've notified ${interestedUser.name} that you've declined their request to join the project at this time.`,
       });
     } catch (error) {
       console.error("Failed to reject developer:", error);
@@ -327,7 +327,7 @@ export default function ProjectDetailsPage() {
     return name.split(' ').map((n) => n[0]).join('');
   };
   
-  const loading = authLoading || projectLoading || loadingUsers || !user;
+  const loading = authLoading || projectLoading || loadingUsers;
 
   if (loading) {
     return (
