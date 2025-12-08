@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useTransition } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
@@ -27,7 +27,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { summarizeUserSkills } from '@/ai/flows/user-skills-summarizer';
-import { Sparkles, Loader2, X, Trash2, Check, ChevronsUpDown } from 'lucide-react';
+import { Sparkles, Loader2, X, Trash2, Check, ChevronsUpDown, PlusCircle } from 'lucide-react';
 import { Switch } from './ui/switch';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import {
@@ -43,27 +43,27 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const professionalSkills = [
-  'Problem Solving',
-  'Debugging',
-  'System Design',
-  'Communication',
-  'Team Collaboration',
-  'Agile Development',
-  'API Design',
-  'Version Control (Git)',
-  'Project Management',
-  'Code Review',
-  'Testing & QA',
-  'Algorithmic Thinking',
-  'Security Best Practices',
-  'Time Management',
-  'Documentation Writing',
+  'Problem Solving', 'Debugging', 'System Design', 'Communication', 'Team Collaboration',
+  'Agile Development', 'API Design', 'Version Control (Git)', 'Project Management', 'Code Review',
+  'Testing & QA', 'Algorithmic Thinking', 'Security Best Practices', 'Time Management', 'Documentation Writing',
 ];
+
+const collaborationGoalsOptions = [
+  'Seeking paid contract work', 'Learning partners', 'Hobby/fun projects', 'Co-founders for a startup',
+];
+
+const commitmentLevelOptions = [
+  'Part-time', 'Full-time', 'Hobbyist', 'Formal student', 'Self-taught',
+];
+
+const urlSchema = z.string().url({ message: 'Please enter a valid URL.' }).refine(val => val.startsWith('https://'), { message: 'URL must start with https://' });
 
 const profileSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters long' }),
@@ -72,6 +72,21 @@ const profileSchema = z.object({
   skills: z.array(z.string()).max(5, { message: 'You can select up to 5 skills.' }).optional(),
   yearsOfExperience: z.coerce.number().min(0, { message: "Years of experience can't be negative."}).optional(),
   openForCollaboration: z.boolean().optional(),
+  collaborationGoals: z.array(z.string()).optional(),
+  commitmentLevel: z.string().optional(),
+  versionControl: z.object({
+      type: z.enum(['github', 'gitlab', 'bitbucket']),
+      url: urlSchema,
+  }),
+  portfolioUrl: urlSchema.optional().or(z.literal('')),
+  socials: z.object({
+      type: z.enum(['linkedin', 'twitter', 'tiktok', 'discord']),
+      url: urlSchema,
+  }).optional(),
+  extraLinks: z.array(z.object({
+      type: z.string().min(1, { message: "Link type cannot be empty"}),
+      url: urlSchema,
+  })).max(3, { message: 'You can add a maximum of 3 extra links.' }).optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -95,6 +110,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
     watch,
     reset,
     getValues,
+    control,
     formState: { errors },
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -105,12 +121,24 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
       skills: [],
       yearsOfExperience: 0,
       openForCollaboration: true,
+      collaborationGoals: [],
+      commitmentLevel: '',
+      versionControl: { type: 'github', url: '' },
+      portfolioUrl: '',
+      socials: { type: 'linkedin', url: '' },
+      extraLinks: [],
     },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+      control,
+      name: "extraLinks",
   });
 
   const bioValue = watch('bio');
   const techStack = watch('techStack') || [];
   const skills = watch('skills') || [];
+  const collaborationGoals = watch('collaborationGoals') || [];
   const openForCollaboration = watch('openForCollaboration');
   
   useEffect(() => {
@@ -122,6 +150,12 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
         skills: userProfile.skills || [],
         yearsOfExperience: userProfile.yearsOfExperience || 0,
         openForCollaboration: userProfile.openForCollaboration === false ? false : true,
+        collaborationGoals: userProfile.collaborationGoals || [],
+        commitmentLevel: userProfile.commitmentLevel || '',
+        versionControl: userProfile.versionControl || { type: 'github', url: '' },
+        portfolioUrl: userProfile.portfolioUrl || '',
+        socials: userProfile.socials || { type: 'linkedin', url: '' },
+        extraLinks: userProfile.extraLinks || [],
       });
     }
   }, [userProfile, reset]);
@@ -203,9 +237,6 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
       
       toast({ title: 'Account deleted successfully' });
       
-      // The onAuthStateChanged listener will handle the redirect
-      // after the user is effectively signed out from the backend deletion.
-      // But we can also proactively sign out on the client.
       await auth.signOut();
       router.push('/');
 
@@ -223,7 +254,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
 
   return (
     <>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         <div className="space-y-6">
             <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
@@ -244,11 +275,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
               <Label>Skills</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    className="w-full justify-between"
-                  >
+                  <Button variant="outline" role="combobox" className="w-full justify-between">
                     <span className="truncate">
                       {skills.length > 0 ? skills.join(', ') : 'Select up to 5 skills...'}
                     </span>
@@ -272,22 +299,11 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
                               } else if(currentSkills.length < 5) {
                                 setValue('skills', [...currentSkills, skill], { shouldDirty: true, shouldValidate: true });
                               } else {
-                                toast({
-                                  variant: "destructive",
-                                  title: "Skill limit reached",
-                                  description: "You can only select up to 5 skills."
-                                })
+                                toast({ variant: "destructive", title: "Skill limit reached", description: "You can only select up to 5 skills." })
                               }
                             }}
                           >
-                            <Check
-                              className={cn(
-                                'mr-2 h-4 w-4',
-                                (getValues('skills') || []).includes(skill)
-                                  ? 'opacity-100'
-                                  : 'opacity-0'
-                              )}
-                            />
+                            <Check className={cn('mr-2 h-4 w-4', (getValues('skills') || []).includes(skill) ? 'opacity-100' : 'opacity-0')} />
                             {skill}
                           </CommandItem>
                         ))}
@@ -300,11 +316,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
                 {skills.map((skill) => (
                   <Badge key={skill} variant="secondary" className="flex items-center gap-1">
                     {skill}
-                    <button
-                      type="button"
-                      onClick={() => setValue('skills', skills.filter((s) => s !== skill), { shouldDirty: true })}
-                      className="rounded-full hover:bg-muted-foreground/20"
-                    >
+                    <button type="button" onClick={() => setValue('skills', skills.filter((s) => s !== skill), { shouldDirty: true })} className="rounded-full hover:bg-muted-foreground/20">
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>
@@ -319,9 +331,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
                 {techStack.map((tech) => (
                     <div key={tech} className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
                     {tech}
-                    <button type="button" onClick={() => handleTechStackRemove(tech)}>
-                        <X className="h-4 w-4" />
-                    </button>
+                    <button type="button" onClick={() => handleTechStackRemove(tech)}><X className="h-4 w-4" /></button>
                     </div>
                 ))}
                 <Input
@@ -334,39 +344,153 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
                 />
                 </div>
             </div>
+
             <div className="space-y-2">
                 <div className="flex justify-between items-center">
                     <Label htmlFor="bio">Bio</Label>
                     <Button type="button" variant="outline" size="sm" onClick={handleGenerateBio} disabled={isAiPending}>
-                    {isAiPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                        <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />
-                    )}
+                    {isAiPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />}
                     Generate with AI
                     </Button>
                 </div>
                 <Textarea id="bio" {...register('bio')} rows={5} />
             </div>
 
-            <div className="flex items-center space-x-3 rounded-md border p-4">
-              <Switch 
-                id="openForCollaboration"
-                checked={openForCollaboration}
-                onCheckedChange={(checked) => setValue('openForCollaboration', checked, { shouldValidate: true, shouldDirty: true })}
-              />
-              <div className="space-y-0.5">
-                <Label htmlFor="openForCollaboration" className="text-base">
-                  Collaboration Status
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  {openForCollaboration ? "Open for Collaboration" : "Not seeking colabs"}
-                </p>
-              </div>
+            <Card>
+                <CardHeader><CardTitle>Collaboration Settings</CardTitle></CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex items-center space-x-3 rounded-md border p-4">
+                        <Switch 
+                            id="openForCollaboration"
+                            checked={openForCollaboration}
+                            onCheckedChange={(checked) => setValue('openForCollaboration', checked, { shouldValidate: true, shouldDirty: true })}
+                        />
+                        <div className="space-y-0.5">
+                            <Label htmlFor="openForCollaboration" className="text-base">Collaboration Status</Label>
+                            <p className="text-sm text-muted-foreground">
+                            {openForCollaboration ? "Open for Collaboration" : "Not seeking colabs"}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Collaboration Goals</Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <Button variant="outline" role="combobox" className="w-full justify-between">
+                                <span className="truncate">
+                                {collaborationGoals.length > 0 ? collaborationGoals.join(', ') : 'Select your goals...'}
+                                </span>
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                            <Command>
+                                <CommandInput placeholder="Search goals..." />
+                                <CommandEmpty>No goal found.</CommandEmpty>
+                                <CommandList>
+                                <CommandGroup>
+                                    {collaborationGoalsOptions.map((goal) => (
+                                    <CommandItem
+                                        key={goal}
+                                        value={goal}
+                                        onSelect={() => {
+                                        const currentGoals = getValues('collaborationGoals') || [];
+                                        if (currentGoals.includes(goal)) {
+                                            setValue('collaborationGoals', currentGoals.filter((g) => g !== goal), { shouldDirty: true, shouldValidate: true });
+                                        } else {
+                                            setValue('collaborationGoals', [...currentGoals, goal], { shouldDirty: true, shouldValidate: true });
+                                        }
+                                        }}
+                                    >
+                                        <Check className={cn('mr-2 h-4 w-4', collaborationGoals.includes(goal) ? 'opacity-100' : 'opacity-0')} />
+                                        {goal}
+                                    </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                                </CommandList>
+                            </Command>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="commitment-level">Commitment Level</Label>
+                        <Select onValueChange={(value) => setValue('commitmentLevel', value, { shouldValidate: true, shouldDirty: true })} defaultValue={getValues('commitmentLevel')}>
+                            <SelectTrigger><SelectValue placeholder="Select your commitment level" /></SelectTrigger>
+                            <SelectContent>
+                                {commitmentLevelOptions.map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </CardContent>
+            </Card>
+
+             <div className="space-y-4 rounded-md border p-4">
+                <h3 className="text-lg font-medium">External Links</h3>
+                
+                <div className="space-y-2">
+                    <Label htmlFor="version-control-url">Version Control (Required)</Label>
+                    <div className="flex gap-2">
+                        <Select defaultValue="github" onValueChange={(value) => setValue('versionControl.type', value as any, { shouldValidate: true, shouldDirty: true })}>
+                            <SelectTrigger className="w-[120px]"><SelectValue placeholder="Select type" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="github">GitHub</SelectItem>
+                                <SelectItem value="gitlab">GitLab</SelectItem>
+                                <SelectItem value="bitbucket">Bitbucket</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Input id="version-control-url" placeholder="https://github.com/username" {...register('versionControl.url')} />
+                    </div>
+                    {errors.versionControl?.url && <p className="text-sm text-destructive">{errors.versionControl.url.message}</p>}
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="portfolio-url">Portfolio Website</Label>
+                    <Input id="portfolio-url" placeholder="https://your-portfolio.com" {...register('portfolioUrl')} />
+                    {errors.portfolioUrl && <p className="text-sm text-destructive">{errors.portfolioUrl.message}</p>}
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="socials-url">Socials</Label>
+                    <div className="flex gap-2">
+                        <Select defaultValue="linkedin" onValueChange={(value) => setValue('socials.type', value as any, { shouldValidate: true, shouldDirty: true })}>
+                             <SelectTrigger className="w-[120px]"><SelectValue placeholder="Select type" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="linkedin">LinkedIn</SelectItem>
+                                <SelectItem value="twitter">Twitter</SelectItem>
+                                <SelectItem value="tiktok">TikTok</SelectItem>
+                                <SelectItem value="discord">Discord</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Input id="socials-url" placeholder="https://linkedin.com/in/username" {...register('socials.url')} />
+                    </div>
+                    {errors.socials?.url && <p className="text-sm text-destructive">{errors.socials.url.message}</p>}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Extra Links</Label>
+                  <div className="space-y-2">
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="flex gap-2 items-start">
+                        <Input placeholder="Link Title (e.g. My Blog)" {...register(`extraLinks.${index}.type`)} />
+                        <Input placeholder="https://..." {...register(`extraLinks.${index}.url`)} />
+                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4"/></Button>
+                    </div>
+                  ))}
+                  </div>
+                   {errors.extraLinks?.[fields.length -1] && <p className="text-sm text-destructive">{errors.extraLinks[fields.length - 1]?.message || errors.extraLinks[fields.length - 1]?.url?.message || errors.extraLinks[fields.length - 1]?.type?.message}</p>}
+                  {fields.length < 3 && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => append({ type: '', url: '' })}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Link
+                    </Button>
+                  )}
+                </div>
             </div>
         </div>
-        <Button type="submit" disabled={loading}>
-          {loading ? 'Saving...' : 'Save Changes'}
+        <Button type="submit" disabled={loading} className="w-full md:w-auto">
+          {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : 'Save All Changes'}
         </Button>
       </form>
 

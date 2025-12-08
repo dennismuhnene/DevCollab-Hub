@@ -1,5 +1,10 @@
 import { Timestamp } from 'firebase/firestore';
 
+export interface ExternalLink {
+  type: string;
+  url: string;
+}
+
 export interface UserProfile {
   uid: string;
   email: string;
@@ -12,6 +17,12 @@ export interface UserProfile {
   yearsOfExperience?: number;
   createdAt: Timestamp;
   openForCollaboration?: boolean;
+  collaborationGoals?: string[];
+  commitmentLevel?: string;
+  versionControl?: ExternalLink;
+  portfolioUrl?: string;
+  socials?: ExternalLink;
+  extraLinks?: ExternalLink[];
 }
 
 export interface Project {

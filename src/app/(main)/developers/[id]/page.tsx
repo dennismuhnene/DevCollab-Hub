@@ -5,13 +5,15 @@ import { useRouter, useParams } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
-import type { UserProfile, Project } from '@/types';
+import type { UserProfile, Project, ExternalLink } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ProjectCard from '@/components/project-card';
-import { Briefcase, BadgeCheck, BadgeX, Clock, BrainCircuit, Code } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { Briefcase, BadgeCheck, BadgeX, Clock, BrainCircuit, Code, Target, Link as LinkIcon, Handshake } from 'lucide-react';
 
 export default function DeveloperProfilePage() {
   const { user, loading: authLoading } = useAuth();
@@ -35,19 +37,16 @@ export default function DeveloperProfilePage() {
     const fetchDeveloperData = async () => {
       setLoading(true);
 
-      // Fetch developer profile
       const developerDocRef = doc(db, 'users', developerId);
       const developerDoc = await getDoc(developerDocRef);
 
       if (developerDoc.exists()) {
         setDeveloper({ uid: developerDoc.id, ...developerDoc.data() } as UserProfile);
       } else {
-        // Handle developer not found
         router.push('/developers');
         return;
       }
 
-      // Fetch developer's projects
       const projectsCol = collection(db, 'projects');
       const q = query(projectsCol, where('ownerId', '==', developerId));
       const querySnapshot = await getDocs(q);
@@ -73,6 +72,13 @@ export default function DeveloperProfilePage() {
     }
     return `${years} year${years !== 1 ? 's' : ''}`;
   };
+
+  const allLinks: ExternalLink[] = developer ? [
+    developer.versionControl,
+    developer.socials,
+    developer.portfolioUrl ? { type: 'Portfolio', url: developer.portfolioUrl } : undefined,
+    ...(developer.extraLinks || [])
+  ].filter((link): link is ExternalLink => !!link?.url) : [];
 
 
   if (loading || authLoading) {
@@ -136,47 +142,69 @@ export default function DeveloperProfilePage() {
       
       <div className="space-y-12">
         <Card>
-          <CardHeader>
-            <CardTitle>About</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-foreground/80 leading-relaxed text-lg">
-              {developer.bio || 'No bio provided yet.'}
-            </p>
-          </CardContent>
+          <CardHeader><CardTitle>About</CardTitle></CardHeader>
+          <CardContent><p className="text-foreground/80 leading-relaxed text-lg">{developer.bio || 'No bio provided yet.'}</p></CardContent>
         </Card>
+
+        {developer.openForCollaboration && (developer.collaborationGoals?.length || developer.commitmentLevel) && (
+            <Card>
+                <CardHeader><CardTitle className="flex items-center"><Handshake className="mr-2 h-5 w-5 text-primary"/> Collaboration Preferences</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                    {developer.collaborationGoals && developer.collaborationGoals.length > 0 && (
+                        <div>
+                            <h3 className="font-semibold mb-2 flex items-center"><Target className="mr-2 h-4 w-4"/> Goals</h3>
+                            <div className="flex flex-wrap gap-2">
+                                {developer.collaborationGoals.map(goal => <Badge key={goal} variant="default">{goal}</Badge>)}
+                            </div>
+                        </div>
+                    )}
+                    {developer.commitmentLevel && (
+                         <div>
+                            <h3 className="font-semibold mb-2">Commitment</h3>
+                            <p className="text-muted-foreground">{developer.commitmentLevel}</p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        )}
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center"><BrainCircuit className="mr-2 h-5 w-5 text-primary" /> Skills</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="flex items-center"><BrainCircuit className="mr-2 h-5 w-5 text-primary" /> Skills</CardTitle></CardHeader>
                 <CardContent>
                     {developer.skills && developer.skills.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
-                        {developer.skills.map((skill) => (
-                            <Badge key={skill} variant="secondary">{skill}</Badge>
-                        ))}
+                        {developer.skills.map((skill) => <Badge key={skill} variant="secondary">{skill}</Badge>)}
                         </div>
                     ) : <p className="text-muted-foreground text-sm">No professional skills listed.</p>}
                 </CardContent>
             </Card>
              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center"><Code className="mr-2 h-5 w-5 text-primary" /> Tech Stack</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="flex items-center"><Code className="mr-2 h-5 w-5 text-primary" /> Tech Stack</CardTitle></CardHeader>
                 <CardContent>
                     {developer.techStack && developer.techStack.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
-                        {developer.techStack.map((tech) => (
-                            <Badge key={tech} variant="outline">{tech}</Badge>
-                        ))}
+                        {developer.techStack.map((tech) => <Badge key={tech} variant="outline">{tech}</Badge>)}
                         </div>
                     ) : <p className="text-muted-foreground text-sm">No technologies listed.</p>}
                 </CardContent>
             </Card>
         </div>
 
+        {allLinks.length > 0 && (
+             <Card>
+                <CardHeader><CardTitle className="flex items-center"><LinkIcon className="mr-2 h-5 w-5 text-primary"/> Links</CardTitle></CardHeader>
+                <CardContent className="flex flex-wrap gap-3">
+                    {allLinks.map((link, index) => (
+                        <Button asChild key={index} variant="outline">
+                            <Link href={link.url} target="_blank" rel="noopener noreferrer">
+                                <span className="capitalize">{link.type}</span>
+                            </Link>
+                        </Button>
+                    ))}
+                </CardContent>
+            </Card>
+        )}
 
         <section>
           <div className="flex items-center mb-6">
@@ -185,9 +213,7 @@ export default function DeveloperProfilePage() {
           </div>
           {projects.length > 0 ? (
             <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
-              {projects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
+              {projects.map((project) => <ProjectCard key={project.id} project={project} />)}
             </div>
           ) : (
             <div className="text-center py-12 border-2 border-dashed rounded-lg">
