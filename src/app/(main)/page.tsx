@@ -210,9 +210,6 @@ export default function HomePage() {
                 <Button asChild size="lg" variant="secondary">
                   <Link href={user ? "/projects/new" : "/signup"}>Get Started</Link>
                 </Button>
-                <Button asChild size="lg" variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground">
-                  <Link href="/developers">Learn more <span aria-hidden="true">→</span></Link>
-                </Button>
               </div>
               <svg viewBox="0 0 1024 1024" className="absolute left-1/2 top-1/2 -z-10 h-[64rem] w-[64rem] -translate-x-1/2 [mask-image:radial-gradient(closest-side,white,transparent)]" aria-hidden="true">
                 <circle cx="512" cy="512" r="512" fill="url(#gradient-cta)" fillOpacity="0.7"></circle>
