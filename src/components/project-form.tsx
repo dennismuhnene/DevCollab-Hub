@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
@@ -18,7 +18,7 @@ import ImageUploader from './image-uploader';
 import { useToast } from '@/hooks/use-toast';
 import type { Project } from '@/types';
 import { generateProjectDescription } from '@/ai/flows/project-description-generator';
-import { Sparkles, Loader2, X, Trash2, Check, ChevronsUpDown } from 'lucide-react';
+import { Sparkles, Loader2, X, Trash2, Check, ChevronsUpDown, PlusCircle, Link as LinkIcon } from 'lucide-react';
 import { Switch } from './ui/switch';
 import {
   AlertDialog,
@@ -31,30 +31,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 
 
 const professionalSkills = [
-  'Problem Solving',
-  'Debugging',
-  'System Design',
-  'Communication',
-  'Team Collaboration',
-  'Agile Development',
-  'API Design',
-  'Version Control (Git)',
-  'Project Management',
-  'Code Review',
-  'Testing & QA',
-  'Algorithmic Thinking',
-  'Security Best Practices',
-  'Time Management',
-  'Documentation Writing',
+  'Problem Solving', 'Debugging', 'System Design', 'Communication', 'Team Collaboration', 'Agile Development', 'API Design', 'Version Control (Git)', 'Project Management', 'Code Review', 'Testing & QA', 'Algorithmic Thinking', 'Security Best Practices', 'Time Management', 'Documentation Writing',
 ];
+
+const projectStages = ['Idea', 'Wireframing', 'MVP in Development', 'Live & Scaling', 'On Hold', 'Completed'];
+const incentiveOptions = ['Equity Share', 'Paid Contract', 'Revenue Share', 'Hobby/Volunteer', 'Learner/School Project'];
+const linkTypes = ['GitHub', 'GitLab', 'Bitbucket', 'Live Demo', 'Figma', 'Other'];
 
 const projectSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters long' }),
@@ -64,6 +54,13 @@ const projectSchema = z.object({
   requiredYearsOfExperience: z.coerce.number().min(0, { message: "Years of experience can't be negative."}).optional(),
   imageUrl: z.string().optional(),
   collaborationOpen: z.boolean().default(true),
+  projectStage: z.string().min(1, { message: 'Please select a project stage.' }),
+  roleRequirements: z.string().min(10, { message: 'Role description must be at least 10 characters.' }),
+  incentives: z.string().min(1, { message: 'Please specify the incentives.' }),
+  projectLinks: z.array(z.object({
+    type: z.string(),
+    url: z.string().url({ message: 'Please enter a valid URL (must include https://)' })
+  })).max(2, { message: 'You can add a maximum of two links.' }).optional(),
 });
 
 type ProjectFormData = z.infer<typeof projectSchema>;
@@ -83,6 +80,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
 
   const {
     register,
+    control,
     handleSubmit,
     setValue,
     watch,
@@ -98,8 +96,14 @@ export default function ProjectForm({ project }: ProjectFormProps) {
       requiredYearsOfExperience: project?.requiredYearsOfExperience || 0,
       imageUrl: project?.imageUrl || '',
       collaborationOpen: project?.collaborationOpen === false ? false : true,
+      projectStage: project?.projectStage || '',
+      roleRequirements: project?.roleRequirements || '',
+      incentives: project?.incentives || '',
+      projectLinks: project?.projectLinks || [],
     },
   });
+
+  const { fields, append, remove } = useFieldArray({ control, name: "projectLinks" });
 
   const titleValue = watch('title');
   const techStack = watch('requiredTechStack') || [];
@@ -108,10 +112,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
   const imageUrlValue = watch('imageUrl');
 
   useEffect(() => {
-    // When the form loads with an existing project, ensure the imageUrl is set.
-    if (project?.imageUrl) {
-      setValue('imageUrl', project.imageUrl);
-    }
+    if (project?.imageUrl) setValue('imageUrl', project.imageUrl);
   }, [project, setValue]);
 
 
@@ -132,11 +133,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
 
   const handleGenerateDescription = async () => {
     if (!titleValue || (getValues('requiredTechStack') || []).length === 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Title and Tech Stack Required',
-        description: 'Please provide a project title and at least one technology to generate a description.',
-      });
+      toast({ variant: 'destructive', title: 'Title and Tech Stack Required', description: 'Please provide a project title and at least one technology to generate a description.' });
       return;
     }
     
@@ -145,17 +142,10 @@ export default function ProjectForm({ project }: ProjectFormProps) {
         const result = await generateProjectDescription({ title: titleValue, keywords: getValues('requiredTechStack') });
         if (result?.description) {
           setValue('description', result.description);
-          toast({
-            title: 'Description Generated!',
-            description: 'The AI has generated a project description for you.',
-          });
+          toast({ title: 'Description Generated!', description: 'The AI has generated a project description for you.' });
         }
       } catch (error) {
-        toast({
-          variant: 'destructive',
-          title: 'AI Generation Failed',
-          description: 'Could not generate a description at this time.',
-        });
+        toast({ variant: 'destructive', title: 'AI Generation Failed', description: 'Could not generate a description at this time.' });
       }
     });
   };
@@ -168,9 +158,8 @@ export default function ProjectForm({ project }: ProjectFormProps) {
     setLoading(true);
 
     let finalImageUrl = project?.imageUrl || '';
-    const oldImageUrl = project?.imageUrl; // Keep track of the old image
+    const oldImageUrl = project?.imageUrl;
 
-    // If a new image file has been selected, upload it
     if (imageFile) {
         toast({ title: 'Uploading image...' });
         const storageRef = ref(storage, `project-images/${user.uid}/${Date.now()}_${imageFile.name}`);
@@ -190,28 +179,21 @@ export default function ProjectForm({ project }: ProjectFormProps) {
 
     try {
       if (project) {
-        // Update existing project
         const projectRef = doc(db, 'projects', project.id);
         await updateDoc(projectRef, { ...projectData, updatedAt: serverTimestamp() });
 
-        // If a new image was uploaded and there was an old one, delete the old one.
         if (imageFile && oldImageUrl && oldImageUrl.startsWith('https://firebasestorage.googleapis.com')) {
            try {
               const oldImageRef = ref(storage, oldImageUrl);
               await deleteObject(oldImageRef);
-              toast({ title: 'Old image removed.' });
            } catch (deleteError: any) {
-              if (deleteError.code !== 'storage/object-not-found') {
-                console.warn("Could not delete old image:", deleteError);
-              }
+              if (deleteError.code !== 'storage/object-not-found') console.warn("Could not delete old image:", deleteError);
            }
         }
 
         toast({ title: 'Project updated successfully!' });
         router.push(`/projects/${project.id}`);
-
       } else {
-        // Create new project
         const newProject = {
           ...projectData,
           ownerId: user.uid,
@@ -234,21 +216,15 @@ export default function ProjectForm({ project }: ProjectFormProps) {
   const handleDeleteProject = async () => {
     if (!project || !user) return;
     setLoading(true);
-
     try {
-      // Delete image from storage if it exists
       if (project.imageUrl && project.imageUrl.startsWith('https://firebasestorage.googleapis.com')) {
         const imageRef = ref(storage, project.imageUrl);
         await deleteObject(imageRef).catch(err => console.warn("Image deletion failed, may not exist", err));
       }
-      
-      // Delete project document from firestore
       const projectRef = doc(db, 'projects', project.id);
       await deleteDoc(projectRef);
-
       toast({ title: 'Project deleted successfully' });
       router.push('/projects');
-
     } catch (error: any) {
       console.error("Project deletion error:", error);
       toast({ variant: 'destructive', title: 'Error deleting project', description: error.message });
@@ -260,17 +236,22 @@ export default function ProjectForm({ project }: ProjectFormProps) {
     <>
       <form onSubmit={handleSubmit(onSubmit)}>
         <Card>
-          <CardHeader>
-            <CardTitle>{project ? 'Edit Project Details' : 'New Project Details'}</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>{project ? 'Edit Project Details' : 'New Project Details'}</CardTitle></CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="title">Project Title</Label>
               <Input id="title" {...register('title')} placeholder="e.g., AI-Powered Note Taking App" />
-              <p className="text-sm text-muted-foreground pt-1">
-                If your project is confidential, consider a more generic title like "Stealth Startup in FinTech".
-              </p>
+              <p className="text-sm text-muted-foreground pt-1">If your project is confidential, consider a more generic title like "Stealth Startup in FinTech".</p>
               {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
+            </div>
+
+             <div className="space-y-2">
+                <Label>Project Stage</Label>
+                <Select onValueChange={(value) => setValue('projectStage', value, { shouldValidate: true })} defaultValue={getValues('projectStage')}>
+                    <SelectTrigger><SelectValue placeholder="Select the current stage of your project" /></SelectTrigger>
+                    <SelectContent>{projectStages.map(stage => <SelectItem key={stage} value={stage}>{stage}</SelectItem>)}</SelectContent>
+                </Select>
+                {errors.projectStage && <p className="text-sm text-destructive">{errors.projectStage.message}</p>}
             </div>
 
             <div className="space-y-2">
@@ -279,19 +260,10 @@ export default function ProjectForm({ project }: ProjectFormProps) {
                 {techStack.map((tech) => (
                   <div key={tech} className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
                     {tech}
-                    <button type="button" onClick={() => handleTechStackRemove(tech)}>
-                      <X className="h-4 w-4" />
-                    </button>
+                    <button type="button" onClick={() => handleTechStackRemove(tech)}><X className="h-4 w-4" /></button>
                   </div>
                 ))}
-                <Input
-                  id="requiredTechStack"
-                  value={techStackInput}
-                  onChange={(e) => setTechStackInput(e.target.value)}
-                  onKeyDown={handleTechStackAdd}
-                  placeholder="Type a technology and press Enter"
-                  className="flex-1 border-none shadow-none focus-visible:ring-0"
-                />
+                <Input id="requiredTechStack" value={techStackInput} onChange={(e) => setTechStackInput(e.target.value)} onKeyDown={handleTechStackAdd} placeholder="Type a technology and press Enter" className="flex-1 border-none shadow-none focus-visible:ring-0" />
               </div>
               {errors.requiredTechStack && <p className="text-sm text-destructive">{errors.requiredTechStack.message}</p>}
             </div>
@@ -300,96 +272,60 @@ export default function ProjectForm({ project }: ProjectFormProps) {
               <Label>Required Skills</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    className="w-full justify-between"
-                  >
-                    <span className="truncate">
-                      {skills.length > 0 ? skills.join(', ') : 'Select up to 3 skills...'}
-                    </span>
+                  <Button variant="outline" role="combobox" className="w-full justify-between">
+                    <span className="truncate">{skills.length > 0 ? skills.join(', ') : 'Select up to 3 skills...'}</span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                  <Command>
-                    <CommandInput placeholder="Search skills..." />
-                    <CommandEmpty>No skill found.</CommandEmpty>
-                    <CommandList>
-                      <CommandGroup>
-                        {professionalSkills.map((skill) => (
-                          <CommandItem
-                            key={skill}
-                            value={skill}
-                            onSelect={() => {
-                              const currentSkills = getValues('requiredSkills') || [];
-                              if (currentSkills.includes(skill)) {
-                                setValue('requiredSkills', currentSkills.filter((s) => s !== skill), { shouldDirty: true, shouldValidate: true });
-                              } else if(currentSkills.length < 3) {
-                                setValue('requiredSkills', [...currentSkills, skill], { shouldDirty: true, shouldValidate: true });
-                              } else {
-                                toast({
-                                  variant: "destructive",
-                                  title: "Skill limit reached",
-                                  description: "You can only select up to 3 skills."
-                                })
-                              }
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                'mr-2 h-4 w-4',
-                                (getValues('requiredSkills') || []).includes(skill)
-                                  ? 'opacity-100'
-                                  : 'opacity-0'
-                              )}
-                            />
-                            {skill}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0"><Command><CommandInput placeholder="Search skills..." /><CommandEmpty>No skill found.</CommandEmpty><CommandList><CommandGroup>{professionalSkills.map((skill) => <CommandItem key={skill} value={skill} onSelect={() => { const currentSkills = getValues('requiredSkills') || []; if (currentSkills.includes(skill)) { setValue('requiredSkills', currentSkills.filter((s) => s !== skill), { shouldDirty: true, shouldValidate: true }); } else if(currentSkills.length < 3) { setValue('requiredSkills', [...currentSkills, skill], { shouldDirty: true, shouldValidate: true }); } else { toast({ variant: "destructive", title: "Skill limit reached", description: "You can only select up to 3 skills." }) } }}>
+                            <Check className={cn('mr-2 h-4 w-4', (getValues('requiredSkills') || []).includes(skill) ? 'opacity-100' : 'opacity-0')} />{skill}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
               </Popover>
-               <div className="flex flex-wrap gap-1 pt-2">
-                {skills.map((skill) => (
-                  <Badge key={skill} variant="secondary" className="flex items-center gap-1">
-                    {skill}
-                    <button
-                      type="button"
-                      onClick={() => setValue('requiredSkills', skills.filter((s) => s !== skill), { shouldDirty: true })}
-                      className="rounded-full hover:bg-muted-foreground/20"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
+               <div className="flex flex-wrap gap-1 pt-2">{skills.map((skill) => <Badge key={skill} variant="secondary" className="flex items-center gap-1">{skill}<button type="button" onClick={() => setValue('requiredSkills', skills.filter((s) => s !== skill), { shouldDirty: true })} className="rounded-full hover:bg-muted-foreground/20"><X className="h-3 w-3" /></button></Badge>)}</div>
               {errors.requiredSkills && <p className="text-sm text-destructive">{errors.requiredSkills.message}</p>}
             </div>
 
             <div className="space-y-2">
                 <Label htmlFor="requiredYearsOfExperience">Required Years of Experience</Label>
                 <Input id="requiredYearsOfExperience" type="number" step="0.5" {...register('requiredYearsOfExperience')} />
-                <p className="text-sm text-muted-foreground pt-1">
-                    Use decimals for half-year increments (e.g., 2.5). For less than a year, use decimals (e.g. 0.5 for 6 months).
-                </p>
+                <p className="text-sm text-muted-foreground pt-1">Use decimals for half-year increments (e.g., 2.5). For less than a year, use decimals (e.g. 0.5 for 6 months).</p>
                 {errors.requiredYearsOfExperience && <p className="text-sm text-destructive">{errors.requiredYearsOfExperience.message}</p>}
             </div>
 
+            <div className="space-y-2">
+                <Label htmlFor="roleRequirements">Role Requirements</Label>
+                <Textarea id="roleRequirements" {...register('roleRequirements')} rows={4} placeholder="e.g., Seeking a UI/UX designer to create high-fidelity mockups and prototypes in Figma..." />
+                {errors.roleRequirements && <p className="text-sm text-destructive">{errors.roleRequirements.message}</p>}
+            </div>
+
+             <div className="space-y-2">
+                <Label>Incentives</Label>
+                <Select onValueChange={(value) => setValue('incentives', value, { shouldValidate: true })} defaultValue={getValues('incentives')}>
+                    <SelectTrigger><SelectValue placeholder="What do you offer collaborators?" /></SelectTrigger>
+                    <SelectContent>{incentiveOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
+                </Select>
+                {errors.incentives && <p className="text-sm text-destructive">{errors.incentives.message}</p>}
+            </div>
+
+            <div className="space-y-4">
+                <Label>Project Links (Optional, max 2)</Label>
+                {fields.map((field, index) => (
+                    <div key={field.id} className="flex items-center gap-2">
+                        <Select onValueChange={(value) => setValue(`projectLinks.${index}.type`, value)} defaultValue={field.type}>
+                            <SelectTrigger className="w-[150px]"><SelectValue placeholder="Link Type" /></SelectTrigger>
+                            <SelectContent>{linkTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent>
+                        </Select>
+                        <Input {...register(`projectLinks.${index}.url`)} placeholder="https://..." />
+                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    </div>
+                ))}
+                {errors.projectLinks && <p className="text-sm text-destructive">{errors.projectLinks.message || errors.projectLinks?.root?.message}</p>}
+                {fields.length < 2 && <Button type="button" variant="outline" size="sm" onClick={() => append({type: 'GitHub', url: ''})}><PlusCircle className="mr-2 h-4 w-4" />Add Link</Button>}
+            </div>
 
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <Label htmlFor="description">Description</Label>
-                <Button type="button" variant="outline" size="sm" onClick={handleGenerateDescription} disabled={isAiPending}>
-                  {isAiPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />
-                  )}
-                  Generate with AI
-                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={handleGenerateDescription} disabled={isAiPending}>{isAiPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />}Generate with AI</Button>
               </div>
               <Textarea id="description" {...register('description')} rows={6} placeholder="Describe your project in detail..." />
               {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
@@ -397,32 +333,16 @@ export default function ProjectForm({ project }: ProjectFormProps) {
             
             <div className="space-y-2">
               <Label>Project Image</Label>
-              <ImageUploader
-                 onFileSelect={setImageFile}
-                 initialUrl={imageUrlValue}
-              />
+              <ImageUploader onFileSelect={setImageFile} initialUrl={imageUrlValue} />
             </div>
 
             <div className="flex items-center space-x-3 rounded-md border p-4">
-                <Switch 
-                  id="collaborationOpen" 
-                  checked={collaborationOpenValue}
-                  onCheckedChange={(checked) => setValue('collaborationOpen', checked, { shouldValidate: true, shouldDirty: true })}
-                />
-                <div className="space-y-0.5">
-                  <Label htmlFor="collaborationOpen" className="text-base">
-                    Open for Collaboration
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Allow other developers to find and show interest in this project.
-                  </p>
-                </div>
-              </div>
+                <Switch id="collaborationOpen" checked={collaborationOpenValue} onCheckedChange={(checked) => setValue('collaborationOpen', checked, { shouldValidate: true, shouldDirty: true })} />
+                <div className="space-y-0.5"><Label htmlFor="collaborationOpen" className="text-base">Open for Collaboration</Label><p className="text-sm text-muted-foreground">Allow other developers to find and show interest in this project.</p></div>
+            </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={loading} size="lg">
-              {loading ? 'Saving...' : project ? 'Save Changes' : 'Create Project'}
-            </Button>
+            <Button type="submit" disabled={loading} size="lg">{loading ? 'Saving...' : project ? 'Save Changes' : 'Create Project'}</Button>
           </CardFooter>
         </Card>
       </form>
@@ -430,33 +350,10 @@ export default function ProjectForm({ project }: ProjectFormProps) {
       {project && (
         <div className="mt-12 border-t border-destructive/20 pt-6">
           <h3 className="text-lg font-semibold text-destructive">Danger Zone</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Deleting your project is a permanent action and cannot be undone.
-          </p>
+          <p className="text-sm text-muted-foreground mb-4">Deleting your project is a permanent action and cannot be undone.</p>
           <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Project
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete your project and remove its data from our servers.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDeleteProject}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  Continue
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
+            <AlertDialogTrigger asChild><Button variant="destructive"><Trash2 className="mr-2 h-4 w-4" />Delete Project</Button></AlertDialogTrigger>
+            <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete your project and remove its data from our servers.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteProject} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Continue</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
           </AlertDialog>
         </div>
       )}
