@@ -35,6 +35,8 @@ type ViewMode = 'developers' | 'projects';
 type Item = UserProfile | Project;
 const isProject = (item: Item): item is Project => 'title' in item;
 
+const ITEMS_PER_PAGE = 6;
+
 export default function DiscoverPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -52,6 +54,7 @@ export default function DiscoverPage() {
   const [experienceRange, setExperienceRange] = useState<[number, number]>([0, 20]);
   const [selectedTechs, setSelectedTechs] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login');
@@ -89,7 +92,6 @@ export default function DiscoverPage() {
 
     fetchData();
   }, [user, toast]);
-
 
   const handleAiSort = async () => {
       if (filteredResults.length === 0) {
@@ -131,6 +133,7 @@ export default function DiscoverPage() {
               });
               
               setFilteredResults(sorted);
+              setCurrentPage(1);
               toast({ title: "Success!", description: "Results have been sorted by AI.", variant: "default" });
 
           } catch (error) {
@@ -174,12 +177,14 @@ export default function DiscoverPage() {
     }
 
     setFilteredResults(filtered);
+    setCurrentPage(1);
 
   }, [viewMode, allDevelopers, allProjects, loading, searchTerm, selectedTechs, selectedSkills, experienceRange]);
 
   const handleViewModeChange = (checked: boolean) => {
     setViewMode(checked ? 'projects' : 'developers');
-    setFilteredResults([]); 
+    setFilteredResults([]);
+    setCurrentPage(1);
   };
 
   const resetFilters = () => {
@@ -187,9 +192,16 @@ export default function DiscoverPage() {
     setSelectedSkills([]);
     setExperienceRange([0, 20]);
     setSearchTerm('');
+    setCurrentPage(1);
   };
 
-  const ListSkeleton = () => <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">{[...Array(6)].map((_, i) => <Card key={i}><CardContent className="p-4"><Skeleton className="h-48 w-full" /></CardContent></Card>)}</div>;
+  const totalPages = Math.ceil(filteredResults.length / ITEMS_PER_PAGE);
+  const paginatedResults = filteredResults.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const ListSkeleton = () => <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">{[...Array(ITEMS_PER_PAGE)].map((_, i) => <Card key={i}><CardContent className="p-4"><Skeleton className="h-48 w-full" /></CardContent></Card>)}</div>;
 
   const renderResults = () => {
     if (filteredResults.length === 0) {
@@ -202,14 +214,37 @@ export default function DiscoverPage() {
     }
 
     return (
+      <>
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredResults.map((item) => {
+            {paginatedResults.map((item) => {
                 if (isProject(item)) {
                     return <ProjectCard key={`proj-${item.id}`} project={item} />;
                 }
                 return <DeveloperCard key={`dev-${item.uid}`} developer={item as UserProfile} />;
             })}
         </div>
+        {totalPages > 1 && (
+          <div className="mt-8 flex justify-center items-center gap-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button 
+              variant="outline" 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        )}
+      </>
     );
   };
 
