@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { createMatch } from '@/lib/firebase/matches';
 import { addNotification, markInterestNotificationsAsRead } from '@/lib/firebase/notifications';
-import { logProjectView, logInterestShown } from '@/firebase/analytics';
+import { logAnalyticsEvent } from '@/firebase/analytics';
 
 interface UserWithId extends UserProfile {
   id: string;
@@ -119,7 +119,7 @@ export default function ProjectDetailsPage() {
         
         setProject(projectData);
         if (user && user.uid !== projectData.ownerId) { // Log view only if not the owner
-          logProjectView(user.uid, projectId);
+          logAnalyticsEvent('project_view', { project_id: projectId });
         }
 
       } catch (error) {
@@ -193,7 +193,7 @@ export default function ProjectDetailsPage() {
       setIsInterested(!wasInterested);
 
       if (!wasInterested) {
-          logInterestShown(user.uid, project.id);
+          logAnalyticsEvent('show_interest', { project_id: project.id });
           await addNotification(project.ownerId, { type: 'interest', fromUserId: user.uid, fromUserName: userProfile.name, projectId: project.id, projectTitle: project.title, read: false });
           toast({ title: 'Interest expressed!', description: 'The project owner has been notified.' });
       } else {
@@ -214,6 +214,7 @@ export default function ProjectDetailsPage() {
     invalidateProjectCache();
     try {
       const matchId = await createMatch(user.uid, interestedUser.id, project.id, project.title);
+      logAnalyticsEvent('create_match', { project_id: project.id, matched_user_id: interestedUser.id });
       
       const projectRef = doc(db, 'projects', project.id);
       await updateDoc(projectRef, { interestedUsers: arrayRemove(interestedUser.id), matchedUsers: arrayUnion(interestedUser.id), updatedAt: serverTimestamp() });

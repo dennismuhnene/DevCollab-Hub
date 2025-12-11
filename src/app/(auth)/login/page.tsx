@@ -24,7 +24,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { LogIn, Eye, EyeOff } from 'lucide-react';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { logLogin } from '@/firebase/analytics';
+import { logAnalyticsEvent } from '@/firebase/analytics';
 
 // Define a separate SVG component for the Google icon
 const GoogleIcon = () => (
@@ -65,7 +65,7 @@ export default function LoginPage() {
         const provider = new GoogleAuthProvider();
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
-        logLogin(user.uid);
+        logAnalyticsEvent('login', { user_id: user.uid });
 
         const userDocRef = doc(db, 'users', user.uid);
         const userDoc = await getDoc(userDocRef);
@@ -122,7 +122,7 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-      logLogin(userCredential.user.uid);
+      logAnalyticsEvent('login', { user_id: userCredential.user.uid });
       toast({
         title: 'Login successful!',
         description: "Welcome back to DevCollab Hub.",

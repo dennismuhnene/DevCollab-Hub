@@ -44,11 +44,11 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { logProfileUpdate } from '@/firebase/analytics';
+import { logAnalyticsEvent } from '@/firebase/analytics';
 
 const professionalSkills = [
   'Problem Solving', 'Debugging', 'System Design', 'Communication', 'Team Collaboration',
@@ -247,7 +247,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
         displayName: data.name,
       });
     }
-    logProfileUpdate(user.uid);
+    logAnalyticsEvent('profile_update', {});
 
     toast({ title: 'Profile updated successfully!' });
     reloadUserProfile();
@@ -260,6 +260,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
       const functions = getFunctions(auth.app);
       const deleteUserCallable = httpsCallable(functions, 'deleteUserAccount');
       
+      logAnalyticsEvent('delete_account', {});
       await deleteUserCallable();
       
       toast({ title: 'Account deleted successfully' });

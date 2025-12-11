@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useRef, useMemo, useTransition } from 'react';
@@ -34,7 +33,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { logMessageSent, logAiChatInsightGenerated } from '@/firebase/analytics';
+import { logAnalyticsEvent } from '@/firebase/analytics';
 
 export default function ChatPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
@@ -177,7 +176,7 @@ export default function ChatPage() {
     
     const messagesCollectionRef = collection(db, 'matches', matchId, 'messages');
     await addDoc(messagesCollectionRef, messageData);
-    logMessageSent(user.uid, matchId);
+    logAnalyticsEvent('send_message', { match_id: matchId });
     
     const matchDocRef = doc(db, 'matches', matchId);
     await updateDoc(matchDocRef, { 
@@ -206,7 +205,7 @@ export default function ChatPage() {
 
     startAiInsightsTransition(async () => {
         try {
-            logAiChatInsightGenerated(user.uid, matchId);
+            logAnalyticsEvent('ai_chat_insight_generated', { match_id: matchId });
             const insights = await getChatInsights({
                 currentUser: {
                     skills: userProfile.skills || [],

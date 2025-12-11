@@ -16,7 +16,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { DiscoverFilters } from '@/components/discover-filters';
-import { logAiSort } from '@/firebase/analytics';
+import { logAnalyticsEvent } from '@/firebase/analytics';
 
 const professionalSkills = [
   'Problem Solving', 'Debugging', 'System Design', 'Communication', 'Team Collaboration',
@@ -63,6 +63,8 @@ export default function DiscoverPage() {
 
   useEffect(() => {
     if (!user) return;
+
+    logAnalyticsEvent('screen_view', { screen_name: 'Developers' });
 
     const fetchData = async () => {
       setLoading(true);
@@ -112,9 +114,7 @@ export default function DiscoverPage() {
           return;
       }
 
-      if(user && user.uid) {
-        logAiSort(user.uid, viewMode);
-      }
+      logAnalyticsEvent('ai_sort', { view_mode: viewMode });
 
       startAiSortTransition(async () => {
           try {
