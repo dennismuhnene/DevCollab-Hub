@@ -5,7 +5,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
-import { doc, serverTimestamp, collection, updateDoc, addDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, collection, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase/config';
 import { ref, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '@/lib/hooks/use-auth';
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
 import ImageUploader from './image-uploader';
 import { useToast } from '@/hooks/use-toast';
 import type { Project } from '@/types';
@@ -36,6 +36,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
+import { logProjectCreated, logProjectDeleted } from '@/firebase/analytics';
 
 
 const professionalSkills = [
@@ -203,6 +204,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
           matchedUsers: [],
         };
         const docRef = await addDoc(collection(db, 'projects'), newProject);
+        logProjectCreated(user.uid, docRef.id);
         toast({ title: 'Project created successfully!' });
         router.push(`/projects/${docRef.id}`);
       }
@@ -223,6 +225,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
       }
       const projectRef = doc(db, 'projects', project.id);
       await deleteDoc(projectRef);
+      logProjectDeleted(user.uid, project.id);
       toast({ title: 'Project deleted successfully' });
       router.push('/projects');
     } catch (error: any) {

@@ -3,6 +3,8 @@
 import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { app, auth, db } from '@/lib/firebase/config';
+import { getAnalytics } from "firebase/analytics";
+import { setAnalyticsInstance } from '@/firebase/analytics-instance';
 
 interface FirebaseClientProviderProps {
   children: ReactNode;
@@ -11,10 +13,12 @@ interface FirebaseClientProviderProps {
 export function FirebaseClientProvider({
   children,
 }: FirebaseClientProviderProps) {
-  // The firebase services are already initialized in @/lib/firebase/config.ts
-  // We just need to pass them to the provider.
   const firebaseServices = useMemo(() => {
-    return { firebaseApp: app, auth, firestore: db };
+    const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
+    if (analytics) {
+      setAnalyticsInstance(analytics);
+    }
+    return { firebaseApp: app, auth, firestore: db, analytics };
   }, []); 
 
   return (
@@ -22,6 +26,7 @@ export function FirebaseClientProvider({
       firebaseApp={firebaseServices.firebaseApp}
       auth={firebaseServices.auth}
       firestore={firebaseServices.firestore}
+      analytics={firebaseServices.analytics}
     >
       {children}
     </FirebaseProvider>

@@ -16,6 +16,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { DiscoverFilters } from '@/components/discover-filters';
+import { logAiSort } from '@/firebase/analytics';
 
 const professionalSkills = [
   'Problem Solving', 'Debugging', 'System Design', 'Communication', 'Team Collaboration',
@@ -109,6 +110,10 @@ export default function DiscoverPage() {
       if (!context) {
           toast({ title: "Profile or project data missing", description: "Please complete your profile or create a project first.", variant: "destructive" });
           return;
+      }
+
+      if(user && user.uid) {
+        logAiSort(user.uid, viewMode);
       }
 
       startAiSortTransition(async () => {

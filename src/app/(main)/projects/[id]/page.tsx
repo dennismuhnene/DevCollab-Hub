@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, getDocs, arrayRemove, arrayUnion, documentId, serverTimestamp, addDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, arrayRemove, arrayUnion, documentId, serverTimestamp, addDoc, Timestamp, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useParams } from 'next/navigation';
@@ -28,9 +28,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { createMatch } from '@/lib/firebase/matches';
 import { addNotification, markInterestNotificationsAsRead } from '@/lib/firebase/notifications';
+import { logProjectView, logInterestShown } from '@/firebase/analytics';
 
 interface UserWithId extends UserProfile {
   id: string;
@@ -67,16 +67,20 @@ export default function ProjectDetailsPage() {
   }, [projectId]);
 
   useEffect(() => {
-    if (!authLoading && !user) router.push('/login');
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId || !user) return;
 
     const fetchProjectData = async () => {
       setProjectLoading(true);
       try {
         const cachedProject = sessionStorage.getItem(`project_${projectId}`);
+        let projectData: Project;
+
         if (cachedProject) {
           const parsedProject = JSON.parse(cachedProject, (key, value) => {
             if ((key === 'createdAt' || key === 'updatedAt') && value) {
@@ -84,113 +88,125 @@ export default function ProjectDetailsPage() {
             }
             return value;
           });
-          const projectDataWithTimestamps = {
+          projectData = {
             ...parsedProject,
             createdAt: { toDate: () => parsedProject.createdAt },
             updatedAt: { toDate: () => parsedProject.updatedAt },
           } as Project;
-          setProject(projectDataWithTimestamps);
-          setProjectLoading(false);
-          return;
+        } else {
+          const projectDocRef = doc(db, 'projects', projectId);
+          const projectDoc = await getDoc(projectDocRef);
+
+          if (projectDoc.exists()) {
+            projectData = { id: projectDoc.id, ...projectDoc.data() } as Project;
+            try {
+              const cacheableProject = {
+                ...projectData,
+                createdAt: (projectData.createdAt as Timestamp)?.toDate().toISOString(),
+                updatedAt: (projectData.updatedAt as Timestamp)?.toDate().toISOString(),
+              };
+              sessionStorage.setItem(`project_${projectId}`, JSON.stringify(cacheableProject));
+            } catch (error) {
+              console.warn('Could not write to session storage', error);
+            }
+          } else {
+            toast({ variant: 'destructive', title: 'Not Found', description: 'This project could not be found.' });
+            router.push('/projects');
+            setProjectLoading(false);
+            return;
+          }
         }
-      } catch (error) {
-        console.warn('Could not read from session storage', error);
-      }
-
-      const projectDocRef = doc(db, 'projects', projectId);
-      const projectDoc = await getDoc(projectDocRef);
-
-      if (projectDoc.exists()) {
-        const projectData = { id: projectDoc.id, ...projectDoc.data() } as Project;
+        
         setProject(projectData);
-        try {
-          const cacheableProject = {
-            ...projectData,
-            createdAt: (projectData.createdAt as Timestamp)?.toDate().toISOString(),
-            updatedAt: (projectData.updatedAt as Timestamp)?.toDate().toISOString(),
-          };
-          sessionStorage.setItem(`project_${projectId}`, JSON.stringify(cacheableProject));
-        } catch (error) {
-          console.warn('Could not write to session storage', error);
+        if (user && user.uid !== projectData.ownerId) { // Log view only if not the owner
+          logProjectView(user.uid, projectId);
         }
-      } else {
-        toast({ variant: 'destructive', title: 'Not Found', description: 'This project could not be found.' });
-        router.push('/projects');
+
+      } catch (error) {
+        console.error("Error fetching project data:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not load project data.' });
+      } finally {
+        setProjectLoading(false);
       }
-      setProjectLoading(false);
     };
 
     fetchProjectData();
-  }, [projectId, router, toast]);
+  }, [projectId, user, router, toast]);
 
   useEffect(() => {
     if (!project || !user) return;
     
     setLoadingUsers(true);
     const fetchAssociatedUsers = async () => {
-        const ownerDocRef = doc(db, 'users', project.ownerId);
-        const ownerDoc = await getDoc(ownerDocRef);
-        if (ownerDoc.exists()) setOwner({ uid: ownerDoc.id, ...ownerDoc.data() } as UserProfile);
+        try {
+          const ownerDocRef = doc(db, 'users', project.ownerId);
+          const ownerDoc = await getDoc(ownerDocRef);
+          if (ownerDoc.exists()) setOwner({ uid: ownerDoc.id, ...ownerDoc.data() } as UserProfile);
 
-        if (user) {
           setIsOwner(project.ownerId === user.uid);
           setIsInterested(project.interestedUsers?.includes(user.uid) || false);
           setIsMatched(project.matchedUsers?.includes(user.uid) || false);
           
-          if (project.ownerId !== user.uid) {
-            const viewsRef = collection(db, 'projects', project.id, 'views');
-            addDocumentNonBlocking(viewsRef, { visitorId: user.uid, timestamp: serverTimestamp() });
+          if (project.ownerId === user.uid) {
+            markInterestNotificationsAsRead(user.uid, project.id);
           }
           
-          if (project.ownerId === user.uid) markInterestNotificationsAsRead(user.uid, project.id);
-        }
-        
-        const fetchUsersByIds = async (ids: string[]) => {
-          if (!ids || ids.length === 0) return [];
-          const userChunks = [];
-          for (let i = 0; i < ids.length; i += 30) userChunks.push(ids.slice(i, i + 30));
-          const userPromises = userChunks.map(chunk => getDocs(query(collection(db, 'users'), where(documentId(), 'in', chunk))));
-          const userSnapshots = await Promise.all(userPromises);
-          return userSnapshots.flatMap(snap => snap.docs.map(d => ({ id: d.id, ...d.data() } as UserWithId)));
-        };
-        
-        if (project.ownerId === user?.uid) {
-           const interested = await fetchUsersByIds(project.interestedUsers || []);
-           setInterestedUsers(interested);
-        }
+          const fetchUsersByIds = async (ids: string[]) => {
+            if (!ids || ids.length === 0) return [];
+            const userChunks = [];
+            for (let i = 0; i < ids.length; i += 30) userChunks.push(ids.slice(i, i + 30));
+            const userPromises = userChunks.map(chunk => getDocs(query(collection(db, 'users'), where(documentId(), 'in', chunk))));
+            const userSnapshots = await Promise.all(userPromises);
+            return userSnapshots.flatMap(snap => snap.docs.map(d => ({ id: d.id, ...d.data() } as UserWithId)));
+          };
+          
+          if (project.ownerId === user?.uid) {
+             const interested = await fetchUsersByIds(project.interestedUsers || []);
+             setInterestedUsers(interested);
+          }
 
-        const matched = await fetchUsersByIds(project.matchedUsers || []);
-        setMatchedUsers(matched);
-        setLoadingUsers(false);
+          const matched = await fetchUsersByIds(project.matchedUsers || []);
+          setMatchedUsers(matched);
+
+        } catch(error) {
+          console.error("Error fetching associated users:", error);
+          toast({ variant: 'destructive', title: 'Error', description: 'Could not load associated user data.' });
+        } finally {
+          setLoadingUsers(false);
+        }
     };
 
     fetchAssociatedUsers();
-  }, [project, user]);
+  }, [project, user, toast]);
 
   const handleInterest = async () => {
     if (!user || !userProfile || !project) return;
     setIsInterestLoading(true);
     invalidateProjectCache();
-    const wasInterested = isInterested;
     
+    const wasInterested = isInterested;
     const projectRef = doc(db, 'projects', project.id);
     const updateData = { interestedUsers: wasInterested ? arrayRemove(user.uid) : arrayUnion(user.uid) };
     
-    await updateDoc(projectRef, updateData);
-    setIsInterested(!wasInterested);
+    try {
+      await updateDoc(projectRef, updateData);
+      setIsInterested(!wasInterested);
 
-    if (!wasInterested) {
-        try {
-            await addNotification(project.ownerId, { type: 'interest', fromUserId: user.uid, fromUserName: userProfile.name, projectId: project.id, projectTitle: project.title, read: false });
-             toast({ title: 'Interest expressed!', description: 'The project owner has been notified.' });
-        } catch (e) {
-            console.error("Failed to send interest notification:", e);
-             toast({ title: 'Interest expressed!', description: 'But failed to notify the owner.' });
-        }
-    } else {
-         toast({ title: 'Interest removed' });
+      if (!wasInterested) {
+          logInterestShown(user.uid, project.id);
+          await addNotification(project.ownerId, { type: 'interest', fromUserId: user.uid, fromUserName: userProfile.name, projectId: project.id, projectTitle: project.title, read: false });
+          toast({ title: 'Interest expressed!', description: 'The project owner has been notified.' });
+      } else {
+          toast({ title: 'Interest removed' });
+      }
+    } catch(e) {
+        console.error("Failed to update interest or send notification:", e);
+        toast({ variant: 'destructive', title: 'Update Failed', description: 'Your interest could not be updated.' });
+        // Revert state on failure
+        setIsInterested(wasInterested);
+    } finally {
+      setIsInterestLoading(false);
     }
-    setIsInterestLoading(false);
   };
   
   const handleMatch = async (interestedUser: UserWithId) => {
@@ -205,8 +221,8 @@ export default function ProjectDetailsPage() {
       setInterestedUsers(prev => prev.filter(u => u.id !== interestedUser.id));
       setMatchedUsers(prev => [...prev, interestedUser]);
 
-      addNotification(interestedUser.id, { type: 'match', fromUserId: user.uid, fromUserName: userProfile.name, matchId, projectId: project.id, projectTitle: project.title, read: false });
-      addNotification(user.uid, { type: 'match', fromUserId: interestedUser.name, fromUserName: interestedUser.name, matchId, projectId: project.id, projectTitle: project.title, read: false });
+      await addNotification(interestedUser.id, { type: 'match', fromUserId: user.uid, fromUserName: userProfile.name, matchId, projectId: project.id, projectTitle: project.title, read: false });
+      await addNotification(user.uid, { type: 'match', fromUserId: interestedUser.name, fromUserName: interestedUser.name, matchId, projectId: project.id, projectTitle: project.title, read: false });
 
       setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId });
       setShowMatchModal(true);
@@ -289,7 +305,7 @@ export default function ProjectDetailsPage() {
     return name.split(' ').map((n) => n[0]).join('');
   };
   
-  const loading = authLoading || projectLoading || loadingUsers;
+  const loading = authLoading || projectLoading;
 
   if (loading) return <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8"><Skeleton className="h-10 w-3/4 mb-4" /><Skeleton className="h-6 w-1/2 mb-8" /><Skeleton className="w-full h-96 mb-8" /><Skeleton className="h-32 w-full" /></div>;
 
@@ -313,7 +329,7 @@ export default function ProjectDetailsPage() {
           
           {project.roleRequirements && <Card><CardHeader><CardTitle className="text-xl flex items-center gap-3"><Target className="h-5 w-5"/> Role Requirements</CardTitle></CardHeader><CardContent><p className="text-foreground/80 leading-relaxed">{project.roleRequirements}</p></CardContent></Card>}
 
-          {isOwner && <Card><CardHeader><CardTitle>Collaboration Hub</CardTitle></CardHeader><CardContent>{interestedUsers.length > 0 ? <div className="mb-6"><h3 className="font-semibold mb-4 flex items-center gap-2"><Hand className="h-5 w-5 text-yellow-500"/>Interested Developers</h3><ul className="space-y-4">{interestedUsers.map(interested => <li key={interested.id} className="flex items-center justify-between"><div className="flex items-center space-x-3"><Avatar><AvatarImage src={interested.photoURL} /><AvatarFallback>{getInitials(interested.name)}</AvatarFallback></Avatar><span className="font-medium">{interested.name}</span></div><div className="flex items-center gap-2"><Button variant="outline" size="sm" asChild><Link href={`/developers/${interested.id}`}>Profile</Link></Button><Button size="sm" onClick={() => handleMatch(interested)}>Match</Button><Button variant="destructive" size="sm" onClick={() => handleReject(interested)}>Reject</Button></div></li>)}</ul></div> : <p className="text-muted-foreground text-sm mb-6">No one has shown interest yet.</p>}{uniqueMatchedUsers.length > 0 && <div><h3 className="font-semibold mb-4 flex items-center gap-2"><UserCheck className="h-5 w-5 text-green-500"/>Matched Developers</h3><ul className="space-y-4">{uniqueMatchedUsers.map(matchedUser => <li key={matchedUser.id} className="flex items-center justify-between"><div className="flex items-center space-x-3"><Avatar><AvatarImage src={matchedUser.photoURL} /><AvatarFallback>{getInitials(matchedUser.name)}</AvatarFallback></Avatar><span className="font-medium">{matchedUser.name}</span></div><div className="flex items-center gap-2"><Button variant="outline" size="sm" asChild><Link href={`/developers/${matchedUser.id}`}>Profile</Link></Button><Button size="sm" onClick={() => handleGoToMessage(matchedUser.id)}><MessageSquare className="mr-2 h-4 w-4"/>Message</Button></div></li>)}</ul></div>}</CardContent></Card>}
+          {isOwner && !loadingUsers && <Card><CardHeader><CardTitle>Collaboration Hub</CardTitle></CardHeader><CardContent>{interestedUsers.length > 0 ? <div className="mb-6"><h3 className="font-semibold mb-4 flex items-center gap-2"><Hand className="h-5 w-5 text-yellow-500"/>Interested Developers</h3><ul className="space-y-4">{interestedUsers.map(interested => <li key={interested.id} className="flex items-center justify-between"><div className="flex items-center space-x-3"><Avatar><AvatarImage src={interested.photoURL} /><AvatarFallback>{getInitials(interested.name)}</AvatarFallback></Avatar><span className="font-medium">{interested.name}</span></div><div className="flex items-center gap-2"><Button variant="outline" size="sm" asChild><Link href={`/developers/${interested.id}`}>Profile</Link></Button><Button size="sm" onClick={() => handleMatch(interested)}>Match</Button><Button variant="destructive" size="sm" onClick={() => handleReject(interested)}>Reject</Button></div></li>)}</ul></div> : <p className="text-muted-foreground text-sm mb-6">No one has shown interest yet.</p>}{uniqueMatchedUsers.length > 0 && <div><h3 className="font-semibold mb-4 flex items-center gap-2"><UserCheck className="h-5 w-5 text-green-500"/>Matched Developers</h3><ul className="space-y-4">{uniqueMatchedUsers.map(matchedUser => <li key={matchedUser.id} className="flex items-center justify-between"><div className="flex items-center space-x-3"><Avatar><AvatarImage src={matchedUser.photoURL} /><AvatarFallback>{getInitials(matchedUser.name)}</AvatarFallback></Avatar><span className="font-medium">{matchedUser.name}</span></div><div className="flex items-center gap-2"><Button variant="outline" size="sm" asChild><Link href={`/developers/${matchedUser.id}`}>Profile</Link></Button><Button size="sm" onClick={() => handleGoToMessage(matchedUser.id)}><MessageSquare className="mr-2 h-4 w-4"/>Message</Button></div></li>)}</ul></div>}</CardContent></Card>}
         </div>
         
         <div className="space-y-6">
