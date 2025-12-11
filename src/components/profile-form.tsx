@@ -48,6 +48,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { logProfileUpdate } from '@/firebase/analytics';
 
 const professionalSkills = [
   'Problem Solving', 'Debugging', 'System Design', 'Communication', 'Team Collaboration',
@@ -246,6 +247,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
         displayName: data.name,
       });
     }
+    logProfileUpdate(user.uid);
 
     toast({ title: 'Profile updated successfully!' });
     reloadUserProfile();

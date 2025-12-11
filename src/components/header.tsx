@@ -19,6 +19,7 @@ import Notifications from './notifications';
 import { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
 import Image from 'next/image';
+import { FeedbackForm } from './feedback-form'; // Import the FeedbackForm component
 
 function ClientOnly({ children }: { children: React.ReactNode }) {
   const [hasMounted, setHasMounted] = useState(false);
@@ -116,6 +117,7 @@ export default function Header() {
                 ) : user ? (
                   <>
                     <Notifications />
+                    <FeedbackForm /> 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button

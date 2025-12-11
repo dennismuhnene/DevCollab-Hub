@@ -24,6 +24,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus, Eye, EyeOff } from 'lucide-react';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { logSignUp } from '@/firebase/analytics';
 
 // Define a separate SVG component for the Google icon
 const GoogleIcon = () => (
@@ -74,6 +75,7 @@ export default function SignupPage() {
         const userDoc = await getDoc(userDocRef);
 
         if (!userDoc.exists()) {
+             logSignUp(user.uid);
              const userData = {
                 uid: user.uid,
                 name: user.displayName,
@@ -110,6 +112,7 @@ export default function SignupPage() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
+      logSignUp(user.uid);
       await updateProfile(user, { displayName: data.name });
       await sendEmailVerification(user);
 

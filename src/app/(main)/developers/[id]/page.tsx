@@ -14,6 +14,7 @@ import ProjectCard from '@/components/project-card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Briefcase, BadgeCheck, BadgeX, Clock, BrainCircuit, Code, Target, Link as LinkIcon, Handshake } from 'lucide-react';
+import { logProfileView } from '@/firebase/analytics';
 
 export default function DeveloperProfilePage() {
   const { user, loading: authLoading } = useAuth();
@@ -32,7 +33,7 @@ export default function DeveloperProfilePage() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (!developerId) return;
+    if (!developerId || !user) return;
 
     const fetchDeveloperData = async () => {
       setLoading(true);
@@ -41,7 +42,9 @@ export default function DeveloperProfilePage() {
       const developerDoc = await getDoc(developerDocRef);
 
       if (developerDoc.exists()) {
-        setDeveloper({ uid: developerDoc.id, ...developerDoc.data() } as UserProfile);
+        const devData = { uid: developerDoc.id, ...developerDoc.data() } as UserProfile;
+        setDeveloper(devData);
+        logProfileView(user.uid, developerId);
       } else {
         router.push('/developers');
         return;
@@ -57,7 +60,7 @@ export default function DeveloperProfilePage() {
     };
 
     fetchDeveloperData();
-  }, [developerId, router]);
+  }, [developerId, user, router]);
   
   const getInitials = (name?: string) => {
     if (!name) return 'U';

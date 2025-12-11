@@ -30,6 +30,7 @@ import { addNotification } from '@/lib/firebase/notifications';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { getProfileInsights } from '@/ai/flows/get-profile-insights';
 import type { GetProfileInsightsOutput } from '@/types/ai';
+import { logMatchCreated, logAiDescriptionGenerated } from '@/firebase/analytics';
 
 interface InterestedUser extends UserProfile {}
 
@@ -129,6 +130,7 @@ export default function DashboardPage() {
 
     startAiInsightsTransition(async () => {
       try {
+        logAiDescriptionGenerated(user.uid);
         const allEngagedUserIds = new Set<string>();
         myProjects.forEach(p => {
             p.interestedUsers?.forEach(uid => allEngagedUserIds.add(uid));
@@ -185,6 +187,7 @@ export default function DashboardPage() {
     if (!user || !userProfile) return;
     try {
       const matchId = await createMatch(user.uid, interestedUser.uid, project.id, project.title);
+      logMatchCreated(user.uid, interestedUser.uid, project.id);
       
       const projectRef = doc(db, 'projects', project.id);
       updateDocumentNonBlocking(projectRef, {

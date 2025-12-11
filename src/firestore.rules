@@ -68,5 +68,13 @@ service cloud.firestore {
         allow update, delete: if false;
       }
     }
+
+    // FEEDBACK
+    match /feedback/{feedbackId} {
+      // Allow any signed-in user to create a feedback document.
+      allow create: if isSignedIn();
+      // Nobody can read, update, or delete feedback to maintain privacy.
+      allow read, update, delete: if false;
+    }
   }
 }
