@@ -14,7 +14,7 @@ import ProjectCard from '@/components/project-card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Briefcase, BadgeCheck, BadgeX, Clock, BrainCircuit, Code, Target, Link as LinkIcon, Handshake } from 'lucide-react';
-import { logProfileView } from '@/firebase/analytics';
+import { logAnalyticsEvent } from '@/firebase/analytics';
 
 export default function DeveloperProfilePage() {
   const { user, loading: authLoading } = useAuth();
@@ -44,7 +44,7 @@ export default function DeveloperProfilePage() {
       if (developerDoc.exists()) {
         const devData = { uid: developerDoc.id, ...developerDoc.data() } as UserProfile;
         setDeveloper(devData);
-        logProfileView(user.uid, developerId);
+        logAnalyticsEvent('profile_view', { user_id: user.uid, viewed_user_id: developerId });
       } else {
         router.push('/developers');
         return;

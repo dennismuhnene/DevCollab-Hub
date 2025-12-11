@@ -4,7 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import { logFeedbackSubmitted } from '@/firebase/analytics';
+import { logAnalyticsEvent } from '@/firebase/analytics';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export function FeedbackForm() {
@@ -22,7 +22,7 @@ export function FeedbackForm() {
         createdAt: new Date(),
         url: window.location.href,
       });
-      logFeedbackSubmitted(user.uid);
+      logAnalyticsEvent('feedback_submitted', { user_id: user.uid });
       setFeedback('');
       setIsOpen(false);
     } catch (error) {

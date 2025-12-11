@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "studio-4315631326-4e84c"
-  }
+    "default": "studio-4315631326-4e84c",
+    "devcollab-hub": "studio-4315631326-4e84c"
+  },
+  "targets": {},
+  "etags": {}
 }

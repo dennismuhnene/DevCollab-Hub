@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { ReactNode, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { sendGAEvent } from '@next/third-parties/google';
 
 export default function MessagesLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -12,6 +13,9 @@ export default function MessagesLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
+    }
+    if (!loading && user) {
+        sendGAEvent({ event: 'screen_view', type: 'screen_name', value: 'Messages' });
     }
   }, [user, loading, router]);
 
@@ -33,5 +37,3 @@ export default function MessagesLayout({ children }: { children: ReactNode }) {
 
   return <div className="h-[calc(100vh-theme(height.14))]">{children}</div>;
 }
-
-    

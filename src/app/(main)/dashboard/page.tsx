@@ -30,7 +30,7 @@ import { addNotification } from '@/lib/firebase/notifications';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { getProfileInsights } from '@/ai/flows/get-profile-insights';
 import type { GetProfileInsightsOutput } from '@/types/ai';
-import { logMatchCreated, logAiDescriptionGenerated } from '@/firebase/analytics';
+import { logAnalyticsEvent } from '@/firebase/analytics';
 
 interface InterestedUser extends UserProfile {}
 
@@ -55,6 +55,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user || !userProfile) return;
+
+    logAnalyticsEvent('screen_view', { screen_name: 'Dashboard' });
 
     const CACHE_KEY_PROJECTS = `dashboard_myProjects_${user.uid}`;
     const CACHE_KEY_DEVS = `dashboard_recommendedDevelopers_${user.uid}`;
@@ -130,7 +132,6 @@ export default function DashboardPage() {
 
     startAiInsightsTransition(async () => {
       try {
-        logAiDescriptionGenerated(user.uid);
         const allEngagedUserIds = new Set<string>();
         myProjects.forEach(p => {
             p.interestedUsers?.forEach(uid => allEngagedUserIds.add(uid));
@@ -176,9 +177,11 @@ export default function DashboardPage() {
             })),
         });
         setAiInsights(insights);
+        logAnalyticsEvent('ai_insight_generated', { result: 'success' });
       } catch (e) {
         console.error("Failed to get AI insights", e);
         toast({ variant: 'destructive', title: 'Could not load AI insights.'});
+        logAnalyticsEvent('ai_insight_generated', { result: 'failure' });
       }
     });
   }
@@ -187,7 +190,10 @@ export default function DashboardPage() {
     if (!user || !userProfile) return;
     try {
       const matchId = await createMatch(user.uid, interestedUser.uid, project.id, project.title);
-      logMatchCreated(user.uid, interestedUser.uid, project.id);
+      logAnalyticsEvent('create_match', { 
+          project_id: project.id,
+          matched_user_id: interestedUser.uid
+      });
       
       const projectRef = doc(db, 'projects', project.id);
       updateDocumentNonBlocking(projectRef, {

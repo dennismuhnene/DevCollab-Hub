@@ -36,7 +36,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
-import { logProjectCreated, logProjectDeleted } from '@/firebase/analytics';
+import { logAnalyticsEvent } from '@/firebase/analytics';
 
 
 const professionalSkills = [
@@ -204,7 +204,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
           matchedUsers: [],
         };
         const docRef = await addDoc(collection(db, 'projects'), newProject);
-        logProjectCreated(user.uid, docRef.id);
+        logAnalyticsEvent('create_project', { project_id: docRef.id });
         toast({ title: 'Project created successfully!' });
         router.push(`/projects/${docRef.id}`);
       }
@@ -225,7 +225,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
       }
       const projectRef = doc(db, 'projects', project.id);
       await deleteDoc(projectRef);
-      logProjectDeleted(user.uid, project.id);
+      logAnalyticsEvent('delete_project', { project_id: project.id });
       toast({ title: 'Project deleted successfully' });
       router.push('/projects');
     } catch (error: any) {

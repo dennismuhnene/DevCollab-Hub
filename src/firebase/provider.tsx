@@ -4,7 +4,6 @@ import React, { DependencyList, createContext, useContext, ReactNode, useMemo, u
 import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
-import { Analytics } from 'firebase/analytics';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -13,7 +12,6 @@ interface FirebaseProviderProps {
   firebaseApp: FirebaseApp;
   firestore: Firestore;
   auth: Auth;
-  analytics: Analytics | null;
 } 
 
 interface UserAuthState {
@@ -27,7 +25,6 @@ export interface FirebaseContextState {
   firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
   auth: Auth | null;
-  analytics: Analytics | null;
   user: User | null;
   isUserLoading: boolean;
   userError: Error | null;
@@ -37,7 +34,6 @@ export interface FirebaseServicesAndUser {
   firebaseApp: FirebaseApp;
   firestore: Firestore;
   auth: Auth;
-  analytics: Analytics | null;
   user: User | null;
   isUserLoading: boolean;
   userError: Error | null;
@@ -57,7 +53,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   firebaseApp,
   firestore,
   auth,
-  analytics,
 }) => {
   const [userAuthState, setUserAuthState] = useState<UserAuthState>({
     user: null,
@@ -122,12 +117,11 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       firebaseApp: servicesAvailable ? firebaseApp : null,
       firestore: servicesAvailable ? firestore : null,
       auth: servicesAvailable ? auth : null,
-      analytics: servicesAvailable ? analytics : null,
       user: userAuthState.user,
       isUserLoading: userAuthState.isUserLoading,
       userError: userAuthState.userError,
     };
-  }, [firebaseApp, firestore, auth, userAuthState, analytics]);
+  }, [firebaseApp, firestore, auth, userAuthState]);
 
   return (
     <FirebaseContext.Provider value={contextValue}>
@@ -149,7 +143,6 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     firebaseApp: context.firebaseApp,
     firestore: context.firestore,
     auth: context.auth,
-    analytics: context.analytics,
     user: context.user,
     isUserLoading: context.isUserLoading,
     userError: context.userError,
@@ -170,11 +163,6 @@ export const useFirebaseApp = (): FirebaseApp => {
   const { firebaseApp } = useFirebase();
   return firebaseApp;
 };
-
-export const useAnalytics = (): Analytics | null => {
-    const { analytics } = useFirebase();
-    return analytics;
-}
 
 type MemoFirebase <T> = T & {__memo?: boolean};
 
