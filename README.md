@@ -1,7 +1,7 @@
-clear# DevCollab Hub
+# DevCollab Hub
 
 <p align="center">
-  <img src="https://picsum.photos/seed/logo/600/300" alt="DevCollab Hub Banner" data-ai-hint="developer collaboration abstract" />
+  <img src="/public/images/devcollab-hero.png" alt="DevCollab Hub Banner" />
 </p>
 
 <p align="center">
@@ -23,6 +23,8 @@ clear# DevCollab Hub
 - **💬 Real-Time Chat:** Once matched, connect and communicate instantly with your new collaborators through private messaging.
 - **🤖 AI-Enhanced Insights:** Leverage AI to generate compelling project descriptions, summarize profiles and get conversation starters for your new matches.
 - **🔒 Secure Authentication:** Standard email/password authentication powered by Firebase.
+- **⚡ Rate Limiting & Caching:** Built with Upstash Redis for robust rate limiting and caching, ensuring a smooth and reliable user experience.
+- **📊 Google Analytics:** Integrated with Google Analytics for tracking user engagement and application performance.
 
 ## 🚀 Tech Stack
 
@@ -33,6 +35,8 @@ This project is built with a modern, scalable and powerful tech stack:
 - **Styling:** [Tailwind CSS](https://tailwindcss.com/) & [ShadCN UI](https://ui.shadcn.com/)
 - **Backend & Database:** [Firebase](https://firebase.google.com/) (Authentication, Firestore, Cloud Storage, Cloud Functions)
 - **Generative AI:** [Google AI & Genkit](https://firebase.google.com/docs/genkit)
+- **Rate Limiting & Caching:** [Upstash Redis](https://upstash.com/redis)
+- **Analytics:** [Google Analytics](https://analytics.google.com/)
 - **Deployment:** [Firebase App Hosting](https://firebase.google.com/docs/app-hosting)
 
 ## 🛠️ Getting Started
@@ -57,11 +61,12 @@ Follow these instructions to get a copy of the project up and running on your lo
     npm install
     ```
 
-3.  **Set up Firebase:**
+3.  **Set up Firebase & Redis:**
     - Create a new project on the [Firebase Console](https://console.firebase.google.com/).
     - In your project's settings, add a new "Web App".
     - Copy the `firebaseConfig` object provided.
-    - Create a `.env` file in the root of the project and populate it with the Firebase configuration keys. You can use the `.env.example` file as a template. Your `.env` should look like this:
+    - Create a new database on [Upstash](https://upstash.com/).
+    - Create a `.env` file in the root of the project and populate it with your Firebase and Upstash credentials. You can use the `.env.example` file as a template. Your `.env` should look like this:
 
       ```env
       NEXT_PUBLIC_FIREBASE_API_KEY=AIza...
@@ -70,17 +75,20 @@ Follow these instructions to get a copy of the project up and running on your lo
       NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
       NEXT_PUBLIC_FIREBASE_APP_ID=1:...:web:...
+
+      UPSTASH_REDIS_REST_URL=...
+      UPSTASH_REDIS_REST_TOKEN=...
       ```
 
 4.  **Run the development server:**
     ```bash
     npm run dev
     ```
-    The application will be available at `http://localhost:9002`.
+    The application will be available at `http://localhost:9003`.
 
 ## 📜 Available Scripts
 
-- `npm run dev`: Starts the Next.js development server with Turbopack.
+- `npm run dev`: Starts the Next.js development server.
 - `npm run build`: Creates a production-ready build of the application.
 - `npm run start`: Starts the production server.
 - `npm run lint`: Lints the codebase using Next.js's built-in ESLint configuration.
@@ -95,5 +103,3 @@ Follow these instructions to get a copy of the project up and running on your lo
   <br />
   This project was developed by <strong>NeuralAxis Labs</strong>.
 </p>
-
-
