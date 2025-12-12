@@ -79,11 +79,19 @@ export default function MatchList({ matches, activeMatchId }: MatchListProps) {
               <div className="flex-1 overflow-hidden">
                 <p className="font-semibold truncate">{otherParticipantDetails.name}</p>
                 <p className={cn(
-                    "text-sm truncate",
-                    match.id === activeMatchId ? "text-primary-foreground/80" : "text-muted-foreground"
+                    "text-sm truncate font-medium",
+                    match.id === activeMatchId ? "text-primary-foreground/90" : "text-muted-foreground"
                 )}>
-                  {match.lastMessage || `Project: ${match.projectTitle}`}
+                  {match.projectTitle}
                 </p>
+                {match.lastMessage && (
+                  <p className={cn(
+                      "text-xs truncate",
+                      match.id === activeMatchId ? "text-primary-foreground/80" : "text-muted-foreground"
+                  )}>
+                    {match.lastMessage}
+                  </p>
+                )}
               </div>
               {unreadCount > 0 && (
                 <Badge className="flex-shrink-0">{unreadCount}</Badge>

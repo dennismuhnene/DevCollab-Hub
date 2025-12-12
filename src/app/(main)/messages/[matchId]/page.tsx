@@ -20,7 +20,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { markMatchNotificationsAsRead } from '@/lib/firebase/notifications';
-import { getChatInsights } from '@/ai/flows/get-chat-insights';
+import { generateChatInsightsAction } from './actions';
 import type { GetChatInsightsOutput } from '@/types/ai';
 import {
   AlertDialog,
@@ -198,34 +198,42 @@ export default function ChatPage() {
   };
 
   const handleGetAiInsights = () => {
-    if (!userProfile || !otherUser || !project) {
+    if (!user || !userProfile || !otherUser || !project) {
         toast({ variant: 'destructive', title: 'Missing data for AI analysis.' });
         return;
     }
 
     startAiInsightsTransition(async () => {
-        try {
-            logAnalyticsEvent('ai_chat_insight_generated', { match_id: matchId });
-            const insights = await getChatInsights({
-                currentUser: {
-                    skills: userProfile.skills || [],
-                    yearsOfExperience: userProfile.yearsOfExperience || 0,
-                },
-                otherUser: {
-                    skills: otherUser.skills || [],
-                    yearsOfExperience: otherUser.yearsOfExperience || 0,
-                },
-                project: {
-                    title: project.title,
-                    description: project.description,
-                    requiredSkills: project.requiredSkills,
-                }
-            });
-            setAiInsights(insights);
+        const authToken = await user.getIdToken();
+        if (!authToken) {
+          toast({ variant: 'destructive', title: 'Authentication Error', description: 'Could not verify your identity. Please log in again.' });
+          return;
+        }
+
+        logAnalyticsEvent('ai_chat_insight_generated', { match_id: matchId });
+        const result = await generateChatInsightsAction({
+            authToken,
+            currentUser: {
+                skills: userProfile.skills || [],
+                yearsOfExperience: userProfile.yearsOfExperience || 0,
+            },
+            otherUser: {
+                skills: otherUser.skills || [],
+                yearsOfExperience: otherUser.yearsOfExperience || 0,
+            },
+            project: {
+                title: project.title,
+                description: project.description,
+                requiredSkills: project.requiredSkills,
+            }
+        });
+
+        if (result.success && result.data) {
+            setAiInsights(result.data);
             setShowAiModal(true);
-        } catch (e) {
-            console.error("Failed to get chat insights:", e);
-            toast({ variant: 'destructive', title: 'Could not load AI insights.'});
+        } else {
+            console.error("Failed to get chat insights:", result.error);
+            toast({ variant: 'destructive', title: 'Could not load AI insights', description: result.error });
         }
     });
   };
@@ -262,8 +270,8 @@ export default function ChatPage() {
 
   if (authLoading || loading || matchLoading) {
     return (
-         <div className="flex h-full border-t">
-            <aside className="w-1/3 lg:w-1/4 h-full border-r bg-muted/20">
+         <div className="flex h-[calc(100vh-theme(spacing.16))] border-t">
+            <aside className="w-1/3 lg:w-1/4 h-full border-r bg-muted/20 hidden md:block">
                 <div className="p-4 space-y-3">
                     {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
                 </div>
@@ -279,7 +287,7 @@ export default function ChatPage() {
 
   return (
     <>
-    <div className="flex h-full border-t">
+    <div className="flex h-[calc(100vh-theme(spacing.16))] border-t">
       <aside className="hidden md:flex w-1/3 lg:w-1/4 h-full border-r bg-muted/20 flex-col">
         <MatchListContent />
       </aside>
@@ -316,18 +324,25 @@ export default function ChatPage() {
             )}
            </div>
         ) : (
-            otherUser && (
-                <div className="p-4 border-b flex items-center gap-4 bg-background">
-                    <Avatar>
-                        <AvatarImage src={otherUser.photoURL} />
-                        <AvatarFallback>{getInitials(otherUser.name)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                        <h3 className="font-semibold">{otherUser.name}</h3>
-                        <p className="text-sm text-muted-foreground">Project: {match?.projectTitle}</p>
-                    </div>
-                </div>
-            )
+           <div className="p-4 border-b flex items-center gap-4 bg-background">
+             <div className="md:hidden">
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                        <Users className="h-5 w-5" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="p-0 w-3/4">
+                      <MatchListContent />
+                  </SheetContent>
+                </Sheet>
+            </div>
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <div className="space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-24" />
+            </div>
+           </div>
         )}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {messages.map((msg, index) => (

@@ -97,6 +97,11 @@ export default function DiscoverPage() {
   }, [user, toast]);
 
   const handleAiSort = async () => {
+      if (!user) {
+        toast({ title: "Authentication Error", description: "You must be logged in to use this feature.", variant: "destructive" });
+        return;
+      }
+
       if (filteredResults.length === 0) {
           toast({ title: "No results to sort", description: "Please broaden your filters before sorting.", variant: "destructive" });
           return;
@@ -118,9 +123,13 @@ export default function DiscoverPage() {
 
       startAiSortTransition(async () => {
           try {
+              const token = await user.getIdToken();
               const response = await fetch('/api/ai/sort', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
                   body: JSON.stringify({ context, items: filteredResults, viewMode }),
               });
 

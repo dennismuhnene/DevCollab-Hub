@@ -1,13 +1,7 @@
 'use server';
 
-/**
- * @fileOverview AI-powered project recommendation system.
- *
- * - getUserRecommendations - A function that retrieves project recommendations for a user based on their skills and interests.
- * - GetUserRecommendationsInput - The input type for the getUserRecommendations function.
- * - GetUserRecommendationsOutput - The return type for the getUserRecommendations function.
- */
-
+import { createHash } from 'crypto';
+import { redis } from '@/lib/redis';
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
@@ -23,7 +17,27 @@ export type GetUserRecommendationsOutput = z.infer<typeof GetUserRecommendations
 export async function getUserRecommendations(
   input: GetUserRecommendationsInput
 ): Promise<GetUserRecommendationsOutput> {
-  return getUserRecommendationsFlow(input);
+    const cacheKey = `user-recs:${createHash('sha256').update(JSON.stringify(input)).digest('hex')}`;
+    try {
+        const cachedResult = await redis.get<GetUserRecommendationsOutput>(cacheKey);
+        if (cachedResult) {
+            console.log('CACHE HIT: Returning cached user recommendations.');
+            return cachedResult;
+        }
+    } catch (error) {
+        console.error('Redis GET Error:', error);
+    }
+
+    console.log('CACHE MISS: Executing getUserRecommendationsFlow.');
+    const result = await getUserRecommendationsFlow(input);
+
+    try {
+        await redis.set(cacheKey, result, { ex: 3600 }); // Cache for 1 hour
+    } catch (error) {
+        console.error('Redis SET Error:', error);
+    }
+
+    return result;
 }
 
 const prompt = ai.definePrompt({
@@ -57,7 +71,33 @@ const getUserRecommendationsFlow = ai.defineFlow(
     outputSchema: GetUserRecommendationsOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (true) {
+      try {
+        const {output} = await prompt(input);
+        return output!;
+      } catch (err: any) {
+        attempts++;
+
+        const isOverloaded =
+          err?.status === 'UNAVAILABLE' ||
+          err?.code === 503 ||
+          err?.originalMessage?.includes('model is overloaded') ||
+          err?.originalMessage?.includes('503');
+
+        if (attempts < maxAttempts && isOverloaded) {
+          const delay = 200 * attempts;
+          console.warn(
+            `getUserRecommendationsFlow retry attempt ${attempts} after model overload (503). Waiting ${delay}ms.`
+          );
+          await new Promise((res) => setTimeout(res, delay));
+          continue;
+        }
+
+        throw err;
+      }
+    }
   }
 );

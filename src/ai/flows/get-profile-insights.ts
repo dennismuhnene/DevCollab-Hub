@@ -1,21 +1,35 @@
-
 'use server';
 
-/**
- * @fileOverview AI-powered profile and project insights generator.
- *
- * - getProfileInsights - A function that generates insights based on a user's profile, their projects, and the developers interested in them.
- */
-
+import { createHash } from 'crypto';
+import { redis } from '@/lib/redis';
 import { ai } from '@/ai/genkit';
 import { GetProfileInsightsInputSchema, GetProfileInsightsOutputSchema } from '@/types/ai';
 import type { GetProfileInsightsInput, GetProfileInsightsOutput } from '@/types/ai';
 
-
 export async function getProfileInsights(
   input: GetProfileInsightsInput
 ): Promise<GetProfileInsightsOutput> {
-  return getProfileInsightsFlow(input);
+    const cacheKey = `profile-insights:${createHash('sha256').update(JSON.stringify(input)).digest('hex')}`;
+    try {
+        const cachedResult = await redis.get<GetProfileInsightsOutput>(cacheKey);
+        if (cachedResult) {
+            console.log('CACHE HIT: Returning cached profile insights.');
+            return cachedResult;
+        }
+    } catch (error) {
+        console.error('Redis GET Error:', error);
+    }
+
+    console.log('CACHE MISS: Executing getProfileInsightsFlow.');
+    const result = await getProfileInsightsFlow(input);
+
+    try {
+        await redis.set(cacheKey, result, { ex: 3600 }); // Cache for 1 hour
+    } catch (error) {
+        console.error('Redis SET Error:', error);
+    }
+
+    return result;
 }
 
 const prompt = ai.definePrompt({
@@ -67,7 +81,33 @@ const getProfileInsightsFlow = ai.defineFlow(
     outputSchema: GetProfileInsightsOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
-    return output!;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (true) {
+      try {
+        const { output } = await prompt(input);
+        return output!;
+      } catch (err: any) {
+        attempts++;
+
+        const isOverloaded =
+          err?.status === 'UNAVAILABLE' ||
+          err?.code === 503 ||
+          err?.originalMessage?.includes('model is overloaded') ||
+          err?.originalMessage?.includes('503');
+
+        if (attempts < maxAttempts && isOverloaded) {
+          const delay = 200 * attempts;
+          console.warn(
+            `getProfileInsightsFlow retry attempt ${attempts} after model overload (503). Waiting ${delay}ms.`
+          );
+          await new Promise((res) => setTimeout(res, delay));
+          continue;
+        }
+
+        throw err;
+      }
+    }
   }
 );
