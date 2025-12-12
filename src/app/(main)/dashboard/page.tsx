@@ -28,7 +28,7 @@ import {
 import { createMatch } from '@/lib/firebase/matches';
 import { addNotification } from '@/lib/firebase/notifications';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { getProfileInsights } from '@/ai/flows/get-profile-insights';
+import { generateDashboardInsightsAction } from './actions';
 import type { GetProfileInsightsOutput } from '@/types/ai';
 import { logAnalyticsEvent } from '@/firebase/analytics';
 
@@ -131,57 +131,65 @@ export default function DashboardPage() {
     if (!user || !userProfile) return;
 
     startAiInsightsTransition(async () => {
-      try {
-        const allEngagedUserIds = new Set<string>();
-        myProjects.forEach(p => {
-            p.interestedUsers?.forEach(uid => allEngagedUserIds.add(uid));
-            p.matchedUsers?.forEach(uid => allEngagedUserIds.add(uid));
-        });
+      const authToken = await user.getIdToken();
+      if (!authToken) {
+        toast({ variant: 'destructive', title: 'Authentication Error', description: 'Could not verify your identity. Please log in again.' });
+        return;
+      }
 
-        let engagedDeveloperProfiles: UserProfile[] = [];
-        if (allEngagedUserIds.size > 0) {
-            const userChunks = Array.from(allEngagedUserIds).reduce((acc: string[][], curr: string, i: number) => {
-                const chunkIndex = Math.floor(i/30);
-                if(!acc[chunkIndex]) acc[chunkIndex] = [];
-                acc[chunkIndex].push(curr);
-                return acc;
-            }, []);
+      const allEngagedUserIds = new Set<string>();
+      myProjects.forEach(p => {
+          p.interestedUsers?.forEach(uid => allEngagedUserIds.add(uid));
+          p.matchedUsers?.forEach(uid => allEngagedUserIds.add(uid));
+      });
 
-            const userPromises = userChunks.map(chunk => getDocs(query(collection(db, 'users'), where(documentId(), 'in', chunk))));
-            const userSnapshots = await Promise.all(userPromises);
-            userSnapshots.forEach(snap => snap.docs.forEach(d => engagedDeveloperProfiles.push({ uid: d.id, ...d.data() } as UserProfile)));
-        }
+      let engagedDeveloperProfiles: UserProfile[] = [];
+      if (allEngagedUserIds.size > 0) {
+          const userChunks = Array.from(allEngagedUserIds).reduce((acc: string[][], curr: string, i: number) => {
+              const chunkIndex = Math.floor(i/30);
+              if(!acc[chunkIndex]) acc[chunkIndex] = [];
+              acc[chunkIndex].push(curr);
+              return acc;
+          }, []);
 
-        if (engagedDeveloperProfiles.length === 0) {
-            toast({ title: "No Engaged Developers Yet", description: "AI insights require developers to first show interest or match with your projects." });
-            return;
-        }
+          const userPromises = userChunks.map(chunk => getDocs(query(collection(db, 'users'), where(documentId(), 'in', chunk))));
+          const userSnapshots = await Promise.all(userPromises);
+          userSnapshots.forEach(snap => snap.docs.forEach(d => engagedDeveloperProfiles.push({ uid: d.id, ...d.data() } as UserProfile)));
+      }
 
-        const insights = await getProfileInsights({
-            userProfile: {
-                bio: userProfile.bio || '',
-                skills: userProfile.skills || [],
-                techStack: userProfile.techStack || [],
-                yearsOfExperience: userProfile.yearsOfExperience || 0,
-                collaborationGoals: userProfile.collaborationGoals || [],
-                commitmentLevel: userProfile.commitmentLevel || '',
-            },
-            userProjects: myProjects.map(p => ({ title: p.title, description: p.description, requiredSkills: p.requiredSkills })),
-            interestedDevelopers: engagedDeveloperProfiles.map(i => ({ 
-                bio: i.bio || '', 
-                skills: i.skills || [], 
-                techStack: i.techStack || [], 
-                yearsOfExperience: i.yearsOfExperience || 0,
-                collaborationGoals: i.collaborationGoals || [],
-                commitmentLevel: i.commitmentLevel || '',
-            })),
-        });
-        setAiInsights(insights);
+      if (engagedDeveloperProfiles.length === 0) {
+          toast({ title: "No Engaged Developers Yet", description: "AI insights require developers to first show interest or match with your projects." });
+          return;
+      }
+
+      const result = await generateDashboardInsightsAction({
+          authToken,
+          userProfile: {
+              bio: userProfile.bio || '',
+              skills: userProfile.skills || [],
+              techStack: userProfile.techStack || [],
+              yearsOfExperience: userProfile.yearsOfExperience || 0,
+              collaborationGoals: userProfile.collaborationGoals || [],
+              commitmentLevel: userProfile.commitmentLevel || '',
+          },
+          userProjects: myProjects.map(p => ({ title: p.title, description: p.description, requiredSkills: p.requiredSkills })),
+          interestedDevelopers: engagedDeveloperProfiles.map(i => ({ 
+              bio: i.bio || '', 
+              skills: i.skills || [], 
+              techStack: i.techStack || [], 
+              yearsOfExperience: i.yearsOfExperience || 0,
+              collaborationGoals: i.collaborationGoals || [],
+              commitmentLevel: i.commitmentLevel || '',
+          })),
+      });
+
+      if (result.success && result.data) {
+        setAiInsights(result.data);
         logAnalyticsEvent('ai_insight_generated', { result: 'success' });
-      } catch (e) {
-        console.error("Failed to get AI insights", e);
-        toast({ variant: 'destructive', title: 'Could not load AI insights.'});
-        logAnalyticsEvent('ai_insight_generated', { result: 'failure' });
+      } else {
+        console.error("Failed to get AI insights", result.error);
+        toast({ variant: 'destructive', title: 'Could not load AI insights', description: result.error });
+        logAnalyticsEvent('ai_insight_generated', { result: 'failure', error: result.error });
       }
     });
   }

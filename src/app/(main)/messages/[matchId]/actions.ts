@@ -1,0 +1,33 @@
+'use server';
+
+import { firebaseAdmin } from '@/lib/firebase-admin';
+import { checkRateLimit } from '@/lib/rate-limiter';
+import { getChatInsights } from '@/ai/flows/get-chat-insights';
+import type { GetChatInsightsInput } from '@/types/ai';
+
+export async function generateChatInsightsAction(payload: GetChatInsightsInput & { authToken: string }) {
+  try {
+    const decodedToken = await firebaseAdmin.auth().verifyIdToken(payload.authToken);
+    const userId = decodedToken.uid;
+
+    await checkRateLimit(userId);
+
+    const insights = await getChatInsights({
+      currentUser: payload.currentUser,
+      otherUser: payload.otherUser,
+      project: payload.project,
+    });
+
+    return { success: true, data: insights };
+
+  } catch (error: any) {
+    if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
+      return { success: false, error: 'Unauthorized' };
+    }
+    if (error.message.includes('Rate limit')) {
+      return { success: false, error: 'Rate limit exceeded' };
+    }
+    console.error('Error generating chat insights:', error);
+    return { success: false, error: 'Internal Server Error' };
+  }
+}
