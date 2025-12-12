@@ -88,3 +88,35 @@ export interface Notification {
     read: boolean;
     timestamp: Timestamp | object; // object for serverTimestamp
 }
+
+export type Question =
+  | {
+      id: string;
+      question: string;
+      type: 'slider';
+      min: number;
+      max: number;
+      labels?: string[];
+    }
+  | {
+      id: string;
+      question: string;
+      type: 'text' | 'textarea';
+    }
+  | {
+      id: string;
+      question: string;
+      type: 'multiple-choice';
+      options: string[];
+    }
+  | {
+      id: string;
+      question: string;
+      type: 'checkbox';
+      options: string[];
+  }
+  | {
+      id: string;
+      question: string;
+      type: 'nps';
+  };

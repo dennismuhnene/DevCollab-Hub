@@ -93,5 +93,13 @@ service cloud.firestore {
         allow update, delete: if false;
       }
     }
+    // FEEDBACK
+    match /feedback/{feedbackId} {
+      allow create: if isSignedIn();
+      // Allow user to read their own feedback, and admin to read all feedback
+      allow read, list: if isSignedIn() && (resource.data.userId == uid() || request.auth.token.email == 'dennis.cmuhnene@gmail.com');
+      // Only admin can update or delete
+      allow update, delete: if isSignedIn() && request.auth.token.email == 'dennis.cmuhnene@gmail.com';
+    }
   }
 }

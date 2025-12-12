@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { LogIn, UserPlus, User, LogOut, MessageSquare, Users, LayoutDashboard, Menu, Contact, PenSquare } from 'lucide-react';
+import { LogIn, UserPlus, User, LogOut, MessageSquare, Users, LayoutDashboard, Menu, Contact, PenSquare, FileText } from 'lucide-react';
 import Notifications from './notifications';
 import { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
@@ -43,7 +43,7 @@ export default function Header() {
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const isAdmin = user?.email === 'dennis.cmuhnene@gmail.com';
+  const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
   const handleLogout = async () => {
     try {
@@ -151,10 +151,16 @@ export default function Header() {
                           <span>Messages</span>
                         </DropdownMenuItem>
                          {isAdmin && (
+                          <>
                             <DropdownMenuItem onSelect={() => router.push('/d_blog')}>
                                 <PenSquare className="mr-2 h-4 w-4" />
                                 <span>Blog Dashboard</span>
                             </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => router.push('/feedback')}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                <span>Feedback</span>
+                            </DropdownMenuItem>
+                          </>
                         )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onSelect={handleLogout}>
