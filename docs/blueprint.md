@@ -1,4 +1,3 @@
-
 # DevCollab Hub - Project Blueprint
 
 ## 1. Project Overview
@@ -11,8 +10,10 @@ DevCollab Hub is a web application designed to connect developers with each othe
 - **Backend:** Firebase (Authentication, Firestore Database, Storage)
 - **Styling:** Tailwind CSS with Radix UI components
 - **AI/ML:** Genkit (with Google Gemini)
+- **Rate Limiting & Caching:** Upstash Redis
+- **Analytics:** Google Analytics
 - **Languages:** TypeScript
-- **Deployment:** Vercel / Next.js hosting with Firebase backend
+- **Deployment:** Firebase App Hosting
 
 ## 3. Key Features
 
@@ -40,13 +41,18 @@ DevCollab Hub is a web application designed to connect developers with each othe
   - Owner/collaborator information.
 
 ### Collaboration & Communication
-- **Matching:** A system for creating matches or connections between users (details in `src/lib/firebase/matches.ts`).
+- **Matching:** A system for creating matches or connections between users.
 - **Messaging:** Real-time chat between matched users.
 - **Notifications:** In-app notifications for important events (e.g., new messages, match requests).
 
 ### Content
 - **Blog:** A public-facing blog for articles and updates.
 - **Content Management:** A simple admin interface for creating and editing blog posts.
+
+### Infrastructure
+- **Rate Limiting:** Implemented with Upstash Redis to prevent abuse and ensure service stability.
+- **Caching:** Utilizes Upstash Redis for caching frequently accessed data to improve performance.
+- **Analytics:** Google Analytics is used to track user interactions and application performance.
 
 ## 4. Data Models (Firestore)
 
