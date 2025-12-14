@@ -9,12 +9,14 @@ let app;
 
 // This prevents re-initializing the app on hot reloads
 if (!getApps().length) {
-  // In production, App Hosting provides the config automatically.
-  // In development, we use the local .env file.
-  if (process.env.NODE_ENV === 'production') {
+  // When deployed to App Hosting, the K_SERVICE environment variable is automatically set.
+  // We can use this to detect the production environment and use auto-initialization.
+  // For local development AND local builds, we'll use the .env file.
+  if (process.env.K_SERVICE) {
     // Use empty config to trigger auto-init from App Hosting environment variables
     app = initializeApp({});
   } else {
+    // This is used for local development (`npm run dev`) and local builds (`npm run build`)
     const firebaseConfig = {
       apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
       authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
