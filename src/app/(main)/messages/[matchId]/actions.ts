@@ -1,12 +1,13 @@
 'use server';
 
-import { firebaseAdmin } from '@/lib/firebase-admin';
+import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
 import { checkRateLimit } from '@/lib/rate-limiter';
 import { getChatInsights } from '@/ai/flows/get-chat-insights';
 import type { GetChatInsightsInput } from '@/types/ai';
 
 export async function generateChatInsightsAction(payload: GetChatInsightsInput & { authToken: string }) {
   try {
+    const firebaseAdmin = initializeFirebaseAdmin();
     const decodedToken = await firebaseAdmin.auth().verifyIdToken(payload.authToken);
     const userId = decodedToken.uid;
 
