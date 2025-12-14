@@ -92,7 +92,7 @@ export default function BlogAdminPage() {
 
   const titleInputRef = useRef<HTMLInputElement | null>(null);
 
-  const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+  const isAdmin = user?.email === process.env.next_public_admin_email;
 
   useEffect(() => {
     if (!authLoading && !isAdmin) {
