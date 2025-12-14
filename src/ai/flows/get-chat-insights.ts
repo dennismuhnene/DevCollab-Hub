@@ -1,7 +1,7 @@
 'use server';
 
 import { createHash } from 'crypto';
-import { redis } from '@/lib/redis';
+import { getRedisClient } from '@/lib/redis';
 import { ai } from '@/ai/genkit';
 import { GetChatInsightsInputSchema, GetChatInsightsOutputSchema } from '@/types/ai';
 import type { GetChatInsightsInput, GetChatInsightsOutput } from '@/types/ai';
@@ -9,6 +9,7 @@ import type { GetChatInsightsInput, GetChatInsightsOutput } from '@/types/ai';
 export async function getChatInsights(
   input: GetChatInsightsInput
 ): Promise<GetChatInsightsOutput> {
+    const redis = getRedisClient();
     const cacheKey = `chat-insights:${createHash('sha256').update(JSON.stringify(input)).digest('hex')}`;
     try {
         const cachedResult = await redis.get<GetChatInsightsOutput>(cacheKey);
@@ -48,11 +49,11 @@ Based on this data, provide:
 - Description: {{{project.description}}}
 - Required Skills: {{#each project.requiredSkills}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
 
-**Current User's Profile:**
+**Current User\'s Profile:**
 - Skills: {{#if currentUser.skills}}{{#each currentUser.skills}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}No skills listed.{{/if}}
 - Experience: {{{currentUser.yearsOfExperience}}} years
 
-**Other User's Profile:**
+**Other User\'s Profile:**
 - Skills: {{#if otherUser.skills}}{{#each otherUser.skills}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}No skills listed.{{/if}}
 - Experience: {{{otherUser.yearsOfExperience}}} years
 

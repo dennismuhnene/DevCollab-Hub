@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Ratelimit } from '@upstash/ratelimit';
-import { redis } from '@/lib/redis';
+import { getRedisClient } from '@/lib/redis';
 
+// Initialize the ratelimit instance by calling the redis client getter.
 const ratelimit = new Ratelimit({
-  redis,
+  redis: getRedisClient(),
   limiter: Ratelimit.slidingWindow(5, '10 s'),
 });
 
