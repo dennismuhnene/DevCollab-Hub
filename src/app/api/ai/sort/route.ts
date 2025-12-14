@@ -110,7 +110,7 @@ Example: ["proj_abc", "proj_xyz", "proj_123"]
         if (error.message?.includes('Rate limit')) {
             return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
         }
-        console.error('AI Sort API Error:', error.message);
+        console.error('AI Sort API Error:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
