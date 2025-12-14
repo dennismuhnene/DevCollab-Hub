@@ -11,11 +11,18 @@
     "runtime": "nodejs20"
   },
   "hosting": {
-    "public": "public",
+    "source": ".",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ]
+  },
+  "apphosting": {
+    "backends": {
+      "main": {
+        "secrets": ["GEMINI_API_KEY"]
+      }
+    }
   }
 }
