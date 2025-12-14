@@ -13,6 +13,10 @@ env:
     secret: gemini_api_key
     availability:
       - RUNTIME
+  - variable: gemini_api_key
+    secret: gemini_api_key
+    availability:
+      - RUNTIME
   - variable: resend_api_key
     secret: resend_api_key
     availability:
