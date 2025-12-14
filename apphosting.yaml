@@ -9,7 +9,7 @@ runConfig:
 # Environment variables and secrets
 # These names MUST match the names of the secrets you create in Google Cloud Secret Manager.
 env:
-  - variable: gemini_api_key
+  - variable: GEMINI_API_KEY
     secret: gemini_api_key
     availability:
       - RUNTIME
