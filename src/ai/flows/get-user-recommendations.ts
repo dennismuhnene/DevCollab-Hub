@@ -1,7 +1,7 @@
 'use server';
 
 import { createHash } from 'crypto';
-import { redis } from '@/lib/redis';
+import { getRedisClient } from '@/lib/redis';
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
@@ -17,6 +17,7 @@ export type GetUserRecommendationsOutput = z.infer<typeof GetUserRecommendations
 export async function getUserRecommendations(
   input: GetUserRecommendationsInput
 ): Promise<GetUserRecommendationsOutput> {
+    const redis = getRedisClient();
     const cacheKey = `user-recs:${createHash('sha256').update(JSON.stringify(input)).digest('hex')}`;
     try {
         const cachedResult = await redis.get<GetUserRecommendationsOutput>(cacheKey);

@@ -1,7 +1,7 @@
 'use server';
 
 import { createHash } from 'crypto';
-import { redis } from '@/lib/redis';
+import { getRedisClient } from '@/lib/redis';
 import { ai } from '@/ai/genkit';
 import { GetProfileInsightsInputSchema, GetProfileInsightsOutputSchema } from '@/types/ai';
 import type { GetProfileInsightsInput, GetProfileInsightsOutput } from '@/types/ai';
@@ -9,6 +9,7 @@ import type { GetProfileInsightsInput, GetProfileInsightsOutput } from '@/types/
 export async function getProfileInsights(
   input: GetProfileInsightsInput
 ): Promise<GetProfileInsightsOutput> {
+    const redis = getRedisClient();
     const cacheKey = `profile-insights:${createHash('sha256').update(JSON.stringify(input)).digest('hex')}`;
     try {
         const cachedResult = await redis.get<GetProfileInsightsOutput>(cacheKey);
