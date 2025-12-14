@@ -43,7 +43,8 @@ export default function Header() {
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const isAdmin = user?.email === process.env.next_public_admin_email;
+  const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+
 
   const handleLogout = async () => {
     try {

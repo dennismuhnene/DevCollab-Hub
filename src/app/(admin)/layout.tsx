@@ -10,12 +10,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user?.email !== process.env.next_public_admin_email) {
+    if (!loading && user?.email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
       router.push('/');
     }
   }, [user, loading, router]);
 
-  if (loading || user?.email !== process.env.next_public_admin_email) {
+  if (loading || user?.email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
     return <p>Loading...</p>;
   }
 

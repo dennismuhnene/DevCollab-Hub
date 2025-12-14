@@ -29,8 +29,8 @@ env:
     secret: upstash_redis_rest_token
     availability:
       - RUNTIME
-  - variable: next_public_admin_email
-    secret: next_public_admin_email
+  - variable: NEXT_PUBLIC_ADMIN_EMAIL
+    secret: NEXT_PUBLIC_ADMIN_EMAIL
     availability:
       - BUILD
       - RUNTIME
