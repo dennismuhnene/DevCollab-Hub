@@ -21,7 +21,7 @@
   "apphosting": {
     "backends": {
       "main": {
-        "secrets": ["GEMINI_API_KEY"]
+        "secrets": ["GEMINI_API_KEY", "FIREBASE_SERVICE_ACCOUNT_KEY"]
       }
     }
   }
