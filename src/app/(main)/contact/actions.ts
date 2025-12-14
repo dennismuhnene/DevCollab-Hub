@@ -30,12 +30,12 @@ export async function sendEmail(prevState: FormState, formData: FormData): Promi
     };
   }
   
-  if (!process.env.RESEND_API_KEY) {
-    console.error('RESEND_API_KEY is not set.');
+  if (!process.env.resend_api_key) {
+    console.error('resend_api_key is not set.');
     return { message: 'Server configuration error. Could not send email.', errors: {} };
   }
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = new Resend(process.env.resend_api_key);
   const { name, email, subject, message } = validatedFields.data;
 
   try {
