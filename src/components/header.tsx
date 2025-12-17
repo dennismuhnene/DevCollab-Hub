@@ -66,6 +66,7 @@ export default function Header() {
   const navLinks = [
     { href: "/developers", label: "Discover", icon: Users },
     { href: "/projects", label: "My Projects", icon: LayoutDashboard },
+    { href: "/roles", label: "My Roles", icon: FileText },
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/messages", label: "Messages", icon: MessageSquare },
     { href: "/blogs", label: "Blog", icon: PenSquare },

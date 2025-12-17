@@ -1,101 +1,107 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
-import type { UserProfile, Project } from '@/types';
+import type { UserProfile, Project, Role } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import DeveloperCard from '@/components/developer-card';
 import ProjectCard from '@/components/project-card';
+import RoleCard from '@/components/role-card';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { DiscoverFilters } from '@/components/discover-filters';
 import { logAnalyticsEvent } from '@/firebase/analytics';
 import { professionalSkills, technologies } from '@/lib/constants';
 
-// --- Constants ---
 const ITEMS_PER_PAGE = 6;
 
-// --- Type guards and definitions ---
-type ViewMode = 'developers' | 'projects';
-type Item = UserProfile | Project;
-const isProject = (item: Item): item is Project => 'title' in item;
+type ViewMode = 'developers' | 'projects' | 'posts';
+type Item = UserProfile | Project | Role;
 
-// --- New Weighted Algorithmic Sorting Logic ---
+const isProject = (item: Item): item is Project => 'title' in item && !('roleDescription' in item);
+const isRole = (item: Item): item is Role => 'title' in item && 'roleDescription' in item;
+
 const calculateMatchScore = (item: Item, currentUserProfile: UserProfile): number => {
   let score = 0;
   if (!currentUserProfile) return 0;
 
-  if (isProject(item)) {
-    // Scoring projects based on the user's profile
-    const project = item;
-    const userTech = currentUserProfile.techStack || [];
-    const projectTech = project.requiredTechStack || [];
-    score += userTech.filter(tech => projectTech.includes(tech)).length * 4; // +4 per matching tech
+  const userTech = currentUserProfile.techStack || [];
+  const userSkills = currentUserProfile.skills || [];
 
-    const userSkills = currentUserProfile.skills || [];
-    const projectSkills = project.requiredSkills || [];
-    score += userSkills.filter(skill => projectSkills.includes(skill)).length * 4; // +4 per matching skill
+  if (isProject(item) || isRole(item)) {
+    const requiredTech = item.requiredTechStack || [];
+    score += userTech.filter(tech => requiredTech.includes(tech)).length * 4;
+
+    const requiredSkills = item.requiredSkills || [];
+    score += userSkills.filter(skill => requiredSkills.includes(skill)).length * 4;
 
     const userExp = currentUserProfile.yearsOfExperience ?? 0;
-    const projectExp = project.requiredYearsOfExperience ?? 0;
-    if (userExp >= projectExp) {
-      score += 5; // +5 bonus if user meets experience requirement
+    const requiredExp = item.requiredYearsOfExperience ?? 0;
+    if (userExp >= requiredExp) {
+      score += 5;
     }
-    if (project.collaborationOpen) {
-        score += 5; // +5 bonus for open collaboration
+
+    if (isProject(item) && item.collaborationOpen) {
+      score += 5;
     }
-    
+
     const seekingPaid = currentUserProfile.collaborationGoals?.includes('Seeking paid contract work');
-    const projectOffersPaid = ['Paid Contract', 'Equity Share', 'Revenue Share'].includes(project.incentives || '');
-    if (seekingPaid && projectOffersPaid) {
-        score += 3;
+    const offersPaid = ['Paid Contract', 'Equity Share', 'Revenue Share'].includes(item.incentives || '');
+    if (seekingPaid && offersPaid) {
+      score += 3;
     }
 
-    const seekingFounder = currentUserProfile.collaborationGoals?.includes('Co-founders for a startup');
-    const projectIsEarly = ['Idea', 'Wireframing'].includes(project.projectStage || '');
-    if(seekingFounder && projectIsEarly){
-        score += 2;
-    }
+    if (isRole(item)) {
+      if (currentUserProfile.commitmentLevel && item.commitmentLevel === currentUserProfile.commitmentLevel) {
+        score += 4;
+      }
 
+      if (currentUserProfile.collaborationPreferences?.includes(item.collaborationType)) {
+        score += 4;
+      }
+
+      const userFunctions = currentUserProfile.partnerFunctions || [];
+      const roleFunctions = item.partnerFunctions || [];
+      score += userFunctions.filter(f => roleFunctions.includes(f)).length * 2;
+
+      const userLocations = currentUserProfile.locations || [];
+      const roleLocations = item.locations || [];
+      score += userLocations.filter(l => roleLocations.includes(l)).length * 2;
+    }
   } else {
-    // Scoring other developers based on the user's profile
-    const developer = item;
-    const userTech = currentUserProfile.techStack || [];
+    const developer = item as UserProfile;
     const devTech = developer.techStack || [];
-    score += userTech.filter(tech => devTech.includes(tech)).length * 3; // +3 per common tech
+    score += userTech.filter(tech => devTech.includes(tech)).length * 3;
 
-    const userSkills = currentUserProfile.skills || [];
     const devSkills = developer.skills || [];
-    score += userSkills.filter(skill => devSkills.includes(skill)).length * 3; // +3 per common skill
+    score += userSkills.filter(skill => devSkills.includes(skill)).length * 3;
 
     const userExp = currentUserProfile.yearsOfExperience ?? 0;
     const devExp = developer.yearsOfExperience ?? 0;
     if (Math.abs(userExp - devExp) <= 2) {
-        score += 5; // +5 Experience peer bonus
+      score += 5;
     }
 
-    if(developer.openForCollaboration){
-        score += 5; // +5 collaboration bonus
+    if (developer.openForCollaboration) {
+      score += 5;
     }
-    
-    if(currentUserProfile.commitmentLevel && developer.commitmentLevel === currentUserProfile.commitmentLevel){
-        score += 4; // +4 for matching commitment
+
+    if (currentUserProfile.commitmentLevel && developer.commitmentLevel === currentUserProfile.commitmentLevel) {
+      score += 4;
     }
 
     const userGoals = currentUserProfile.collaborationGoals || [];
     const devGoals = developer.collaborationGoals || [];
-    score += userGoals.filter(goal => devGoals.includes(goal)).length * 2; // +2 per shared goal
+    score += userGoals.filter(goal => devGoals.includes(goal)).length * 2;
   }
   return score;
 };
-
 
 export default function DiscoverPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
@@ -104,10 +110,11 @@ export default function DiscoverPage() {
 
   const [allDevelopers, setAllDevelopers] = useState<UserProfile[]>([]);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [allPosts, setAllPosts] = useState<Role[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('projects');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const [experienceRange, setExperienceRange] = useState<[number, number]>([0, 20]);
   const [selectedTechs, setSelectedTechs] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
@@ -120,27 +127,31 @@ export default function DiscoverPage() {
   useEffect(() => {
     if (!user) return;
 
-    logAnalyticsEvent('screen_view', { screen_name: 'Developers' });
+    logAnalyticsEvent('screen_view', { screen_name: 'Discover' });
 
     const fetchData = async () => {
       setLoading(true);
       try {
-        const usersQuery = query(collection(db, 'users'), where('uid', '!=', user.uid));
-        const usersSnapshot = await getDocs(usersQuery);
-        const developersData = usersSnapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as UserProfile));
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        const developersData = usersSnapshot.docs
+          .map(doc => ({ ...doc.data(), uid: doc.id } as UserProfile))
+          .filter(developer => developer.uid !== user.uid);
         setAllDevelopers(developersData);
 
-        const projectsCol = collection(db, 'projects');
-        const allProjectsSnapshot = await getDocs(projectsCol);
-        const allProjectsData = allProjectsSnapshot.docs
-            .filter(doc => doc.exists() && doc.data() && doc.data().ownerId !== user.uid)
-            .map(doc => ({ ...doc.data(), id: doc.id } as Project));
-        
-        setAllProjects(allProjectsData);
+        const projectsSnapshot = await getDocs(collection(db, 'projects'));
+        const projectsData = projectsSnapshot.docs
+          .filter(doc => doc.exists() && doc.data() && doc.data().ownerId !== user.uid)
+          .map(doc => ({ ...doc.data(), id: doc.id } as Project));
+        setAllProjects(projectsData);
 
+        const rolesSnapshot = await getDocs(collection(db, 'roles'));
+        const rolesData = rolesSnapshot.docs
+          .map(doc => ({ ...doc.data(), id: doc.id } as Role))
+          .filter(role => role.ownerId !== user.uid);
+        setAllPosts(rolesData);
       } catch (error) {
-        console.error("Error fetching discovery data:", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not load discovery data.'});
+        console.error('Error fetching discovery data:', error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not load discovery data.' });
       }
       setLoading(false);
     };
@@ -148,64 +159,62 @@ export default function DiscoverPage() {
     fetchData();
   }, [user, toast]);
 
-  // --- Combined Filtering and Sorting Logic ---
   const sortedAndFilteredResults = useMemo(() => {
     if (loading || !userProfile) return [];
 
-    let results: Item[] = viewMode === 'developers' ? [...allDevelopers] : [...allProjects];
+    let results: Item[];
+    if (viewMode === 'developers') results = [...allDevelopers];
+    else if (viewMode === 'projects') results = [...allProjects];
+    else results = [...allPosts];
 
-    // 1. Filter results based on user selection
     let filtered = results.filter(item => {
-        if (selectedTechs.length > 0) {
-            const itemTechs = isProject(item) ? item.requiredTechStack : item.techStack;
-            if (!selectedTechs.every(t => itemTechs?.includes(t)))
-                return false;
-        }
-        if (selectedSkills.length > 0) {
-            const itemSkills = isProject(item) ? item.requiredSkills : item.skills;
-            if (!selectedSkills.every(s => itemSkills?.includes(s)))
-                return false;
-        }
-        const exp = (isProject(item) ? item.requiredYearsOfExperience : item.yearsOfExperience) ?? 0;
-        if (exp < experienceRange[0] || exp > experienceRange[1]) {
-            return false;
-        }
-        return true;
+      const itemIsProject = isProject(item);
+      const itemIsRole = isRole(item);
+      const itemIsDeveloper = !itemIsProject && !itemIsRole;
+
+      if (selectedTechs.length > 0) {
+        const itemTechs = itemIsDeveloper ? item.techStack : item.requiredTechStack;
+        if (!selectedTechs.every(t => itemTechs?.includes(t))) return false;
+      }
+      if (selectedSkills.length > 0) {
+        const itemSkills = itemIsDeveloper ? item.skills : item.requiredSkills;
+        if (!selectedSkills.every(s => itemSkills?.includes(s))) return false;
+      }
+      const exp = (itemIsDeveloper ? item.yearsOfExperience : item.requiredYearsOfExperience) ?? 0;
+      if (exp < experienceRange[0] || exp > experienceRange[1]) {
+        return false;
+      }
+      return true;
     });
 
     if (searchTerm) {
-        const lowerTerm = searchTerm.toLowerCase();
-        filtered = filtered.filter(item => {
-            const name = isProject(item) ? item.title : item.name;
-            const description = isProject(item) ? item.description : item.bio;
-            return name?.toLowerCase().includes(lowerTerm) || description?.toLowerCase().includes(lowerTerm);
-        });
+      const lowerTerm = searchTerm.toLowerCase();
+      filtered = filtered.filter(item => {
+        const name = isRole(item) || isProject(item) ? item.title : (item as UserProfile).name;
+        const description = isRole(item)
+          ? item.roleDescription
+          : isProject(item)
+          ? item.description
+          : (item as UserProfile).bio;
+        return name?.toLowerCase().includes(lowerTerm) || description?.toLowerCase().includes(lowerTerm);
+      });
     }
 
-    // 2. Sort the filtered results based on our new match score algorithm
     const sorted = filtered.sort((a, b) => {
-        const scoreA = calculateMatchScore(a, userProfile);
-        const scoreB = calculateMatchScore(b, userProfile);
-        return scoreB - scoreA; // Sort in descending order of score
+      const scoreA = calculateMatchScore(a, userProfile);
+      const scoreB = calculateMatchScore(b, userProfile);
+      return scoreB - scoreA;
     });
 
     return sorted;
-  }, [viewMode, allDevelopers, allProjects, loading, userProfile, searchTerm, selectedTechs, selectedSkills, experienceRange]);
+  }, [viewMode, allDevelopers, allProjects, allPosts, loading, userProfile, searchTerm, selectedTechs, selectedSkills, experienceRange]);
 
   useEffect(() => {
-      setCurrentPage(1);
+    setCurrentPage(1);
   }, [searchTerm, selectedTechs, selectedSkills, experienceRange, viewMode]);
 
-  // --- Pagination Logic ---
   const totalPages = Math.ceil(sortedAndFilteredResults.length / ITEMS_PER_PAGE);
-  const paginatedResults = sortedAndFilteredResults.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
-
-  const handleViewModeChange = (checked: boolean) => {
-    setViewMode(checked ? 'projects' : 'developers');
-  };
+  const paginatedResults = sortedAndFilteredResults.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const resetFilters = () => {
     setSelectedTechs([]);
@@ -213,16 +222,25 @@ export default function DiscoverPage() {
     setExperienceRange([0, 20]);
     setSearchTerm('');
   };
-  
-  // --- Render Functions ---
-  const ListSkeleton = () => <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">{[...Array(ITEMS_PER_PAGE)].map((_, i) => <Card key={i}><CardContent className="p-4"><Skeleton className="h-48 w-full" /></CardContent></Card>)}</div>;
+
+  const ListSkeleton = () => (
+    <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+      {[...Array(ITEMS_PER_PAGE)].map((_, i) => (
+        <Card key={i}>
+          <CardContent className="p-4">
+            <Skeleton className="h-48 w-full" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
 
   const renderResults = () => {
     if (sortedAndFilteredResults.length === 0) {
       return (
         <div className="text-center py-20">
-            <h2 className="text-xl font-semibold">No Results Found</h2>
-            <p className="mt-2 text-muted-foreground">Try adjusting your filters or search criteria.</p>
+          <h2 className="text-xl font-semibold">No Results Found</h2>
+          <p className="mt-2 text-muted-foreground">Try adjusting your filters or search criteria.</p>
         </div>
       );
     }
@@ -230,19 +248,23 @@ export default function DiscoverPage() {
     return (
       <>
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {paginatedResults.map((item) => {
-                if (isProject(item)) {
-                    return <ProjectCard key={`proj-${item.id}`} project={item} />;
-                } else {
-                    return <DeveloperCard key={`dev-${(item as UserProfile).uid}`} developer={item as UserProfile} />;
-                }
-            })}
+          {paginatedResults.map(item => {
+            if (isProject(item)) return <ProjectCard key={`proj-${item.id}`} project={item} />;
+            if (isRole(item)) return <RoleCard key={`role-${item.id}`} role={item} isDiscoverMode={true} />;
+            return <DeveloperCard key={`dev-${(item as UserProfile).uid}`} developer={item as UserProfile} />;
+          })}
         </div>
         {totalPages > 1 && (
           <div className="mt-8 flex justify-center items-center gap-4">
-            <Button variant="outline" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Previous</Button>
-            <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
-            <Button variant="outline" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next</Button>
+            <Button variant="outline" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button variant="outline" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+              Next
+            </Button>
           </div>
         )}
       </>
@@ -251,31 +273,54 @@ export default function DiscoverPage() {
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8">
-        <div className="mb-12 text-center">
-            <h1 className="text-4xl font-bold tracking-tight font-headline">Discover Your Tribe</h1>
-            <p className="mt-3 text-lg text-muted-foreground">Toggle to find projects or connect with developers.</p>
-        </div>
+      <div className="mb-12 text-center">
+        <h1 className="text-4xl font-bold tracking-tight font-headline">Discover Your Tribe</h1>
+        <p className="mt-3 text-lg text-muted-foreground">Find projects, connect with developers, or explore open posts.</p>
+      </div>
 
-        <div className="flex justify-center items-center gap-4 mb-8">
-            <span className={`font-semibold ${viewMode === 'developers' ? 'text-primary' : 'text-muted-foreground'}`}>Developers</span>
-            <Switch checked={viewMode === 'projects'} onCheckedChange={handleViewModeChange} aria-label="Toggle between discovering developers and projects"/>
-            <span className={`font-semibold ${viewMode === 'projects' ? 'text-primary' : 'text-muted-foreground'}`}>Projects</span>
+      <div className="flex justify-center items-center gap-2 mb-8 rounded-full bg-muted p-1">
+        <Button variant={viewMode === 'developers' ? 'default' : 'ghost'} onClick={() => setViewMode('developers')} className="rounded-full">
+          Developers
+        </Button>
+        <Button variant={viewMode === 'projects' ? 'default' : 'ghost'} onClick={() => setViewMode('projects')} className="rounded-full">
+          Projects
+        </Button>
+        <Button variant={viewMode === 'posts' ? 'default' : 'ghost'} onClick={() => setViewMode('posts')} className="rounded-full">
+          Posts
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="lg:col-span-1">
+          <DiscoverFilters
+            allTechs={technologies}
+            allSkills={professionalSkills}
+            experienceRange={experienceRange}
+            setExperienceRange={setExperienceRange}
+            selectedTechs={selectedTechs}
+            setSelectedTechs={setSelectedTechs}
+            selectedSkills={selectedSkills}
+            setSelectedSkills={setSelectedSkills}
+            resetFilters={resetFilters}
+          />
         </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            <div className="lg:col-span-1">
-                <DiscoverFilters allTechs={technologies} allSkills={professionalSkills} experienceRange={experienceRange} setExperienceRange={setExperienceRange} selectedTechs={selectedTechs} setSelectedTechs={setSelectedTechs} selectedSkills={selectedSkills} setSelectedSkills={setSelectedSkills} resetFilters={resetFilters} />
+        <div className="lg:col-span-3">
+          <Card className="mb-8 p-4 sticky top-4 z-10 bg-background/80 backdrop-blur-sm">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder={`Search for ${viewMode}...`}
+                className="pl-10 w-full"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                disabled={loading}
+              />
             </div>
-            <div className="lg:col-span-3">
-                <Card className="mb-8 p-4 sticky top-4 z-10 bg-background/80 backdrop-blur-sm">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input type="search" placeholder={`Search for ${viewMode}...`} className="pl-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} disabled={loading} />
-                    </div>
-                </Card>
-                {loading || authLoading ? <ListSkeleton /> : renderResults()}
-            </div>
+          </Card>
+          {loading || authLoading ? <ListSkeleton /> : renderResults()}
         </div>
+      </div>
     </div>
   );
 }

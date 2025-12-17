@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
-import { doc, serverTimestamp, collection, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, collection, updateDoc, addDoc, deleteDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import type { Role } from '@/types';
+import type { Role, Project } from '@/types';
 import { Loader2, X, Trash2, Check, ChevronsUpDown } from 'lucide-react';
 import {
   AlertDialog,
@@ -32,8 +32,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 import { logAnalyticsEvent } from '@/firebase/analytics';
-import { professionalSkills, incentiveOptions, commitmentLevelOptions } from '@/lib/constants';
-
+import { MultiSelect } from '@/components/ui/multi-select';
+import { 
+    professionalSkills, 
+    incentiveOptions, 
+    commitmentLevelOptions, 
+    roleCollaborationTypes, 
+    partnerFunctions, 
+    countries 
+} from '@/lib/constants';
 
 const roleSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters long' }),
@@ -43,6 +50,10 @@ const roleSchema = z.object({
   requiredYearsOfExperience: z.coerce.number().min(0, { message: "Years of experience can't be negative."}).optional(),
   incentives: z.string().min(1, { message: 'Please specify the incentives.' }),
   commitmentLevel: z.string().min(1, { message: 'Please select a commitment level.' }),
+  collaborationType: z.string().min(1, { message: 'Please select a collaboration type.' }),
+  partnerFunctions: z.array(z.string()).optional(),
+  locations: z.array(z.string()).min(1, { message: 'At least one location is required.' }),
+  projectId: z.string().optional(),
 });
 
 type RoleFormData = z.infer<typeof roleSchema>;
@@ -57,7 +68,19 @@ export default function RoleForm({ role }: RoleFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [techStackInput, setTechStackInput] = useState('');
+  const [userProjects, setUserProjects] = useState<Project[]>([]);
   const isEditMode = !!role;
+
+  useEffect(() => {
+    const fetchUserProjects = async () => {
+      if (user) {
+        const q = query(collection(db, 'projects'), where('ownerId', '==', user.uid));
+        const querySnapshot = await getDocs(q);
+        setUserProjects(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project)));
+      }
+    };
+    fetchUserProjects();
+  }, [user]);
 
   const {
     register,
@@ -77,11 +100,19 @@ export default function RoleForm({ role }: RoleFormProps) {
       requiredYearsOfExperience: role?.requiredYearsOfExperience || 0,
       incentives: role?.incentives || '',
       commitmentLevel: role?.commitmentLevel || '',
+      collaborationType: role?.collaborationType || '',
+      partnerFunctions: role?.partnerFunctions || [],
+      locations: role?.locations || [],
+      projectId: role?.projectId || '',
     },
   });
 
   const techStack = watch('requiredTechStack') || [];
   const skills = watch('requiredSkills') || [];
+  const collaborationType = watch('collaborationType');
+  const selectedLocations = watch('locations') || [];
+  const selectedPartnerFunctions = watch('partnerFunctions') || [];
+  const projectId = watch('projectId');
 
   const handleTechStackAdd = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && techStackInput.trim()) {
@@ -117,14 +148,23 @@ export default function RoleForm({ role }: RoleFormProps) {
     setLoading(true);
 
     try {
+      const dataToSave: any = {
+        ...data,
+        partnerFunctions: data.collaborationType === 'Co-founder / Partner' ? data.partnerFunctions : [],
+      };
+
+      if (!data.projectId) {
+        dataToSave.projectId = '';
+      }
+
       if (isEditMode) {
         const roleRef = doc(db, 'roles', role.id);
-        await updateDoc(roleRef, { ...data, updatedAt: serverTimestamp() });
+        await updateDoc(roleRef, { ...dataToSave, updatedAt: serverTimestamp() });
         toast({ title: 'Role updated successfully!' });
         logAnalyticsEvent('update_role', { role_id: role.id });
         router.push('/roles');
       } else {
-        const newRole = { ...data, ownerId: user.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+        const newRole = { ...dataToSave, ownerId: user.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
         const docRef = await addDoc(collection(db, 'roles'), newRole);
         toast({ title: 'Role created successfully!' });
         logAnalyticsEvent('create_role', { role_id: docRef.id });
@@ -158,6 +198,7 @@ export default function RoleForm({ role }: RoleFormProps) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
       <div className="space-y-6">
+        {/* Role Title, Description, Tech Stack, Skills */}
         <div className="space-y-2">
           <Label htmlFor="title">Role Title</Label>
           <Input id="title" {...register('title')} placeholder="e.g., Senior Frontend Developer for FinTech Startup" />
@@ -169,6 +210,20 @@ export default function RoleForm({ role }: RoleFormProps) {
           <Label htmlFor="roleDescription">Role Description</Label>
           <Textarea id="roleDescription" {...register('roleDescription')} rows={6} placeholder="Describe the ideal candidate, responsibilities, and what they will work on..." />
           {errors.roleDescription && <p className="text-sm text-destructive">{errors.roleDescription.message}</p>}
+        </div>
+
+        <div className="space-y-2">
+            <Label>Associated Project (Optional)</Label>
+            <div className="flex items-center gap-2">
+                <Select onValueChange={(value) => setValue('projectId', value, { shouldValidate: true })} value={projectId}>
+                    <SelectTrigger><SelectValue placeholder="Select a project" /></SelectTrigger>
+                    <SelectContent>
+                        {userProjects.map(p => <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                {projectId && <Button variant="outline" size="icon" onClick={() => setValue('projectId', '', { shouldValidate: true })}><X className="h-4 w-4" /></Button>}
+            </div>
+            <p className="text-sm text-muted-foreground pt-1">Link this role to one of your existing projects.</p>
         </div>
 
         <div className="space-y-2">
@@ -187,7 +242,7 @@ export default function RoleForm({ role }: RoleFormProps) {
               value={techStackInput}
               onChange={(e) => setTechStackInput(e.target.value)}
               onKeyDown={handleTechStackAdd}
-              onBlur={handleTechStackBlur} // For mobile tab/next
+              onBlur={handleTechStackBlur}
               placeholder="Type a technology and press Enter"
               className="flex-1 border-none shadow-none focus-visible:ring-0"
             />
@@ -196,38 +251,24 @@ export default function RoleForm({ role }: RoleFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label>Required Professional Skills (Max 5)</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" role="combobox" className="w-full justify-between">
-                <span className="truncate">{skills.length > 0 ? skills.join(', ') : 'Select up to 5 required skills...'}</span>
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                <Command>
-                    <CommandInput placeholder="Search skills..." />
-                    <CommandEmpty>No skill found.</CommandEmpty>
-                    <CommandList><CommandGroup>{professionalSkills.map((skill) => (
-                        <CommandItem key={skill} value={skill} onSelect={() => { const currentSkills = getValues('requiredSkills') || []; if (currentSkills.includes(skill)) { setValue('requiredSkills', currentSkills.filter((s) => s !== skill), { shouldDirty: true, shouldValidate: true }); } else if(currentSkills.length < 5) { setValue('requiredSkills', [...currentSkills, skill], { shouldDirty: true, shouldValidate: true }); } else { toast({ variant: "destructive", title: "Skill limit reached", description: "You can only select up to 5 skills." }) } }}>
-                        <Check className={cn('mr-2 h-4 w-4', (getValues('requiredSkills') || []).includes(skill) ? 'opacity-100' : 'opacity-0')} />{skill}</CommandItem>))}
-                    </CommandGroup></CommandList>
-                </Command>
-            </PopoverContent>
-          </Popover>
-          <div className="flex flex-wrap gap-1 pt-2">
-                {skills.map((skill) => (
-                  <Badge key={skill} variant="secondary" className="flex items-center gap-1">
-                    {skill}
-                    <button type="button" onClick={() => setValue('requiredSkills', skills.filter((s) => s !== skill), { shouldDirty: true, shouldValidate: true })} className="rounded-full hover:bg-muted-foreground/20">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-          </div>
-          {errors.requiredSkills && <p className="text-sm text-destructive">{errors.requiredSkills.message}</p>}
+            <Label>Required Professional Skills (Max 5)</Label>
+            <MultiSelect
+                options={professionalSkills.map(s => ({ label: s, value: s }))}
+                selected={skills}
+                onChange={(newSkills) => {
+                    const resolvedSkills = typeof newSkills === 'function' ? newSkills(getValues('requiredSkills')) : newSkills;
+                    if (resolvedSkills.length > 5) {
+                        toast({ variant: "destructive", title: "Skill limit reached", description: "You can only select up to 5 skills." })
+                    } else {
+                        setValue('requiredSkills', resolvedSkills, { shouldValidate: true, shouldDirty: true });
+                    }
+                }}
+                placeholder="Select or type skills..."
+            />
+            {errors.requiredSkills && <p className="text-sm text-destructive">{errors.requiredSkills.message}</p>}
         </div>
         
+        {/* Experience, Incentives, Commitment */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
                 <Label htmlFor="requiredYearsOfExperience">Required Years of Experience</Label>
@@ -252,6 +293,83 @@ export default function RoleForm({ role }: RoleFormProps) {
                 <SelectContent>{commitmentLevelOptions.map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}</SelectContent>
             </Select>
             {errors.commitmentLevel && <p className="text-sm text-destructive">{errors.commitmentLevel.message}</p>}
+        </div>
+
+        {/* NEW FIELDS START HERE */}
+        <div className="space-y-2">
+            <Label>Collaboration Type</Label>
+            <Select onValueChange={(value) => setValue('collaborationType', value, { shouldValidate: true })} defaultValue={getValues('collaborationType')}>
+                <SelectTrigger><SelectValue placeholder="What kind of collaboration is this?" /></SelectTrigger>
+                <SelectContent>{roleCollaborationTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent>
+            </Select>
+            {errors.collaborationType && <p className="text-sm text-destructive">{errors.collaborationType.message}</p>}
+        </div>
+
+        {collaborationType === 'Co-founder / Partner' && (
+            <div className="space-y-2">
+              <Label>Looking for a Partner in:</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" className="w-full justify-between">
+                    <span className="truncate">{selectedPartnerFunctions.length > 0 ? selectedPartnerFunctions.join(', ') : 'Select partner functions...'}</span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                        <CommandInput placeholder="Search functions..." />
+                        <CommandEmpty>No function found.</CommandEmpty>
+                        <CommandList><CommandGroup>{partnerFunctions.map((func) => (
+                            <CommandItem key={func} value={func} onSelect={() => { const currentFuncs = getValues('partnerFunctions') || []; if (currentFuncs.includes(func)) { setValue('partnerFunctions', currentFuncs.filter((f) => f !== func), { shouldDirty: true, shouldValidate: true }); } else { setValue('partnerFunctions', [...currentFuncs, func], { shouldDirty: true, shouldValidate: true }); } }}>
+                            <Check className={cn('mr-2 h-4 w-4', selectedPartnerFunctions.includes(func) ? 'opacity-100' : 'opacity-0')} />{func}</CommandItem>))}
+                        </CommandGroup></CommandList>
+                    </Command>
+                </PopoverContent>
+              </Popover>
+              <div className="flex flex-wrap gap-1 pt-2">
+                    {selectedPartnerFunctions.map((func) => (
+                      <Badge key={func} variant="secondary" className="flex items-center gap-1">
+                        {func}
+                        <button type="button" onClick={() => setValue('partnerFunctions', selectedPartnerFunctions.filter((f) => f !== func), { shouldDirty: true, shouldValidate: true })} className="rounded-full hover:bg-muted-foreground/20">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+              </div>
+            </div>
+        )}
+
+        <div className="space-y-2">
+          <Label>Target Locations / Regions</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" role="combobox" className="w-full justify-between">
+                <span className="truncate">{selectedLocations.length > 0 ? selectedLocations.join(', ') : 'Select locations...'}</span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                    <CommandInput placeholder="Search country..." />
+                    <CommandEmpty>No country found.</CommandEmpty>
+                    <CommandList><CommandGroup>{countries.map((country) => (
+                        <CommandItem key={country} value={country} onSelect={() => { const currentLocs = getValues('locations') || []; if (currentLocs.includes(country)) { setValue('locations', currentLocs.filter((l) => l !== country), { shouldDirty: true, shouldValidate: true }); } else { setValue('locations', [...currentLocs, country], { shouldDirty: true, shouldValidate: true }); } }}>
+                        <Check className={cn('mr-2 h-4 w-4', selectedLocations.includes(country) ? 'opacity-100' : 'opacity-0')} />{country}</CommandItem>))}
+                    </CommandGroup></CommandList>
+                </Command>
+            </PopoverContent>
+          </Popover>
+          <div className="flex flex-wrap gap-1 pt-2">
+                {selectedLocations.map((loc) => (
+                  <Badge key={loc} variant="secondary" className="flex items-center gap-1">
+                    {loc}
+                    <button type="button" onClick={() => setValue('locations', selectedLocations.filter((l) => l !== loc), { shouldDirty: true, shouldValidate: true })} className="rounded-full hover:bg-muted-foreground/20">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+          </div>
+          {errors.locations && <p className="text-sm text-destructive">{errors.locations.message}</p>}
         </div>
       </div>
 
