@@ -29,6 +29,7 @@ export async function generateChatInsightsAction(payload: GetChatInsightsInput &
       return { success: false, error: 'Rate limit exceeded' };
     }
     console.error('Error generating chat insights:', error);
-    return { success: false, error: 'Internal Server Error' };
+    // Return the actual error message to the client
+    return { success: false, error: error.message || 'An unexpected error occurred.' };
   }
 }

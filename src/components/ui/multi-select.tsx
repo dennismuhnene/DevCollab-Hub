@@ -32,19 +32,34 @@ export function MultiSelect({ options, selected, onChange, className, ...props }
     onChange(selected.filter((s) => s !== value));
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' && inputValue) {
-      const exactMatch = options.find(o => o.value.toLowerCase() === inputValue.toLowerCase());
+  // Combined logic for adding a new value from input
+  const addValueFromInput = () => {
+    if (inputValue) {
+      const valueToAdd = inputValue.trim();
+      const exactMatch = options.find(o => o.value.toLowerCase() === valueToAdd.toLowerCase());
 
+      // Only add if it's not an exact match of an existing option
       if (!exactMatch) {
-        if (!selected.find(s => s.toLowerCase() === inputValue.toLowerCase())) {
-            onChange(prev => [...prev, inputValue]);
+        // And if it's not already in the selected list
+        if (!selected.find(s => s.toLowerCase() === valueToAdd.toLowerCase())) {
+            onChange(prev => [...prev, valueToAdd]);
         }
-        setInputValue('');
-        e.preventDefault(); 
       }
+      setInputValue('');
     }
   };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' && inputValue) {
+      e.preventDefault();
+      addValueFromInput();
+    }
+  };
+  
+  const handleBlur = () => {
+      setOpen(false);
+      addValueFromInput();
+  }
 
   return (
     <CommandPrimitive onKeyDown={handleKeyDown} className={cn('overflow-visible bg-transparent', className)}>
@@ -77,7 +92,7 @@ export function MultiSelect({ options, selected, onChange, className, ...props }
             ref={inputRef}
             value={inputValue}
             onValueChange={setInputValue}
-            onBlur={() => setOpen(false)}
+            onBlur={handleBlur} // Updated to handle adding value on blur
             onFocus={() => setOpen(true)}
             placeholder={props.placeholder || 'Select items...'}
             className="ml-2 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
