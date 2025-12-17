@@ -54,6 +54,13 @@ service cloud.firestore {
       }
     }
 
+    // ROLES
+    match /roles/{roleId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.ownerId == uid();
+      allow update, delete: if isSignedIn() && resource.data.ownerId == uid();
+    }
+
     // BLOGS
     match /blogs/{blogId} {
       // Allow public read access to all posts. The UI will filter for published posts.

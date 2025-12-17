@@ -23,6 +23,9 @@ export interface UserProfile {
   portfolioUrl?: string;
   socials?: ExternalLink;
   extraLinks?: ExternalLink[];
+  collaborationPreferences?: string[];
+  partnerFunctions?: string[];
+  locations?: string[];
 }
 
 export interface Project {
@@ -57,6 +60,10 @@ export interface Role {
   commitmentLevel: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  collaborationType: string;
+  partnerFunctions?: string[];
+  locations: string[];
+  projectId?: string;
 }
 
 export interface Match {
