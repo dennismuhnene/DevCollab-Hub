@@ -37,15 +37,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 import { logAnalyticsEvent } from '@/firebase/analytics';
-
-
-const professionalSkills = [
-  'Problem Solving', 'Debugging', 'System Design', 'Communication', 'Team Collaboration', 'Agile Development', 'API Design', 'Version Control (Git)', 'Project Management', 'Code Review', 'Testing & QA', 'Algorithmic Thinking', 'Security Best Practices', 'Time Management', 'Documentation Writing',
-];
-
-const projectStages = ['Idea', 'Wireframing', 'MVP in Development', 'Live & Scaling', 'On Hold', 'Completed'];
-const incentiveOptions = ['Equity Share', 'Paid Contract', 'Revenue Share', 'Hobby/Volunteer', 'Learner/School Project'];
-const linkTypes = ['GitHub', 'GitLab', 'Bitbucket', 'Live Demo', 'Figma', 'Other'];
+import { professionalSkills, projectStages, incentiveOptions, linkTypes } from '@/lib/constants';
 
 const projectSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters long' }),

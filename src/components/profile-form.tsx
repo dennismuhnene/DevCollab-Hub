@@ -49,20 +49,7 @@ import { cn } from '@/lib/utils';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { logAnalyticsEvent } from '@/firebase/analytics';
-
-const professionalSkills = [
-  'Problem Solving', 'Debugging', 'System Design', 'Communication', 'Team Collaboration',
-  'Agile Development', 'API Design', 'Version Control (Git)', 'Project Management', 'Code Review',
-  'Testing & QA', 'Algorithmic Thinking', 'Security Best Practices', 'Time Management', 'Documentation Writing',
-];
-
-const collaborationGoalsOptions = [
-  'Seeking paid contract work', 'Learning partners', 'Hobby/fun projects', 'Co-founders for a startup',
-];
-
-const commitmentLevelOptions = [
-  'Part-time', 'Full-time', 'Hobbyist', 'Formal student', 'Self-taught',
-];
+import { professionalSkills, collaborationGoalsOptions, commitmentLevelOptions } from '@/lib/constants';
 
 const urlSchema = z.string().url({ message: 'Please enter a valid URL.' }).refine(val => val.startsWith('https://'), { message: 'URL must start with https://' });
 
@@ -186,16 +173,26 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
     }
   }, [userProfile, reset]);
 
-  const handleTechStackAdd = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && techStackInput.trim()) {
-      e.preventDefault();
+  const addTechStackItem = () => {
+    const newTech = techStackInput.trim();
+    if (newTech) {
       const currentTechStack = getValues('techStack') || [];
-      const newTech = techStackInput.trim();
       if (!currentTechStack.includes(newTech)) {
         setValue('techStack', [...currentTechStack, newTech], { shouldValidate: true, shouldDirty: true });
       }
       setTechStackInput('');
     }
+  };
+
+  const handleTechStackKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTechStackItem();
+    }
+  };
+
+  const handleTechStackBlur = () => {
+    addTechStackItem();
   };
 
   const handleTechStackRemove = (techToRemove: string) => {
@@ -366,7 +363,8 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
                     id="tech-stack-input"
                     value={techStackInput}
                     onChange={(e) => setTechStackInput(e.target.value)}
-                    onKeyDown={handleTechStackAdd}
+                    onKeyDown={handleTechStackKeyDown}
+                    onBlur={handleTechStackBlur}
                     placeholder="Type a technology and press Enter"
                     className="flex-1 border-none shadow-none focus-visible:ring-0"
                 />
@@ -440,6 +438,16 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
                             </Command>
                             </PopoverContent>
                         </Popover>
+                        <div className="flex flex-wrap gap-1 pt-2">
+                            {collaborationGoals.map((goal) => (
+                                <Badge key={goal} variant="secondary" className="flex items-center gap-1">
+                                    {goal}
+                                    <button type="button" onClick={() => setValue('collaborationGoals', collaborationGoals.filter((g) => g !== goal), { shouldDirty: true, shouldValidate: true })} className="rounded-full hover:bg-muted-foreground/20">
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </Badge>
+                            ))}
+                        </div>
                     </div>
 
                     <div className="space-y-2">

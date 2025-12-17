@@ -45,6 +45,20 @@ export interface Project {
   projectLinks?: ExternalLink[];
 }
 
+export interface Role {
+  id: string;
+  ownerId: string;
+  title: string;
+  roleDescription: string;
+  requiredTechStack: string[];
+  requiredSkills: string[];
+  requiredYearsOfExperience?: number;
+  incentives: string;
+  commitmentLevel: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 export interface Match {
   id: string;
   projectId: string;
