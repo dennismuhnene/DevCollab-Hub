@@ -18,10 +18,9 @@ export default function MessagesPage() {
   const [sortedMatches, setSortedMatches] = useState<Match[]>([]);
   const [showArchived, setShowArchived] = useState(false);
 
-  // This query now perfectly matches the security rule for 'list'
   const matchesQuery = useMemoFirebase(
     () => {
-      if (!user?.uid) return null; // CRITICAL: Do not query if user is not loaded
+      if (!user?.uid) return null;
       return query(
         collection(db, 'matches'),
         where('participants', 'array-contains', user.uid)
@@ -32,12 +31,12 @@ export default function MessagesPage() {
 
   const { data: matches, isLoading, error } = useCollection<Match>(user ? matchesQuery : null);
   
-  // Sorting is now done on the client-side to avoid complex indexed queries
+  // ROBUST SORTING: Handles both new and legacy data structures
   useEffect(() => {
     if (matches) {
         const sorted = [...matches].sort((a, b) => {
-            const timeA = a.timestamp?.toMillis() || a.createdAt?.toMillis() || 0;
-            const timeB = b.timestamp?.toMillis() || b.createdAt?.toMillis() || 0;
+            const timeA = a.lastMessageTimestamp?.toMillis() || a.timestamp?.toMillis() || a.createdAt?.toMillis() || 0;
+            const timeB = b.lastMessageTimestamp?.toMillis() || b.timestamp?.toMillis() || b.createdAt?.toMillis() || 0;
             return timeB - timeA;
         });
         setSortedMatches(sorted);
@@ -55,13 +54,12 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (error) {
-      // The useCollection hook will throw a contextual error which is caught by the FirebaseErrorListener
       console.error("MessagesPage Firestore Error:", error);
     }
   }, [error]);
 
   return (
-    <div className="flex h-full border-t">
+    <div className="flex h-[calc(100vh-theme(spacing.16))] border-t">
       <aside className="w-full md:w-1/3 lg:w-1/4 h-full border-r bg-muted/20 flex flex-col">
         <div className="p-4 border-b">
           <h2 className="text-xl font-semibold flex items-center">
@@ -78,7 +76,7 @@ export default function MessagesPage() {
         </div>
         {isLoading ? (
           <div className="p-4 space-y-3">
-            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
+            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
           </div>
         ) : (
           <MatchList matches={filteredMatches} />
