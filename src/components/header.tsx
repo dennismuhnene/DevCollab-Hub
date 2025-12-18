@@ -19,25 +19,8 @@ import Notifications from './notifications';
 import { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
 import Image from 'next/image';
-import { FeedbackForm } from './feedback-form'; // Import the FeedbackForm component
-
-function ClientOnly({ children }: { children: React.ReactNode }) {
-  const [hasMounted, setHasMounted] = useState(false);
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
-  if (!hasMounted) {
-    return (
-        <div className="flex items-center space-x-2">
-            <div className="h-8 w-20 animate-pulse rounded-md bg-muted"></div>
-            <div className="h-8 w-8 animate-pulse rounded-full bg-muted"></div>
-        </div>
-    );
-  }
-  return <>{children}</>;
-}
-
+import { FeedbackForm } from './feedback-form';
+import ClientOnly from '@/components/client-only';
 
 export default function Header() {
   const { user, userProfile, loading } = useAuth();
@@ -195,76 +178,78 @@ export default function Header() {
                 )}
               </ClientOnly>
               <div className="md:hidden">
-                 <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-                    <SheetTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <Menu className="h-5 w-5" />
-                        <span className="sr-only">Open menu</span>
-                      </Button>
-                    </SheetTrigger>
-                    <SheetContent side="left" className="p-0 w-3/4">
-                       <SheetTitle className="sr-only">Menu</SheetTitle>
-                        <div className="flex flex-col h-full">
-                            <div className="flex items-center border-b p-4">
-                                <Link href="/" className="flex items-center space-x-2" onClick={() => setIsSheetOpen(false)}>
-                                    <Image src="/images/devcollab-logo.png" alt="DevCollab Hub Logo" width={32} height={32} className="h-8 w-8" />
-                                    <span className="font-bold text-[#c5a35a]">DevCollab Hub</span>
-                                </Link>
-                            </div>
-                            <div className="flex flex-col space-y-2 p-4 flex-1">
-                                {user ? (
-                                     mobileNavLinks.map((link) => (
-                                        <SheetClose asChild key={link.href}>
-                                            <Link href={link.href} className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
-                                                <link.icon className="h-5 w-5" />
-                                                {link.label}
-                                            </Link>
-                                        </SheetClose>
-                                    ))
-                                ) : (
-                                    <>
-                                        <SheetClose asChild>
-                                            <Link href="/blogs" className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
-                                                <PenSquare className="h-5 w-5" />
-                                                Blog
-                                            </Link>
-                                        </SheetClose>
-                                         <SheetClose asChild>
-                                            <Link href="/contact" className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
-                                                <Contact className="h-5 w-5" />
-                                                Contact
-                                            </Link>
-                                        </SheetClose>
-                                    </>
-                                )}
-                            </div>
-                            <div className="mt-auto border-t p-4">
-                               <ClientOnly>
-                                {!user && (
-                                    <div className="flex flex-col space-y-2">
-                                        <SheetClose asChild>
-                                            <Button variant="ghost" asChild>
-                                            <Link href="/login">
-                                                <LogIn className="mr-2 h-4 w-4" />
-                                                Sign In
-                                            </Link>
-                                            </Button>
-                                        </SheetClose>
-                                        <SheetClose asChild>
-                                            <Button asChild>
-                                            <Link href="/signup">
-                                                <UserPlus className="mr-2 h-4 w-4" />
-                                                Sign Up
-                                            </Link>
-                                            </Button>
-                                        </SheetClose>
-                                    </div>
-                                )}
-                               </ClientOnly>
-                            </div>
-                        </div>
-                    </SheetContent>
-                  </Sheet>
+                <ClientOnly>
+                  <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                      <SheetTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <Menu className="h-5 w-5" />
+                          <span className="sr-only">Open menu</span>
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent side="left" className="p-0 w-3/4">
+                        <SheetTitle className="sr-only">Menu</SheetTitle>
+                          <div className="flex flex-col h-full">
+                              <div className="flex items-center border-b p-4">
+                                  <Link href="/" className="flex items-center space-x-2" onClick={() => setIsSheetOpen(false)}>
+                                      <Image src="/images/devcollab-logo.png" alt="DevCollab Hub Logo" width={32} height={32} className="h-8 w-8" />
+                                      <span className="font-bold text-[#c5a35a]">DevCollab Hub</span>
+                                  </Link>
+                              </div>
+                              <div className="flex flex-col space-y-2 p-4 flex-1">
+                                  {user ? (
+                                      mobileNavLinks.map((link) => (
+                                          <SheetClose asChild key={link.href}>
+                                              <Link href={link.href} className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
+                                                  <link.icon className="h-5 w-5" />
+                                                  {link.label}
+                                              </Link>
+                                          </SheetClose>
+                                      ))
+                                  ) : (
+                                      <>
+                                          <SheetClose asChild>
+                                              <Link href="/blogs" className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
+                                                  <PenSquare className="h-5 w-5" />
+                                                  Blog
+                                              </Link>
+                                          </SheetClose>
+                                          <SheetClose asChild>
+                                              <Link href="/contact" className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
+                                                  <Contact className="h-5 w-5" />
+                                                  Contact
+                                              </Link>
+                                          </SheetClose>
+                                      </>
+                                  )}
+                              </div>
+                              <div className="mt-auto border-t p-4">
+                                <ClientOnly>
+                                  {!user && (
+                                      <div className="flex flex-col space-y-2">
+                                          <SheetClose asChild>
+                                              <Button variant="ghost" asChild>
+                                              <Link href="/login">
+                                                  <LogIn className="mr-2 h-4 w-4" />
+                                                  Sign In
+                                              </Link>
+                                              </Button>
+                                          </SheetClose>
+                                          <SheetClose asChild>
+                                              <Button asChild>
+                                              <Link href="/signup">
+                                                  <UserPlus className="mr-2 h-4 w-4" />
+                                                  Sign Up
+                                              </Link>
+                                              </Button>
+                                          </SheetClose>
+                                      </div>
+                                  )}
+                                </ClientOnly>
+                              </div>
+                          </div>
+                      </SheetContent>
+                    </Sheet>
+                  </ClientOnly>
               </div>
             </div>
           </nav>

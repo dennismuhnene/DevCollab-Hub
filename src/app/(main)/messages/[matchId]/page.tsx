@@ -1,27 +1,30 @@
 'use client';
 
-import { useEffect, useState, useRef, useMemo, useTransition } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback, useTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, increment } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, increment, Timestamp, FieldValue } from 'firebase/firestore';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { db } from '@/lib/firebase/config';
 import type { Match, Message, UserProfile, Project } from '@/types';
+import type { GetChatInsightsOutput } from '@/types/ai';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import MatchList from '@/components/match-list';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Send, Users, Archive, Sparkles, Loader2 } from 'lucide-react';
+import { Send, Users, Archive, ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { addNotification } from '@/lib/firebase/notifications';
 import { useMemoFirebase } from '@/firebase';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { useDoc } from '@/firebase/firestore/use-doc';
 import { markMatchNotificationsAsRead } from '@/lib/firebase/notifications';
+import { useToast } from '@/hooks/use-toast';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { logAnalyticsEvent } from '@/firebase/analytics';
+import Link from 'next/link';
 import { generateChatInsightsAction } from './actions';
-import type { GetChatInsightsOutput } from '@/types/ai';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,9 +34,31 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useToast } from '@/hooks/use-toast';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { logAnalyticsEvent } from '@/firebase/analytics';
+
+
+// Helper to get initials
+const getInitials = (name?: string) => name ? name.split(' ').map((n) => n[0]).join('') : '?';
+
+const MatchListContent = ({ matches, isLoading, activeMatchId, showArchived, onShowArchivedChange }: {
+  matches: Match[];
+  isLoading: boolean;
+  activeMatchId: string;
+  showArchived: boolean;
+  onShowArchivedChange: (checked: boolean) => void;
+}) => (
+  <>
+    <div className="p-4 border-b"><h2 className="text-xl font-semibold flex items-center"><Users className="mr-3 h-5 w-5" />Matches</h2></div>
+    <div className="p-4 border-b flex items-center justify-between">
+      <Label htmlFor="show-archived" className="flex items-center gap-2 text-sm font-medium"><Archive className="h-4 w-4" />Show Archived</Label>
+      <Switch id="show-archived" checked={showArchived} onCheckedChange={onShowArchivedChange} />
+    </div>
+    {isLoading ? (
+      <div className="p-4 space-y-3">{[...Array(8)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
+    ) : (
+      <MatchList matches={matches} activeMatchId={activeMatchId} />
+    )}
+  </>
+);
 
 export default function ChatPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
@@ -41,8 +66,10 @@ export default function ChatPage() {
   const params = useParams();
   const matchId = params.matchId as string;
 
-  const [otherUser, setOtherUser] = useState<UserProfile | null>(null);
+  // State Management
+  const [match, setMatch] = useState<Match | null>(null);
   const [project, setProject] = useState<Project | null>(null);
+  const [otherUser, setOtherUser] = useState<UserProfile | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -54,28 +81,23 @@ export default function ChatPage() {
   const [showAiModal, setShowAiModal] = useState(false);
   const { toast } = useToast();
 
-  const matchRef = useMemoFirebase(() => matchId ? doc(db, 'matches', matchId) : null, [matchId]);
-  const { data: match, isLoading: matchLoading } = useDoc<Match>(matchRef);
-
-
   const matchesQuery = useMemoFirebase(
-    () => {
-      if (!user?.uid) return null;
-      return query(
-            collection(db, 'matches'),
-            where('participants', 'array-contains', user.uid)
-          );
-    },
+    () => user?.uid ? query(collection(db, 'matches'), where('participants', 'array-contains', user.uid)) : null,
     [user?.uid]
   );
+  const { data: matches, isLoading: matchesLoading, error: matchesError } = useCollection<Match>(matchesQuery);
 
-  const { data: matches, isLoading: matchesLoading, error: matchesError } = useCollection<Match>(user ? matchesQuery : null);
-  
-   useEffect(() => {
+  const getSortableTime = (timestamp: Timestamp | FieldValue | null | undefined): number => {
+    if (!timestamp) return 0;
+    if (timestamp instanceof Timestamp) return timestamp.toMillis();
+    return Date.now();
+  };
+
+  useEffect(() => {
     if (matches) {
         const sorted = [...matches].sort((a, b) => {
-            const timeA = a.timestamp?.toMillis() || a.createdAt?.toMillis() || 0;
-            const timeB = b.timestamp?.toMillis() || b.createdAt?.toMillis() || 0;
+            const timeA = getSortableTime(a.lastMessageTimestamp) || getSortableTime(a.createdAt);
+            const timeB = getSortableTime(b.lastMessageTimestamp) || getSortableTime(b.createdAt);
             return timeB - timeA;
         });
         setSortedMatches(sorted);
@@ -91,111 +113,119 @@ export default function ChatPage() {
   }, [sortedMatches, showArchived, user]);
 
   useEffect(() => {
-    if (matchesError) {
-      console.error("ChatPage Matches Error:", matchesError);
-    }
+    if (matchesError) console.error("ChatPage Matches Error:", matchesError);
   }, [matchesError]);
 
   useEffect(() => {
-    if (match && user) {
-      const userUnreadCount = match.unreadCounts?.[user.uid] || 0;
-      if (userUnreadCount > 0) {
-        const matchDocRef = doc(db, 'matches', matchId);
-        updateDoc(matchDocRef, {
-          [`unreadCounts.${user.uid}`]: 0,
-        });
-      }
-      markMatchNotificationsAsRead(user.uid, matchId);
-    }
-}, [match, user, matchId]);
-
-  useEffect(() => {
     if (!matchId || !user) return;
+    setLoading(true);
 
-    const fetchOtherUserAndProject = async () => {
-      setLoading(true);
-      const matchDocRef = doc(db, 'matches', matchId);
-      const matchDoc = await getDoc(matchDocRef);
+    const messagesQuery = query(collection(db, 'matches', matchId, 'messages'), orderBy('timestamp', 'asc'));
+    const unsubscribeMessages = onSnapshot(messagesQuery, 
+        (snapshot) => setMessages(snapshot.docs.map(doc => doc.data() as Message)),
+        (err) => console.error("ChatPage Messages Snapshot Error:", err)
+    );
 
-      if (matchDoc.exists()) {
+    const matchDocRef = doc(db, 'matches', matchId);
+    const unsubscribeMatch = onSnapshot(matchDocRef, async (matchDoc) => {
+        if (!matchDoc.exists()) {
+            toast({ variant: 'destructive', title: 'Match not found' });
+            return router.push('/messages');
+        }
+
         const matchData = { id: matchDoc.id, ...matchDoc.data() } as Match;
+        setMatch(matchData);
+
         if (!matchData.participants.includes(user.uid)) {
-          router.push('/messages');
-          return;
+            toast({ variant: 'destructive', title: 'Access Denied' });
+            return router.push('/messages');
+        }
+
+        // Fetch project details if it's a project match
+        if (matchData.projectId) {
+            const projectDoc = await getDoc(doc(db, 'projects', matchData.projectId));
+            if (projectDoc.exists()) {
+                setProject({ id: projectDoc.id, ...projectDoc.data() } as Project);
+            } else {
+                setProject(null); 
+            }
+        } else {
+            setProject(null);
         }
 
         const otherUserId = matchData.participants.find(p => p !== user.uid);
         if (otherUserId) {
-          const userDocRef = doc(db, 'users', otherUserId);
-          const userDoc = await getDoc(userDocRef);
-          if (userDoc.exists()) {
-            setOtherUser(userDoc.data() as UserProfile);
-          }
-        }
-
-        if (matchData.projectId) {
-            const projectDocRef = doc(db, 'projects', matchData.projectId);
-            const projectDoc = await getDoc(projectDocRef);
-            if (projectDoc.exists()) {
-                setProject({ id: projectDoc.id, ...projectDoc.data() } as Project);
+            const details = matchData.participantsDetails?.[otherUserId];
+            if (details && details.name) {
+                 setOtherUser({ uid: otherUserId, ...details } as UserProfile);
+            } else {
+                const userDoc = await getDoc(doc(db, 'users', otherUserId));
+                if (userDoc.exists()) {
+                    setOtherUser({ uid: userDoc.id, ...userDoc.data() } as UserProfile);
+                }
             }
         }
 
-      } else {
-        router.push('/messages');
-      }
-      setLoading(false);
-    };
+        if ((matchData.unreadCounts?.[user.uid] || 0) > 0) {
+            await updateDoc(matchDocRef, { [`unreadCounts.${user.uid}`]: 0 });
+            markMatchNotificationsAsRead(user.uid, matchId);
+        }
 
-    fetchOtherUserAndProject();
-
-    const messagesQuery = query(collection(db, 'matches', matchId, 'messages'), orderBy('timestamp', 'asc'));
-    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-      setMessages(snapshot.docs.map(doc => doc.data() as Message));
+        setLoading(false);
     }, (err) => {
-        console.error("ChatPage Messages Snapshot Error:", err);
+        console.error("ChatPage Match Snapshot Error:", err);
+        toast({ variant: 'destructive', title: 'Error loading chat' });
+        setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeMessages();
+      unsubscribeMatch();
+    };
 
-  }, [matchId, user, router]);
+  }, [matchId, user, router, toast]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !user || !match || !otherUser) return;
+  const handleSendMessage = useCallback(async () => {
+    if (!newMessage.trim() || !user || !match || !otherUser?.uid) return;
 
-    const messageData = {
-      text: newMessage,
-      senderId: user.uid,
-      timestamp: serverTimestamp(),
-    };
-    
-    const messagesCollectionRef = collection(db, 'matches', matchId, 'messages');
-    await addDoc(messagesCollectionRef, messageData);
-    logAnalyticsEvent('send_message', { match_id: matchId });
-    
-    const matchDocRef = doc(db, 'matches', matchId);
-    await updateDoc(matchDocRef, { 
-      timestamp: serverTimestamp(),
-      lastMessage: newMessage,
-      [`unreadCounts.${otherUser.uid}`]: increment(1),
-    });
-
-    addNotification(otherUser.uid, {
-        type: 'message',
-        fromUserId: user.uid,
-        fromUserName: user.displayName || 'A user',
-        matchId: matchId,
-        read: false,
-        messageSnippet: newMessage,
-    });
-
+    const trimmedMessage = newMessage.trim();
     setNewMessage('');
-  };
+
+    try {
+      await addDoc(collection(db, 'matches', matchId, 'messages'), {
+        text: trimmedMessage,
+        senderId: user.uid,
+        timestamp: serverTimestamp(),
+      });
+
+      await updateDoc(doc(db, 'matches', matchId), { 
+        lastMessage: trimmedMessage,
+        lastMessageSender: user.uid,
+        lastMessageTimestamp: serverTimestamp(),
+        [`unreadCounts.${otherUser.uid}`]: increment(1),
+      });
+
+      await addNotification(otherUser.uid, {
+          type: 'message',
+          fromUserId: user.uid,
+          fromUserName: userProfile?.name || 'A user', 
+          matchId: matchId,
+          messageSnippet: trimmedMessage,
+          contextTitle: match.contextTitle || match.projectTitle || '',
+      });
+
+      logAnalyticsEvent('send_message', { match_id: matchId });
+
+    } catch (error) {
+      console.error("Failed to send message or add notification: ", error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not send your message. Please try again.' });
+      setNewMessage(trimmedMessage);
+    }
+  }, [newMessage, user, match, otherUser, userProfile, matchId, toast]);
 
   const handleGetAiInsights = () => {
     if (!user || !userProfile || !otherUser || !project) {
@@ -238,147 +268,111 @@ export default function ChatPage() {
     });
   };
 
-  const getInitials = (name?: string) => {
-    if (!name) return '?';
-    return name.split(' ').map((n) => n[0]).join('');
-  };
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  }
   
-  const MatchListContent = () => (
-      <>
-        <div className="p-4 border-b">
-          <h2 className="text-xl font-semibold flex items-center">
-            <Users className="mr-3 h-5 w-5" />
-            Matches
-          </h2>
-        </div>
-         <div className="p-4 border-b flex items-center justify-between">
-           <Label htmlFor="show-archived" className="flex items-center gap-2 text-sm font-medium">
-             <Archive className="h-4 w-4" />
-             Show Archived
-           </Label>
-           <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
-        </div>
-        {matchesLoading ? (
-           <div className="p-4 space-y-3">
-            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
-          </div>
-        ) : (
-          <MatchList matches={filteredMatches} activeMatchId={matchId} />
-        )}
-      </>
-  );
+  const isProjectOwner = project?.ownerId === user?.uid;
+  const title = match?.contextTitle || match?.projectTitle;
 
-  if (authLoading || loading || matchLoading) {
+  if (authLoading || loading) {
     return (
-         <div className="flex h-[calc(100vh-theme(spacing.16))] border-t">
-            <aside className="w-1/3 lg:w-1/4 h-full border-r bg-muted/20 hidden md:block">
-                <div className="p-4 space-y-3">
-                    {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
-                </div>
-            </aside>
-            <main className="flex-1 flex flex-col">
-                 <Skeleton className="h-full w-full" />
-            </main>
-        </div>
+      <div className="flex h-[calc(100vh-theme(spacing.16))] border-t">
+        <aside className="w-1/3 lg:w-1/4 h-full border-r bg-muted/20 hidden md:block">
+          <div className="p-4 border-b"><h2 className="text-xl font-semibold">Matches</h2></div>
+          <div className="p-4 space-y-3">{[...Array(8)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
+        </aside>
+        <main className="flex-1 flex flex-col">
+          <div className="p-4 border-b flex items-center gap-4 bg-background"><Skeleton className="h-10 w-10 rounded-full" /><div className="space-y-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-3 w-24" /></div></div>
+          <div className="flex-1 p-6"><Skeleton className="h-full w-full" /></div>
+          <div className="p-4 border-t"><Skeleton className="h-10 w-full" /></div>
+        </main>
+      </div>
     )
   }
 
-  const isProjectOwner = project?.ownerId === user?.uid;
-
   return (
     <>
-    <div className="flex h-[calc(100vh-theme(spacing.16))] border-t">
-      <aside className="hidden md:flex w-1/3 lg:w-1/4 h-full border-r bg-muted/20 flex-col">
-        <MatchListContent />
-      </aside>
-      <main className="flex-1 flex flex-col">
-        {otherUser && match && match.participantsDetails && match.participantsDetails[otherUser.uid] ? (
-           <div className="p-4 border-b flex items-center justify-between gap-4 bg-background">
-            <div className="flex items-center gap-4">
+      <div className="flex h-[calc(100vh-theme(spacing.16))] border-t">
+        <aside className="hidden md:flex w-1/3 lg:w-1/4 h-full border-r bg-muted/20 flex-col">
+          <MatchListContent 
+            matches={filteredMatches}
+            isLoading={matchesLoading}
+            activeMatchId={matchId}
+            showArchived={showArchived}
+            onShowArchivedChange={setShowArchived}
+          />
+        </aside>
+
+        <main className="flex-1 flex flex-col bg-background">
+          {otherUser ? (
+            <div className="p-4 border-b flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
                 <div className="md:hidden">
-                    <Sheet>
-                      <SheetTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <Users className="h-5 w-5" />
-                        </Button>
-                      </SheetTrigger>
-                      <SheetContent side="left" className="p-0 w-3/4">
-                          <MatchListContent />
-                      </SheetContent>
-                    </Sheet>
+                  <Sheet>
+                    <SheetTrigger asChild><Button variant="ghost" size="icon"><Users className="h-5 w-5" /></Button></SheetTrigger>
+                    <SheetContent side="left" className="p-0 w-full sm:w-3/4">
+                      <MatchListContent 
+                        matches={filteredMatches}
+                        isLoading={matchesLoading}
+                        activeMatchId={matchId}
+                        showArchived={showArchived}
+                        onShowArchivedChange={setShowArchived}
+                      />
+                    </SheetContent>
+                  </Sheet>
                 </div>
-              <Avatar>
-                  <AvatarImage src={match.participantsDetails[otherUser.uid].photoURL} />
-                  <AvatarFallback>{getInitials(match.participantsDetails[otherUser.uid].name)}</AvatarFallback>
-              </Avatar>
-              <div>
-                  <h3 className="font-semibold">{match.participantsDetails[otherUser.uid].name}</h3>
-                  <p className="text-sm text-muted-foreground">Project: {match?.projectTitle}</p>
+                <Avatar><AvatarImage src={otherUser.photoURL} /><AvatarFallback>{getInitials(otherUser.name)}</AvatarFallback></Avatar>
+                <div><h3 className="font-semibold">{otherUser.name || 'New Match'}</h3>{title && <p className="text-sm text-muted-foreground">{title}</p>}</div>
               </div>
+                {isProjectOwner && (
+                 <Button variant="outline" size="sm" onClick={handleGetAiInsights} disabled={isAiInsightsLoading}>
+                    {isAiInsightsLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />}
+                    AI Insights
+                 </Button>
+                )}
             </div>
-            {isProjectOwner && (
-             <Button variant="outline" size="sm" onClick={handleGetAiInsights} disabled={isAiInsightsLoading}>
-                {isAiInsightsLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />}
-                Get AI Insights
-             </Button>
-            )}
+          ) : (
+            <div className="p-4 border-b flex items-center gap-4">
+              <div className="md:hidden"><Button variant="ghost" size="icon" asChild><Link href="/messages"><ArrowLeft className="h-5 w-5" /></Link></Button></div>
+              <p>Loading chat...</p>
+            </div>
+          )}
+
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {messages.map((msg, index) => (
+                  <div key={index} className={cn("flex items-end gap-2", msg.senderId === user?.uid ? "justify-end" : "justify-start")}>
+                    {msg.senderId !== user?.uid && otherUser && (
+                        <Avatar className="h-8 w-8"><AvatarImage src={otherUser.photoURL} /><AvatarFallback>{getInitials(otherUser.name)}</AvatarFallback></Avatar>
+                    )}
+                    <div className={cn("max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg shadow-sm", msg.senderId === user?.uid ? "bg-primary text-primary-foreground" : "bg-muted")}>
+                        <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>
+                    </div>
+                  </div>
+              ))}
+              <div ref={messagesEndRef} />
+          </div>
+
+           <div className="p-4 border-t bg-card mt-auto">
+              <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex items-center gap-2">
+                  <Input 
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Type a message..."
+                      autoComplete="off"
+                      className="flex-1"
+                      disabled={!otherUser}
+                  />
+                  <Button type="submit" size="icon" disabled={!newMessage.trim() || !otherUser}><Send className="h-4 w-4" /></Button>
+              </form>
            </div>
-        ) : (
-           <div className="p-4 border-b flex items-center gap-4 bg-background">
-             <div className="md:hidden">
-                <Sheet>
-                  <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                        <Users className="h-5 w-5" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="left" className="p-0 w-3/4">
-                      <MatchListContent />
-                  </SheetContent>
-                </Sheet>
-            </div>
-            <Skeleton className="h-10 w-10 rounded-full" />
-            <div className="space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-24" />
-            </div>
-           </div>
-        )}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {messages.map((msg, index) => (
-                <div key={index} className={cn("flex items-end gap-2", msg.senderId === user?.uid ? "justify-end" : "justify-start")}>
-                   {msg.senderId !== user?.uid && otherUser && match && match.participantsDetails && match.participantsDetails[otherUser.uid] && (
-                     <Avatar className="h-8 w-8">
-                       <AvatarImage src={match.participantsDetails[otherUser.uid].photoURL} />
-                       <AvatarFallback>{getInitials(match.participantsDetails[otherUser.uid].name)}</AvatarFallback>
-                     </Avatar>
-                   )}
-                   <div className={cn(
-                       "max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg",
-                       msg.senderId === user?.uid ? "bg-primary text-primary-foreground" : "bg-muted"
-                   )}>
-                    <p className="text-sm">{msg.text}</p>
-                   </div>
-                </div>
-            ))}
-            <div ref={messagesEndRef} />
-        </div>
-         <div className="p-4 border-t bg-background">
-            <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-                <Input 
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Type a message..."
-                    autoComplete="off"
-                />
-                <Button type="submit" size="icon" disabled={!newMessage.trim()}>
-                    <Send className="h-4 w-4" />
-                </Button>
-            </form>
-         </div>
-      </main>
-    </div>
-     {aiInsights && (
+        </main>
+      </div>
+      {aiInsights && (
         <AlertDialog open={showAiModal} onOpenChange={setShowAiModal}>
             <AlertDialogContent>
                 <AlertDialogHeader>

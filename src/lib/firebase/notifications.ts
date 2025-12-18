@@ -9,7 +9,7 @@ export async function addNotification(userId: string, notification: any) {
         await addDoc(notificationRef, {
             ...notification,
             read: notification.read ?? false,
-            timestamp: serverTimestamp(),
+            createdAt: serverTimestamp(),
         });
     } catch (error) {
         console.error("Failed to add notification: ", error);
