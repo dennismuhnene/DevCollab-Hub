@@ -188,8 +188,8 @@ export default function DashboardPage() {
         logAnalyticsEvent('ai_insight_generated', { result: 'success' });
       } else {
         console.error("Failed to get AI insights", result.error);
-        toast({ variant: 'destructive', title: 'Could not load AI insights', description: result.error });
-        logAnalyticsEvent('ai_insight_generated', { result: 'failure', error: result.error });
+        toast({ variant: 'destructive', title: 'Could not load AI insights', description: result.error as string });
+        logAnalyticsEvent('ai_insight_generated', { result: 'failure', error: result.error as string });
       }
     });
   }
@@ -210,10 +210,10 @@ export default function DashboardPage() {
         updatedAt: serverTimestamp(),
       });
 
-      addNotification(interestedUser.uid, { type: 'match', fromUserId: user.uid, fromUserName: userProfile.name, matchId: matchId, projectId: project.id, projectTitle: project.title, read: false });
-      addNotification(user.uid, { type: 'match', fromUserId: interestedUser.uid, fromUserName: interestedUser.name, matchId: matchId, projectId: project.id, projectTitle: project.title, read: false });
+      addNotification(interestedUser.uid, { type: 'match', fromUserId: user.uid, fromUserName: userProfile.name || 'A user', matchId: matchId, projectId: project.id, projectTitle: project.title, read: false });
+      addNotification(user.uid, { type: 'match', fromUserId: interestedUser.uid, fromUserName: interestedUser.name || 'A user', matchId: matchId, projectId: project.id, projectTitle: project.title, read: false });
 
-      setMatchedInfo({ projectName: project.title, devName: interestedUser.name, matchId: matchId });
+      setMatchedInfo({ projectName: project.title, devName: interestedUser.name || 'A user', matchId: matchId });
       setShowMatchModal(true);
       
       const updatedInterested = { ...interestedUsersByProject, [project.id]: interestedUsersByProject[project.id]?.filter(u => u.uid !== interestedUser.uid) };
@@ -244,13 +244,6 @@ export default function DashboardPage() {
     return `${years} year${years !== 1 ? 's' : ''}`;
   };
 
-  const allLinks: ExternalLink[] = userProfile ? [
-    userProfile.versionControl,
-    userProfile.socials,
-    userProfile.portfolioUrl ? { type: 'Portfolio', url: userProfile.portfolioUrl } : undefined,
-    ...(userProfile.extraLinks || [])
-  ].filter((link): link is ExternalLink => !!link?.url) : [];
-
   if (authLoading || loadingData || !userProfile) {
     return (
       <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -279,7 +272,7 @@ export default function DashboardPage() {
           
           <Card className="bg-gradient-to-br from-primary/5 to-transparent">
             <CardHeader>
-                <CardTitle className="flex items-center gap-3"><Lightbulb className="h-6 w-6 text-yellow-400" /><span>AI-Powered Insights</span></CardTitle>
+                <CardTitle className="flex items-center gap-3"><Lightbulb className="h-6 w-6 text-yellow-400" /><span>Insights</span></CardTitle>
                 <CardDescription>Analyze developers interested in your projects to uncover collaboration opportunities and profile improvement suggestions.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
@@ -333,7 +326,7 @@ export default function DashboardPage() {
                    <CardContent className="p-8 space-y-8">
                         <div><h3 className="text-xl font-semibold mb-2">About</h3><p className="text-foreground/80 leading-relaxed text-base">{userProfile.bio || 'No bio provided yet. Add one to attract collaborators!'}</p></div>
                         
-                        {userProfile.openForCollaboration && (userProfile.collaborationGoals?.length || userProfile.commitmentLevel) && <Card><CardHeader><CardTitle className="flex items-center"><Handshake className="mr-2 h-5 w-5 text-primary"/> Collaboration Preferences</CardTitle></CardHeader><CardContent className="space-y-4 pt-4">{userProfile.collaborationGoals && userProfile.collaborationGoals.length > 0 && <div><h3 className="font-semibold mb-2 flex items-center"><Target className="mr-2 h-4 w-4"/> Goals</h3><div className="flex flex-wrap gap-2">{userProfile.collaborationGoals.map(goal => <Badge key={goal} variant="default">{goal}</Badge>)}</div></div>}{userProfile.commitmentLevel && <div><h3 className="font-semibold mb-2">Commitment</h3><p className="text-muted-foreground">{userProfile.commitmentLevel}</p></div>}</CardContent></Card>}
+                        {userProfile.openForCollaboration && ((userProfile.collaborationGoals && userProfile.collaborationGoals.length > 0) || userProfile.commitmentLevel) && <Card><CardHeader><CardTitle className="flex items-center"><Handshake className="mr-2 h-5 w-5 text-primary"/> Collaboration Preferences</CardTitle></CardHeader><CardContent className="space-y-4 pt-4">{userProfile.collaborationGoals && userProfile.collaborationGoals.length > 0 && <div><h3 className="font-semibold mb-2 flex items-center"><Target className="mr-2 h-4 w-4"/> Goals</h3><div className="flex flex-wrap gap-2">{userProfile.collaborationGoals.map((goal: string) => <Badge key={goal} variant="default">{goal}</Badge>)}</div></div>}{userProfile.commitmentLevel && <div><h3 className="font-semibold mb-2">Commitment</h3><p className="text-muted-foreground">{userProfile.commitmentLevel}</p></div>}</CardContent></Card>}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                           <div>
@@ -342,7 +335,7 @@ export default function DashboardPage() {
                           </div>
                           <div>
                             <h3 className="flex items-center text-xl font-semibold mb-4"><Code className="mr-2 h-5 w-5" /> Tech Stack</h3>
-                            {userProfile.techStack && userProfile.techStack.length > 0 ? <div className="flex flex-wrap gap-2">{userProfile.techStack.map((tech) => <Badge key={tech} variant="outline">{tech}</Badge>)}</div> : <p className="text-muted-foreground text-sm">No tech stack listed.</p>}
+                            {userProfile.techStack && userProfile.techStack.length > 0 ? <div className="flex flex-wrap gap-2">{userProfile.techStack.map((tech: string) => <Badge key={tech} variant="outline">{tech}</Badge>)}</div> : <p className="text-muted-foreground text-sm">No tech stack listed.</p>}
                           </div>
                         </div>
 

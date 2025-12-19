@@ -5,7 +5,16 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle } from 'lucide-react';
 
 export default function PrivacyPolicyPage() {
-  const policySections = [
+  const policySections: {
+    id: number;
+    title: string;
+    content: {
+        subtitle?: string;
+        description?: string;
+        points?: string[];
+        footer?: string;
+    }[];
+  }[] = [
     {
       id: 1,
       title: "1. Information We Collect",

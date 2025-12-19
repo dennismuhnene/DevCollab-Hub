@@ -1,6 +1,6 @@
 'use client';
 
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, Timestamp, FieldValue } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { db } from '@/lib/firebase/config';
@@ -12,6 +12,16 @@ import { useMemoFirebase } from '@/firebase';
 import { useEffect, useState, useMemo } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+
+// Helper function to safely get milliseconds from a timestamp
+const getSortableTime = (timestamp: Timestamp | FieldValue | null | undefined): number => {
+  if (!timestamp) return 0;
+  if (timestamp instanceof Timestamp) {
+    return timestamp.toMillis();
+  }
+  // For FieldValue (like serverTimestamp()), return current time for optimistic sorting
+  return Date.now();
+};
 
 export default function MessagesPage() {
   const { user } = useAuth();
@@ -35,8 +45,8 @@ export default function MessagesPage() {
   useEffect(() => {
     if (matches) {
         const sorted = [...matches].sort((a, b) => {
-            const timeA = a.lastMessageTimestamp?.toMillis() || a.timestamp?.toMillis() || a.createdAt?.toMillis() || 0;
-            const timeB = b.lastMessageTimestamp?.toMillis() || b.timestamp?.toMillis() || b.createdAt?.toMillis() || 0;
+            const timeA = getSortableTime(a.lastMessageTimestamp) || getSortableTime(a.timestamp as any) || getSortableTime(a.createdAt);
+            const timeB = getSortableTime(b.lastMessageTimestamp) || getSortableTime(b.timestamp as any) || getSortableTime(b.createdAt);
             return timeB - timeA;
         });
         setSortedMatches(sorted);
