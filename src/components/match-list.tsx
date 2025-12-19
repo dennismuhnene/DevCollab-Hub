@@ -37,24 +37,18 @@ const MatchListItem = ({ match, activeMatchId, currentUserId }: { match: Match, 
       return;
     }
 
-    const participantDetails = match.participantsDetails?.[otherUserId];
-    if (participantDetails && participantDetails.name) {
-      setOtherUser(participantDetails);
+    const userDocRef = doc(db, 'users', otherUserId);
+    getDoc(userDocRef).then(userDoc => {
+      if (userDoc.exists()) {
+        setOtherUser({ uid: userDoc.id, ...userDoc.data() });
+      } else {
+        setOtherUser({ uid: otherUserId });
+      }
       setLoading(false);
-    } else {
-      const userDocRef = doc(db, 'users', otherUserId);
-      getDoc(userDocRef).then(userDoc => {
-        if (userDoc.exists()) {
-          setOtherUser({ uid: userDoc.id, ...userDoc.data() });
-        } else {
-          setOtherUser({ uid: otherUserId });
-        }
-        setLoading(false);
-      }).catch(err => {
-        console.error("Error fetching user profile in MatchListItem:", err);
-        setLoading(false);
-      });
-    }
+    }).catch(err => {
+      console.error("Error fetching user profile in MatchListItem:", err);
+      setLoading(false);
+    });
   }, [match, otherUserId]);
 
   const handleArchiveToggle = async (e: React.MouseEvent) => {

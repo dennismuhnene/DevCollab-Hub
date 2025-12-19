@@ -52,7 +52,7 @@ const MatchListContent = ({ matches, isLoading, activeMatchId, showArchived, onS
       <Label htmlFor="show-archived" className="flex items-center gap-2 text-sm font-medium"><Archive className="h-4 w-4" />Show Archived</Label>
       <Switch id="show-archived" checked={showArchived} onCheckedChange={onShowArchivedChange} />
     </div>
-    {isLoading ? (
+    {isLoading && matches.length === 0 ? (
       <div className="p-4 space-y-3">{[...Array(8)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
     ) : (
       <MatchList matches={matches} activeMatchId={activeMatchId} />
@@ -155,14 +155,9 @@ export default function ChatPage() {
 
         const otherUserId = matchData.participants.find(p => p !== user.uid);
         if (otherUserId) {
-            const details = matchData.participantsDetails?.[otherUserId];
-            if (details && details.name) {
-                 setOtherUser({ uid: otherUserId, ...details } as UserProfile);
-            } else {
-                const userDoc = await getDoc(doc(db, 'users', otherUserId));
-                if (userDoc.exists()) {
-                    setOtherUser({ uid: userDoc.id, ...userDoc.data() } as UserProfile);
-                }
+            const userDoc = await getDoc(doc(db, 'users', otherUserId));
+            if (userDoc.exists()) {
+                setOtherUser({ uid: userDoc.id, ...userDoc.data() } as UserProfile);
             }
         }
 
