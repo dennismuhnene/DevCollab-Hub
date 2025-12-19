@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, increment, Timestamp, FieldValue } from 'firebase/firestore';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { db } from '@/lib/firebase/config';
-import type { Match, Message, UserProfile, Project } from '@/types';
+import type { Match, Message, UserProfile, Project, Role } from '@/types';
 import type { GetChatInsightsOutput } from '@/types/ai';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import MatchList from '@/components/match-list';
@@ -34,7 +34,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-
 
 // Helper to get initials
 const getInitials = (name?: string) => name ? name.split(' ').map((n) => n[0]).join('') : '?';
@@ -69,6 +68,7 @@ export default function ChatPage() {
   // State Management
   const [match, setMatch] = useState<Match | null>(null);
   const [project, setProject] = useState<Project | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
   const [otherUser, setOtherUser] = useState<UserProfile | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -141,18 +141,19 @@ export default function ChatPage() {
             return router.push('/messages');
         }
 
-        // Fetch project details if it's a project match
-        if (matchData.projectId) {
-            const projectDoc = await getDoc(doc(db, 'projects', matchData.projectId));
-            if (projectDoc.exists()) {
-                setProject({ id: projectDoc.id, ...projectDoc.data() } as Project);
-            } else {
-                setProject(null); 
-            }
+        if (matchData.type === 'project' && matchData.contextId) {
+            const projectDoc = await getDoc(doc(db, 'projects', matchData.contextId));
+            setProject(projectDoc.exists() ? { id: projectDoc.id, ...projectDoc.data() } as Project : null);
+            setRole(null);
+        } else if (matchData.type === 'role' && matchData.contextId) {
+            const roleDoc = await getDoc(doc(db, 'roles', matchData.contextId));
+            setRole(roleDoc.exists() ? { id: roleDoc.id, ...roleDoc.data() } as Role : null);
+            setProject(null);
         } else {
             setProject(null);
+            setRole(null);
         }
-
+        
         const otherUserId = matchData.participants.find(p => p !== user.uid);
         if (otherUserId) {
             const userDoc = await getDoc(doc(db, 'users', otherUserId));
@@ -202,6 +203,7 @@ export default function ChatPage() {
         lastMessageSender: user.uid,
         lastMessageTimestamp: serverTimestamp(),
         [`unreadCounts.${otherUser.uid}`]: increment(1),
+        archivedBy: [],
       });
 
       await addNotification(otherUser.uid, {
@@ -210,7 +212,7 @@ export default function ChatPage() {
           fromUserName: userProfile?.name || 'A user', 
           matchId: matchId,
           messageSnippet: trimmedMessage,
-          contextTitle: match.contextTitle || match.projectTitle || '',
+          contextTitle: match.contextTitle || '',
       });
 
       logAnalyticsEvent('send_message', { match_id: matchId });
@@ -223,7 +225,7 @@ export default function ChatPage() {
   }, [newMessage, user, match, otherUser, userProfile, matchId, toast]);
 
   const handleGetAiInsights = () => {
-    if (!user || !userProfile || !otherUser || !project) {
+    if (!user || !userProfile || !otherUser || (!project && !role)) {
         toast({ variant: 'destructive', title: 'Missing data for AI analysis.' });
         return;
     }
@@ -235,7 +237,28 @@ export default function ChatPage() {
           return;
         }
 
-        logAnalyticsEvent('ai_chat_insight_generated', { match_id: matchId });
+        let insightContext;
+        if (project) {
+            insightContext = {
+                title: project.title,
+                description: project.description,
+                requiredSkills: project.requiredSkills,
+            };
+        } else if (role) {
+            insightContext = {
+                title: role.title,
+                description: role.roleDescription, // Corrected property
+                requiredSkills: role.requiredSkills,
+            };
+        }
+
+        if (!insightContext) { // Guard against undefined context
+            toast({ variant: 'destructive', title: 'Could not determine context for AI insights.' });
+            return;
+        }
+        
+        logAnalyticsEvent('ai_chat_insight_generated', { match_id: matchId, context_type: project ? 'project' : 'role' });
+
         const result = await generateChatInsightsAction({
             authToken,
             currentUser: {
@@ -246,11 +269,7 @@ export default function ChatPage() {
                 skills: otherUser.skills || [],
                 yearsOfExperience: otherUser.yearsOfExperience || 0,
             },
-            project: {
-                title: project.title,
-                description: project.description,
-                requiredSkills: project.requiredSkills,
-            }
+            project: insightContext
         });
 
         if (result.success && result.data) {
@@ -270,10 +289,10 @@ export default function ChatPage() {
     }
   }
   
-  const isProjectOwner = project?.ownerId === user?.uid;
-  const title = match?.contextTitle || match?.projectTitle;
+  const isOwner = project?.ownerId === user?.uid || role?.ownerId === user?.uid;
+  const title = match?.contextTitle;
 
-  if (authLoading || loading) {
+  if (authLoading || (loading && !match)) { // Fixed syntax error
     return (
       <div className="flex h-[calc(100vh-theme(spacing.16))] border-t">
         <aside className="w-1/3 lg:w-1/4 h-full border-r bg-muted/20 hidden md:block">
@@ -320,28 +339,45 @@ export default function ChatPage() {
                     </SheetContent>
                   </Sheet>
                 </div>
-                <Avatar><AvatarImage src={otherUser.photoURL} /><AvatarFallback>{getInitials(otherUser.name)}</AvatarFallback></Avatar>
-                <div><h3 className="font-semibold">{otherUser.name || 'New Match'}</h3>{title && <p className="text-sm text-muted-foreground">{title}</p>}</div>
+                <Avatar><AvatarImage src={otherUser?.photoURL} /><AvatarFallback>{getInitials(otherUser?.name)}</AvatarFallback></Avatar>
+                <div><h3 className="font-semibold">{otherUser?.name || 'New Match'}</h3>{title && <p className="text-sm text-muted-foreground">{title}</p>}</div>
               </div>
-                {isProjectOwner && (
+                {isOwner && (
                  <Button variant="outline" size="sm" onClick={handleGetAiInsights} disabled={isAiInsightsLoading}>
                     {isAiInsightsLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />}
-                    AI Insights
+                    Insights
                  </Button>
                 )}
             </div>
           ) : (
             <div className="p-4 border-b flex items-center gap-4">
-              <div className="md:hidden"><Button variant="ghost" size="icon" asChild><Link href="/messages"><ArrowLeft className="h-5 w-5" /></Link></Button></div>
-              <p>Loading chat...</p>
+                <div className="md:hidden"><Button variant="ghost" size="icon" asChild><Link href="/messages"><ArrowLeft className="h-5 w-5" /></Link></Button></div>
+                {loading ? (
+                    <div className="flex items-center gap-4 w-full">
+                        <Skeleton className="h-10 w-10 rounded-full" />
+                        <div className="space-y-2">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-3 w-24" />
+                        </div>
+                    </div>
+                ) : <p>Select a conversation to start chatting</p>}
             </div>
           )}
 
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {messages.map((msg, index) => (
+              {loading && messages.length === 0 ? (
+                  <div className="space-y-4">
+                      {[...Array(5)].map((_, i) => (
+                          <div key={i} className={`flex items-end gap-2 ${i % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
+                              {i % 2 === 0 && <Skeleton className="h-8 w-8 rounded-full" />}
+                              <Skeleton className="h-12 w-48 rounded-lg" />
+                          </div>
+                      ))}
+                  </div>
+              ) : messages.map((msg, index) => (
                   <div key={index} className={cn("flex items-end gap-2", msg.senderId === user?.uid ? "justify-end" : "justify-start")}>
                     {msg.senderId !== user?.uid && otherUser && (
-                        <Avatar className="h-8 w-8"><AvatarImage src={otherUser.photoURL} /><AvatarFallback>{getInitials(otherUser.name)}</AvatarFallback></Avatar>
+                        <Avatar className="h-8 w-8"><AvatarImage src={otherUser?.photoURL} /><AvatarFallback>{getInitials(otherUser?.name)}</AvatarFallback></Avatar>
                     )}
                     <div className={cn("max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg shadow-sm", msg.senderId === user?.uid ? "bg-primary text-primary-foreground" : "bg-muted")}>
                         <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>
@@ -373,7 +409,7 @@ export default function ChatPage() {
                 <AlertDialogHeader>
                     <AlertDialogTitle className="flex items-center gap-2">
                         <Sparkles className="h-5 w-5 text-yellow-500" />
-                        AI-Powered Chat Insights
+                        Chat Insights
                     </AlertDialogTitle>
                     <AlertDialogDescription>
                         Here are some tailored questions and insights to guide your conversation.
@@ -382,16 +418,16 @@ export default function ChatPage() {
                 <div className="text-sm space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                     <div>
                         <h4 className="font-semibold mb-1">Key Overlaps & Strengths</h4>
-                        <p className="text-muted-foreground">{aiInsights.keyOverlaps}</p>
+                        <p className="text-muted-foreground">{aiInsights?.keyOverlaps}</p>
                     </div>
                     <div>
                         <h4 className="font-semibold mb-1">Potential Gaps to Discuss</h4>
-                        <p className="text-muted-foreground">{aiInsights.potentialGaps}</p>
+                        <p className="text-muted-foreground">{aiInsights?.potentialGaps}</p>
                     </div>
                     <div>
                         <h4 className="font-semibold mb-2">Suggested Questions to Ask</h4>
                         <ul className="list-disc list-outside pl-5 space-y-2 text-muted-foreground">
-                            {aiInsights.suggestedQuestions.map((q, i) => (
+                            {aiInsights?.suggestedQuestions.map((q, i) => (
                                 <li key={i}>{q}</li>
                             ))}
                         </ul>

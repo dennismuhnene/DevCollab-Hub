@@ -9,7 +9,7 @@ import { Button } from './ui/button';
 import { Archive, ArchiveRestore } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from './ui/badge';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react'; // Correctly import memo
 import { Skeleton } from './ui/skeleton';
 import { getDoc, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
@@ -20,7 +20,8 @@ const getInitials = (name?: string) => {
   return name.split(' ').map((n) => n[0]).join('');
 };
 
-const MatchListItem = ({ match, activeMatchId, currentUserId }: { match: Match, activeMatchId?: string, currentUserId: string }) => {
+// Wrap the component in React.memo to prevent re-renders when props are unchanged
+const MatchListItem = memo(({ match, activeMatchId, currentUserId }: { match: Match, activeMatchId?: string, currentUserId: string }) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [otherUser, setOtherUser] = useState<Partial<UserProfile> | null>(null);
@@ -149,7 +150,10 @@ const MatchListItem = ({ match, activeMatchId, currentUserId }: { match: Match, 
       </Button>
     </div>
   );
-};
+});
+// Add a display name for better debugging
+MatchListItem.displayName = 'MatchListItem';
+
 
 export default function MatchList({ matches, activeMatchId }: { matches: Match[], activeMatchId?: string }) {
   const { user } = useAuth();

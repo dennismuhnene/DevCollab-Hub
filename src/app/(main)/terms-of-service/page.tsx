@@ -5,7 +5,16 @@ import { Badge } from '@/components/ui/badge';
 import { ShieldCheck } from 'lucide-react';
 
 export default function TermsOfServicePage() {
-  const sections = [
+  const sections: {
+    id: number;
+    title: string;
+    content: {
+        subtitle?: string;
+        description?: string;
+        points?: string[];
+        footer?: string;
+    }[];
+  }[] = [
     {
       id: 1,
       title: "1. About the Service",
