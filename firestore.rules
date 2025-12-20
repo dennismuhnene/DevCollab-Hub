@@ -104,7 +104,12 @@ service cloud.firestore {
 
         allow read, get, list: if isSignedIn() && isParticipant();
         allow create: if isSignedIn() && isParticipant() && request.resource.data.senderId == uid();
-        allow update, delete: if false;
+        // A user can "delete" a message for themselves by adding their UID to the 'deletedFor' field.
+        // This is an update operation.
+        allow update: if isSignedIn() && isParticipant()
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletedFor'])
+                      && uid() in request.resource.data.deletedFor;
+        allow delete: if false; // Disallow full deletion of messages from client
       }
     }
     // FEEDBACK

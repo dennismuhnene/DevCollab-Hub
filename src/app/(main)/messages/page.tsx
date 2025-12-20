@@ -57,6 +57,8 @@ export default function MessagesPage() {
     if (!user) return [];
     return sortedMatches.filter(match => {
       const isArchived = match.archivedBy?.includes(user.uid);
+      const isDeleted = match.deletedBy?.includes(user.uid);
+      if (isDeleted) return false;
       return showArchived ? isArchived : !isArchived;
     });
   }, [sortedMatches, showArchived, user]);

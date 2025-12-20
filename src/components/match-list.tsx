@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
-import { Archive, ArchiveRestore } from 'lucide-react';
+import { Archive, ArchiveRestore, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from './ui/badge';
 import { useEffect, useState, memo } from 'react'; // Correctly import memo
@@ -27,6 +27,7 @@ const MatchListItem = memo(({ match, activeMatchId, currentUserId }: { match: Ma
   const [otherUser, setOtherUser] = useState<Partial<UserProfile> | null>(null);
   const [loading, setLoading] = useState(true);
   const [isArchiving, setIsArchiving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const otherUserId = match.participants.find(p => p !== currentUserId);
 
@@ -74,6 +75,25 @@ const MatchListItem = memo(({ match, activeMatchId, currentUserId }: { match: Ma
       toast({ variant: 'destructive', title: 'Error', description: 'Could not update conversation.' });
     } finally {
       setIsArchiving(false);
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) return;
+
+    setIsDeleting(true);
+    const matchRef = doc(db, 'matches', match.id);
+
+    try {
+      await updateDoc(matchRef, { deletedBy: arrayUnion(user.uid) });
+      toast({ title: 'Conversation Deleted' });
+    } catch (error) {
+      console.error("Error deleting match:", error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not delete conversation.' });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -135,19 +155,34 @@ const MatchListItem = memo(({ match, activeMatchId, currentUserId }: { match: Ma
           )}
         </div>
       </Link>
-      <Button
-        variant="ghost"
-        size="icon"
-        className={cn(
-          "absolute top-1/2 right-2 -translate-y-1/2 h-7 w-7 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity",
-          match.id === activeMatchId && "text-primary-foreground hover:bg-primary/80"
-        )}
-        onClick={handleArchiveToggle}
-        disabled={isArchiving}
-        title={isArchived ? "Unarchive" : "Archive"}
-      >
-        {isArchived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
-      </Button>
+      <div className="absolute top-1/2 right-2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "h-7 w-7",
+            match.id === activeMatchId && "text-primary-foreground hover:bg-primary/80"
+          )}
+          onClick={handleArchiveToggle}
+          disabled={isArchiving}
+          title={isArchived ? "Unarchive" : "Archive"}
+        >
+          {isArchived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "h-7 w-7",
+            match.id === activeMatchId && "text-primary-foreground hover:bg-primary/80"
+          )}
+          onClick={handleDelete}
+          disabled={isDeleting}
+          title="Delete"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 });

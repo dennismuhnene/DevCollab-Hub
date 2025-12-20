@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback, useTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, increment, Timestamp, FieldValue } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, increment, Timestamp, FieldValue, arrayUnion } from 'firebase/firestore';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { db } from '@/lib/firebase/config';
 import type { Match, Message, UserProfile, Project, Role } from '@/types';
@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Send, Users, Archive, ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
+import { Send, Users, Archive, ArrowLeft, Sparkles, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { addNotification } from '@/lib/firebase/notifications';
 import { useMemoFirebase } from '@/firebase';
@@ -108,6 +108,8 @@ export default function ChatPage() {
     if (!user) return [];
     return sortedMatches.filter(match => {
       const isArchived = match.archivedBy?.includes(user.uid);
+      const isDeleted = match.deletedBy?.includes(user.uid);
+      if (isDeleted) return false;
       return showArchived ? isArchived : !isArchived;
     });
   }, [sortedMatches, showArchived, user]);
@@ -122,7 +124,7 @@ export default function ChatPage() {
 
     const messagesQuery = query(collection(db, 'matches', matchId, 'messages'), orderBy('timestamp', 'asc'));
     const unsubscribeMessages = onSnapshot(messagesQuery, 
-        (snapshot) => setMessages(snapshot.docs.map(doc => doc.data() as Message)),
+        (snapshot) => setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message))),
         (err) => console.error("ChatPage Messages Snapshot Error:", err)
     );
 
@@ -224,6 +226,18 @@ export default function ChatPage() {
     }
   }, [newMessage, user, match, otherUser, userProfile, matchId, toast]);
 
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!user) return;
+    const messageRef = doc(db, 'matches', matchId, 'messages', messageId);
+    try {
+      await updateDoc(messageRef, { deletedFor: arrayUnion(user.uid) });
+      toast({ title: 'Message Deleted' });
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not delete message.' });
+    }
+  };
+
   const handleGetAiInsights = () => {
     if (!user || !userProfile || !otherUser || (!project && !role)) {
         toast({ variant: 'destructive', title: 'Missing data for AI analysis.' });
@@ -291,6 +305,11 @@ export default function ChatPage() {
   
   const isOwner = project?.ownerId === user?.uid || role?.ownerId === user?.uid;
   const title = match?.contextTitle;
+
+  const visibleMessages = useMemo(() => {
+      if (!user) return [];
+      return messages.filter(msg => !msg.deletedFor?.includes(user.uid))
+  }, [messages, user]);
 
   if (authLoading || (loading && !match)) { // Fixed syntax error
     return (
@@ -374,15 +393,25 @@ export default function ChatPage() {
                           </div>
                       ))}
                   </div>
-              ) : messages.map((msg, index) => (
-                  <div key={index} className={cn("flex items-end gap-2", msg.senderId === user?.uid ? "justify-end" : "justify-start")}>
+              ) : visibleMessages.map((msg, index) => (
+                <div key={index} className={cn("group flex items-end gap-2", msg.senderId === user?.uid ? "justify-end" : "justify-start")}>
                     {msg.senderId !== user?.uid && otherUser && (
                         <Avatar className="h-8 w-8"><AvatarImage src={otherUser?.photoURL} /><AvatarFallback>{getInitials(otherUser?.name)}</AvatarFallback></Avatar>
                     )}
-                    <div className={cn("max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg shadow-sm", msg.senderId === user?.uid ? "bg-primary text-primary-foreground" : "bg-muted")}>
+                    <div className={cn("max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg shadow-sm relative", msg.senderId === user?.uid ? "bg-primary text-primary-foreground" : "bg-muted")}>
                         <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>
                     </div>
-                  </div>
+                    {msg.senderId === user?.uid && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                        onClick={() => handleDeleteMessage(msg.id!)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                </div>
               ))}
               <div ref={messagesEndRef} />
           </div>

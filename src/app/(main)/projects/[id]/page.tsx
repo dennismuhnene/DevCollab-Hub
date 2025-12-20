@@ -205,6 +205,19 @@ export default function ProjectDetailsPage() {
     fetchAssociatedUsers();
   }, [project, user, toast]);
 
+  const handleRestoreAndGoToConversation = async (mId: string) => {
+    if (!user) return;
+    const matchRef = doc(db, 'matches', mId);
+    const snap = await getDoc(matchRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      if (Array.isArray(data.deletedBy) && data.deletedBy.includes(user.uid)) {
+        await updateDoc(matchRef, { deletedBy: arrayRemove(user.uid) });
+      }
+    }
+    router.push(`/messages/${mId}`);
+  };
+
   const handleInterest = async () => {
     if (!user || !userProfile || !project || isPermanentlyRejected) return;
     setIsInterestLoading(true);
@@ -442,8 +455,8 @@ export default function ProjectDetailsPage() {
                             <p className="font-semibold">{p.name || 'A User'}</p>
                           </Link>
                           {matchIdsByUser[p.id] ? (
-                            <Button asChild size="sm">
-                              <Link href={`/messages/${matchIdsByUser[p.id]}`}><MessageSquare className="mr-2 h-4 w-4" />Conversation</Link>
+                            <Button size="sm" onClick={() => handleRestoreAndGoToConversation(matchIdsByUser[p.id])}>
+                              <MessageSquare className="mr-2 h-4 w-4" />Conversation
                             </Button>
                           ) : (
                             <Button variant="secondary" size="sm" disabled>Matched</Button>
@@ -476,8 +489,8 @@ export default function ProjectDetailsPage() {
                 <UserCheck className="h-8 w-8 text-green-500" />
                 <p className="font-semibold text-lg text-green-500">You're Matched!</p>
                 {matchId && (
-                  <Button asChild className="bg-amber-500 hover:bg-amber-600">
-                    <Link href={`/messages/${matchId}`}><MessageSquare className="mr-2 h-4 w-4" />Go to Conversation</Link>
+                  <Button className="bg-amber-500 hover:bg-amber-600" onClick={() => handleRestoreAndGoToConversation(matchId)}>
+                    <MessageSquare className="mr-2 h-4 w-4" />Go to Conversation
                   </Button>
                 )}
               </div>
