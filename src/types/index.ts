@@ -105,6 +105,7 @@ export interface Match {
       [uid: string]: number; 
   };
   archivedBy?: string[];
+  deletedBy?: string[];
 
   // LEGACY FIELDS (pre-refactor)
   projectId?: string; 
@@ -136,4 +137,5 @@ export interface Message {
   text: string;
   senderId: string;
   timestamp: Timestamp | null | FieldValue;
+  deletedFor?: string[];
 }
