@@ -143,6 +143,7 @@ export default function ChatPage() {
             return router.push('/messages');
         }
 
+        // Handle new and legacy match structures
         if (matchData.type === 'project' && matchData.contextId) {
             const projectDoc = await getDoc(doc(db, 'projects', matchData.contextId));
             setProject(projectDoc.exists() ? { id: projectDoc.id, ...projectDoc.data() } as Project : null);
@@ -151,6 +152,10 @@ export default function ChatPage() {
             const roleDoc = await getDoc(doc(db, 'roles', matchData.contextId));
             setRole(roleDoc.exists() ? { id: roleDoc.id, ...roleDoc.data() } as Role : null);
             setProject(null);
+        } else if ((matchData as any).projectId) { // LEGACY FALLBACK for older project-based matches
+            const projectDoc = await getDoc(doc(db, 'projects', (matchData as any).projectId));
+            setProject(projectDoc.exists() ? { id: projectDoc.id, ...projectDoc.data() } as Project : null);
+            setRole(null);
         } else {
             setProject(null);
             setRole(null);
@@ -311,7 +316,7 @@ export default function ChatPage() {
       return messages.filter(msg => !msg.deletedFor?.includes(user.uid))
   }, [messages, user]);
 
-  if (authLoading || (loading && !match)) { // Fixed syntax error
+  if (authLoading || (loading && !match)) {
     return (
       <div className="flex h-[calc(100vh-theme(spacing.16))] border-t">
         <aside className="w-1/3 lg:w-1/4 h-full border-r bg-muted/20 hidden md:block">
