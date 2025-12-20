@@ -5,25 +5,38 @@ This document outlines the core features, technology stack, and data models for 
 ## 1. Core Features
 
 - **User Authentication:** Secure sign-up and login using Firebase Authentication (email/password and Google OAuth).
-- **User Profiles:** Developers can create and manage their profiles, showcasing:
+
+- **Comprehensive User Profiles:** Developers can create and manage their profiles, showcasing:
     - Name, Bio, Years of Experience
-    - Tech Stack (e.g., React, Node.js, Python)
-    - Professional Skills (e.g., System Design, Agile Development)
-    - Collaboration Preferences (goals, commitment level, availability)
-    - Links to GitHub, Portfolio, and other social media.
-- **Project Listings:** Users can create and manage project listings, detailing:
-    - Project Title & Description
-    - Required Tech Stack & Skills
-    - Required Years of Experience
-    - Project Stage (e.g., Idea, In Progress, Launched)
-    - Open Roles & Collaboration Status
-    - Incentives (e.g., Paid, Equity, For Fun)
-- **Discover Page:** A central hub for developers to find projects and other developers.
-    - **Dual-View Toggle:** Seamlessly switch between viewing projects and viewing developers.
-    - **Advanced Filtering:** Filter results by tech stack, skills, and years of experience.
-    - **Search:** Full-text search across titles, descriptions, names, and bios.
-    - **Algorithmic Sorting:** Automatically prioritizes and sorts results based on how well they match the user's profile and preferences.
-- **Real-time Chat:** Direct messaging between users to discuss projects and collaboration opportunities, built with Firebase Firestore.
+    - Photo URL
+    - Tech Stack & Professional Skills
+    - Collaboration Preferences (goals, commitment level, preferred collaboration types, locations)
+    - Links to external portfolios and social media.
+
+- **Project & Role Creation:** Users can create and manage:
+    - **Projects:** Detailed listings for an entire product or idea.
+    - **Roles:** Specific, targeted posts for a single position or need within a project, including required skills, commitment level, and collaboration type.
+
+- **User Dashboard:** A personalized central hub for each user, providing:
+    - A snapshot of their public profile.
+    - A summary of their created projects.
+    - **Collaboration Hub:** A dedicated section to review developers who have expressed interest in their projects.
+    - **AI-Powered Insights:** Users can generate on-demand analysis of interested developers, receiving an "Audience Summary," identification of "Potential Gaps," and "Actionable Advice" to improve their project listings or profile.
+
+- **Intelligent Discovery Page:** A central hub for users to find projects, developers, and open roles (posts).
+    - **Tri-View Toggle:** Seamlessly switch between viewing developers, projects, and roles.
+    - **Advanced Filtering:** Filter results by tech stack, skills, years of experience, and more.
+    - **Algorithmic Sorting:** Automatically prioritizes and sorts results based on a "match score," which calculates relevance based on the current user's profile, skills, and preferences.
+    - **Search:** Full-text search across all discoverable items.
+
+- **Collaboration Flow:** A structured process to foster meaningful connections:
+    1.  **Express Interest:** A user finds a project and shows their interest.
+    2.  **Review & Match:** The project owner is notified and can review the interested user's profile on their dashboard. They can then choose to "Match."
+    3.  **Connect:** Upon matching, a notification is sent to both users, a chat is created, and they can begin communicating directly.
+
+- **Real-time Notifications:** A system to alert users of important events, such as new matches.
+
+- **Direct Messaging:** A real-time chat system, built with Firebase Firestore, for matched users to communicate and collaborate.
 
 ## 2. Technology Stack
 
@@ -31,68 +44,110 @@ This document outlines the core features, technology stack, and data models for 
 - **Language:** TypeScript
 - **Backend & Database:** Firebase (Authentication, Firestore, Storage)
 - **Styling:** Tailwind CSS with shadcn/ui components
-- **State Management:** React Hooks (`useState`, `useContext`, `useEffect`)
-- **Form Handling:** `react-hook-form` with `zod` for validation
-- **AI Integration:** Google AI (Genkit) for the AI Bio generation feature.
+- **State Management:** React Hooks and Context API
+- **AI Integration:** Google AI (Genkit) for providing advanced insights on the user dashboard.
+- **Analytics:** Firebase Analytics to track user engagement and feature usage.
 
 ## 3. Data Models
 
 ### UserProfile
-
 ```typescript
 {
   uid: string; // Firebase Auth UID
   name: string;
+  email: string;
+  photoURL?: string;
   bio?: string;
   techStack?: string[];
-  skills?: string[]; // Max 5
+  skills?: string[];
   yearsOfExperience?: number;
   openForCollaboration?: boolean;
   collaborationGoals?: string[];
   commitmentLevel?: string;
-  versionControl?: { type: 'github' | 'gitlab' | 'bitbucket'; url: string; };
-  portfolioUrl?: string;
-  socials?: { type: 'linkedin' | 'twitter' | 'tiktok' | 'discord'; url: string; };
-  extraLinks?: { type: string; url: string; }[]; // Max 3
-  // Timestamps, etc.
+  collaborationPreferences?: string[]; // e.g., 'Remote', 'On-site'
+  locations?: string[];
+  partnerFunctions?: string[];
+  // Links, Timestamps, etc.
 }
 ```
 
 ### Project
-
 ```typescript
 {
   id: string; // Firestore Document ID
-  ownerId: string; // UID of the user who created it
+  ownerId: string;
   title: string;
   description: string;
   requiredTechStack?: string[];
   requiredSkills?: string[];
   requiredYearsOfExperience?: number;
-  projectStage?: 'Idea' | 'Planning' | 'In Progress' | 'Launched';
+  interestedUsers?: string[]; // Array of UIDs
+  matchedUsers?: string[]; // Array of UIDs
   collaborationOpen?: boolean;
-  roleRequirements?: { role: string; description: string; }[]; // E.g., { role: 'Frontend Dev', description: 'Build UI in React' }
-  incentives?: 'Paid' | 'Equity' | 'Learning/Fun' | 'Not Specified';
   // Timestamps, etc.
 }
 ```
 
-### Chat
+### Role (Post)
+```typescript
+{
+  id: string; // Firestore Document ID
+  ownerId: string;
+  title: string;
+  roleDescription: string;
+  requiredTechStack?: string[];
+  requiredSkills?: string[];
+  requiredYearsOfExperience?: number;
+  commitmentLevel?: string;
+  collaborationType?: string; // 'Full-time', 'Part-time'
+  partnerFunctions?: string[];
+  locations?: string[];
+  incentives?: 'Paid Contract' | 'Equity Share' | 'Revenue Share';
+  // Timestamps, etc.
+}
+```
 
-- **Conversations Collection:** Each document represents a chat between two users.
-  - `participants`: `[uid1, uid2]`
-- **Messages Sub-collection:** A sub-collection within each conversation document containing individual chat messages.
-  - `senderId`, `text`, `timestamp`
+### Match
+A `matches` collection where each document represents a connection.
+```typescript
+{
+  id: string; // Firestore Document ID
+  projectId: string;
+  projectTitle: string;
+  users: [string, string]; // [projectOwnerUID, collaboratorUID]
+  createdAt: Timestamp;
+}
+```
+
+### Notification
+A sub-collection under each user's document.
+```typescript
+{
+  id: string;
+  type: 'match' | 'message';
+  fromUserId: string;
+  fromUserName: string;
+  projectId?: string;
+  projectTitle?: string;
+  matchId?: string;
+  read: boolean;
+  createdAt: Timestamp;
+}
+```
 
 ## 4. Page Structure
 
 - `/` - Landing Page
-- `/login` - Sign-in/Sign-up Page
+- `/login`, `/signup` - Auth pages
+- `/dashboard` - Main hub for logged-in users
 - `/profile` - View/Edit your own profile
-- `/profile/[uid]` - View a specific user's public profile
-- `/developers` - Discover other developers and projects (the main feed)
+- `/developers` - Main discovery page for developers, projects, and roles
+- `/developers/[id]` - View a specific user's public profile
+- `/projects` - View the user's own projects
 - `/projects/new` - Create a new project form
 - `/projects/[id]` - View a specific project's details
 - `/projects/[id]/edit` - Edit an existing project
-- `/chat` - Main chat interface
-- `/chat/[uid]` - A direct chat with a specific user
+- `/roles/create` - Create a new role post
+- `/roles/[roleId]` - View a specific role's details
+- `/messages` - Main messages view
+- `/messages/[matchId]` - A direct chat with a specific match
