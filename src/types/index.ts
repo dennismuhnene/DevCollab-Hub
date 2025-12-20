@@ -59,6 +59,8 @@ export interface Project {
   rejections?: { [userId: string]: number }; // Changed from rejectedUsers
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  imageUrl?: string;
+  projectLinks?: ExternalLink[];
 }
 
 // Defines a specific role within a project that users can be matched with

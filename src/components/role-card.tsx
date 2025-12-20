@@ -33,11 +33,7 @@ export default function RoleCard({ role, isDiscoverMode = false }: RoleCardProps
       </CardContent>
       <CardFooter>
         <Button asChild variant="default" className="w-full">
-          {isDiscoverMode ? (
-            <Link href={`/roles/${role.id}`}>View Post</Link>
-          ) : (
-            <Link href={`/roles/edit/${role.id}`}>Edit Role</Link>
-          )}
+          <Link href={`/roles/${role.id}`}>View Role</Link>
         </Button>
       </CardFooter>
     </Card>
