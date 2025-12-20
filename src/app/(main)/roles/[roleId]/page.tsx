@@ -398,18 +398,28 @@ export default function RoleDetailsPage() {
               <CardContent><p className="text-lg leading-relaxed text-foreground/80 whitespace-pre-wrap">{role.roleDescription}</p></CardContent>
             </Card>
 
-           {project && (
-            <Card>
+            {project && (
+              <Card>
                 <CardHeader><CardTitle className="text-xl flex items-center gap-3"><LinkIcon className="h-5 w-5"/> Associated Project</CardTitle></CardHeader>
                 <CardContent>
                     <Link href={`/projects/${project.id}`} className="font-semibold text-lg text-blue-500 hover:underline">{project.title}</Link>
                     <p className="text-foreground/80 leading-relaxed mt-2">{project.description.substring(0, 200)}...</p>
                 </CardContent>
-            </Card>
-          )}
+              </Card>
+            )}
 
-          {isOwner && (
-            <Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4"/> Commitment</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{role.commitmentLevel}</p></CardContent></Card>
+              <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Handshake className="h-4 w-4"/> Incentives</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{role.incentives}</p></CardContent></Card>
+              <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4"/> Collaboration Type</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{role.collaborationType}</p></CardContent></Card>
+              <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" /> Required Experience</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{formatExperience(role.requiredYearsOfExperience)}</p></CardContent></Card>
+              <Card className="md:col-span-2"><CardHeader><CardTitle className="text-base flex items-center gap-2"><Code className="h-4 w-4"/>Required Tech Stack</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{role.requiredTechStack?.map((tech) => <Badge key={tech} variant="secondary">{tech}</Badge>)}</CardContent></Card>
+              <Card className="md:col-span-2"><CardHeader><CardTitle className="text-base flex items-center gap-2"><BrainCircuit className="h-4 w-4"/>Required Skills</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{role.requiredSkills?.map((skill) => <Badge key={skill} variant="outline">{skill}</Badge>)}</CardContent></Card>
+              <Card className="md:col-span-2"><CardHeader><CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4"/>Locations</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{role.locations?.map((location) => <Badge key={location} variant="default">{location}</Badge>)}</CardContent></Card>
+            </div>
+
+            {isOwner && (
+              <Card>
                 <CardHeader>
                     <CardTitle>Collaboration Hub</CardTitle>
                     <CardDescription>Manage developers who are interested in this role.</CardDescription>
@@ -458,8 +468,8 @@ export default function RoleDetailsPage() {
                         </div>
                     ) : <p className="text-muted-foreground text-sm">No developers matched yet.</p>)}
                 </CardContent>
-            </Card>
-          )}
+              </Card>
+            )}
         </div>
         
         <div className="lg:col-span-1 space-y-6">
@@ -490,13 +500,6 @@ export default function RoleDetailsPage() {
                     </div>
             ) : getInterestButton()}
           </div>
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4"/> Commitment</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{role.commitmentLevel}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Handshake className="h-4 w-4"/> Incentives</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{role.incentives}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4"/> Collaboration Type</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{role.collaborationType}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" /> Required Experience</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{formatExperience(role.requiredYearsOfExperience)}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Code className="h-4 w-4"/>Required Tech Stack</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{role.requiredTechStack?.map((tech) => <Badge key={tech} variant="secondary">{tech}</Badge>)}</CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><BrainCircuit className="h-4 w-4"/>Required Skills</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{role.requiredSkills?.map((skill) => <Badge key={skill} variant="outline">{skill}</Badge>)}</CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4"/>Locations</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{role.locations?.map((location) => <Badge key={location} variant="default">{location}</Badge>)}</CardContent></Card>
         </div>
       </div>
     </div>
