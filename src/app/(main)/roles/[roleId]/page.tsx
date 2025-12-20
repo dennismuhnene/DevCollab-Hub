@@ -50,6 +50,7 @@ export default function RoleDetailsPage() {
   const [isMatched, setIsMatched] = useState(false);
   const [rejectionCount, setRejectionCount] = useState(0);
   const [matchId, setMatchId] = useState<string | null>(null);
+  const [matchIdsByUser, setMatchIdsByUser] = useState<Record<string, string>>({});
   const [isInterestLoading, setIsInterestLoading] = useState(false);
   const [interestedUsers, setInterestedUsers] = useState<UserWithId[]>([]);
   const [matchedUsers, setMatchedUsers] = useState<UserWithId[]>([]);
@@ -94,7 +95,7 @@ export default function RoleDetailsPage() {
             const projectDocRef = doc(db, 'projects', roleData.projectId);
             const projectDoc = await getDoc(projectDocRef);
             if (projectDoc.exists()) {
-                setProject({ id: projectDoc.id, ...projectDoc.data() } as Project)
+                setProject({ id: projectDoc.id, ...projectDoc.data() } as Project);
             }
         }
       } else {
@@ -111,7 +112,36 @@ export default function RoleDetailsPage() {
     return () => unsubscribe();
   }, [roleId, user, router, toast]);
 
-  // Fetch associated users and determine user status
+  useEffect(() => {
+    if (!role || !user) return;
+
+    const fetchMatch = async () => {
+      const qNew = query(
+        collection(db, 'matches'),
+        where('contextId', '==', role.id),
+        where('participants', 'array-contains', user.uid)
+      );
+
+      const qLegacy = query(
+        collection(db, 'matches'),
+        where('roleId', '==', role.id),
+        where('participants', 'array-contains', user.uid)
+      );
+
+      const [newSnap, legacySnap] = await Promise.all([getDocs(qNew), getDocs(qLegacy)]);
+      const snap = !newSnap.empty ? newSnap : legacySnap;
+
+      if (!snap.empty) {
+        setMatchId(snap.docs[0].id);
+        setIsMatched(true);
+      } else {
+        setMatchId(null);
+      }
+    };
+
+    fetchMatch();
+  }, [role, user]);
+
   useEffect(() => {
     if (!role || !user) return;
     
@@ -124,7 +154,7 @@ export default function RoleDetailsPage() {
 
           setIsOwner(role.ownerId === user.uid);
           setIsInterested(role.interestedUsers?.includes(user.uid) || false);
-          setIsMatched(role.matchedUsers?.includes(user.uid) || false);
+          setIsMatched(role.matchedUsers?.includes(user.uid) || isMatched);
           
           if (role.ownerId === user.uid) {
             markInterestNotificationsAsRead(user.uid, role.id);
@@ -139,13 +169,38 @@ export default function RoleDetailsPage() {
             return userSnapshots.flatMap(snap => snap.docs.map(d => ({ ...d.data(), id: d.id } as UserWithId)));
           };
           
-          if (role.ownerId === user?.uid) {
+          if (role.ownerId === user.uid) {
              const interested = await fetchUsersByIds(role.interestedUsers || []);
              setInterestedUsers(interested);
           }
 
           const matched = await fetchUsersByIds(role.matchedUsers || []);
           setMatchedUsers(matched);
+
+          if (role.ownerId === user.uid && matched.length > 0) {
+            const qNew = query(
+              collection(db, 'matches'),
+              where('contextId', '==', role.id),
+              where('participants', 'array-contains', user.uid)
+            );
+
+            const qLegacy = query(
+              collection(db, 'matches'),
+              where('roleId', '==', role.id),
+              where('participants', 'array-contains', user.uid)
+            );
+
+            const [newSnap, legacySnap] = await Promise.all([getDocs(qNew), getDocs(qLegacy)]);
+            const snaps = [...newSnap.docs, ...legacySnap.docs];
+
+            const map: Record<string, string> = {};
+            snaps.forEach(d => {
+              const participants = d.data().participants as string[];
+              const other = participants.find(p => p !== user.uid);
+              if (other && !map[other]) map[other] = d.id;
+            });
+            setMatchIdsByUser(map);
+          }
 
         } catch(error) {
           console.error("Error fetching associated users:", error);
@@ -156,7 +211,7 @@ export default function RoleDetailsPage() {
     };
 
     fetchAssociatedUsers();
-  }, [role, user, toast]);
+  }, [role, user, toast, isMatched]);
 
   const handleInterest = async () => {
     if (!user || !userProfile || !role || isPermanentlyRejected) return;
@@ -184,7 +239,7 @@ export default function RoleDetailsPage() {
     } catch(e) {
         console.error("Failed to update interest:", e);
         toast({ variant: 'destructive', title: 'Update Failed', description: 'Your interest could not be updated.' });
-        setIsInterested(wasInterested); // Revert state on failure
+        setIsInterested(wasInterested);
     } finally {
         setIsInterestLoading(false);
     }
@@ -393,7 +448,11 @@ export default function RoleDetailsPage() {
                                     <Avatar><AvatarImage src={p.photoURL} /><AvatarFallback>{p.name?.charAt(0) || 'U'}</AvatarFallback></Avatar>
                                     <p className="font-semibold">{p.name || 'A User'}</p>
                                 </Link>
-                                <Button variant="secondary" size="sm" disabled>Matched</Button>
+                                {matchIdsByUser[p.id] ? (
+                                  <Button asChild size="sm"><Link href={`/messages/${matchIdsByUser[p.id]}`}><MessageSquare className="mr-2 h-4 w-4"/>Conversation</Link></Button>
+                                ) : (
+                                  <Button variant="secondary" size="sm" disabled>Matched</Button>
+                                )}
                             </div>
                         ))}
                         </div>
