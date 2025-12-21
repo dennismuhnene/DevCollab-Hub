@@ -135,7 +135,7 @@ export default function ContactForm() {
                     <Input
                       id="subject"
                       name="subject"
-                      placeholder="Project discussion, collaboration, etc."
+                      placeholder="The subject of your message"
                       required
                     />
                      {state.errors?.subject && <p className="text-sm text-destructive">{state.errors.subject[0]}</p>}
@@ -146,7 +146,7 @@ export default function ContactForm() {
                     <Textarea
                       id="message"
                       name="message"
-                      placeholder="Tell me about your project or what you'd like to discuss..."
+                      placeholder="Tell us something. Type here"
                       rows={6}
                       required
                     />
