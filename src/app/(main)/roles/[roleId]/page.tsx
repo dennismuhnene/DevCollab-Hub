@@ -430,7 +430,7 @@ export default function RoleDetailsPage() {
                     (interestedUsers.length > 0 ? (
                         <div className="space-y-4">
                         {interestedUsers.map(p => (
-                            <div key={p.id} className="flex items-center justify-between p-2 rounded-md border">
+                            <div key={p.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 rounded-md border">
                                 <div className="flex items-center gap-3">
                                     <Avatar><AvatarImage src={p.photoURL} /><AvatarFallback>{p.name?.charAt(0) || 'U'}</AvatarFallback></Avatar>
                                     <div>
@@ -475,7 +475,7 @@ export default function RoleDetailsPage() {
         <div className="lg:col-span-1 space-y-6">
           <div className="flex flex-col space-y-2">
             {isOwner ? (
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 mt-2 sm:mt-0">
                     <Button size="lg" className="w-full" asChild><Link href={`/roles/edit/${role.id}`} onClick={invalidateRoleCache}><Edit className="mr-2 h-4 w-4"/>Edit Role</Link></Button>
                     <AlertDialog>
                         <AlertDialogTrigger asChild><Button size="icon" variant="destructive"><Trash2 className="h-4 w-4"/></Button></AlertDialogTrigger>
