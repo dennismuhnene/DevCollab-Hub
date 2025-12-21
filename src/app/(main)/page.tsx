@@ -408,7 +408,7 @@ export default function HomePage() {
                 Ready to Build What's Next?
               </h2>
               <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.2)]">
-              Sometimes you don't have the time to build everything, sometimes you don't know how and where to find the technical team to build a feature; or sometimes you need to maybe iterate your MVP, or you wanna find better ways to reach your target market and sometimes there are legalese you wanna figure out etc...That's the tribe you are missing. This is what this platfrom is about. Join a community of innovators and builders. Find your perfect tribe and transform your vision into a real-world product.
+              Sometimes you don't have the time to build everything, sometimes you don't know how and where to find the technical team to build a feature; or sometimes you need to maybe iterate your MVP, or you wanna find better ways to reach your target market and sometimes there are legalese you wanna figure out etc...That's the tribe you are missing. That's what this platfrom is about. Join a community of innovators and builders. Find your perfect tribe and transform your vision into a real-world product.
               </p>
               <div className="mt-10 flex items-center justify-center gap-x-6">
                 <Button asChild size="lg" className="bg-white text-orange-500 hover:bg-gray-100 shadow-lg">
