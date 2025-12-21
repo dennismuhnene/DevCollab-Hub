@@ -412,70 +412,19 @@ export default function ProjectDetailsPage() {
             <CardHeader><CardTitle className="text-xl flex items-center gap-3"><UserPlus className="h-5 w-5" /> Seeking Collaborators</CardTitle></CardHeader>
             <CardContent><p className="text-foreground/80 leading-relaxed mt-2">{project.roleRequirements}</p></CardContent>
           </Card>
-
-          {isOwner && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Collaboration Hub</CardTitle>
-                <CardDescription>Manage developers who are interested in this project.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <h3 className="font-semibold mb-2">Interested Developers ({interestedUsers.length})</h3>
-                {loadingUsers ? <Skeleton className="h-24 w-full" /> : (
-                  interestedUsers.length > 0 ? (
-                    <div className="space-y-4">
-                      {interestedUsers.map(p => (
-                        <div key={p.id} className="flex items-center justify-between p-2 rounded-md border">
-                          <div className="flex items-center gap-3">
-                            <Avatar><AvatarImage src={p.photoURL} /><AvatarFallback>{p.name?.charAt(0) || 'U'}</AvatarFallback></Avatar>
-                            <div>
-                              <Link href={`/developers/${p.id}`} className="font-semibold hover:underline">{p.name || 'A User'}</Link>
-                              <p className="text-sm text-muted-foreground">{p.title || 'No title'}</p>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button variant="outline" size="sm" asChild><Link href={`/developers/${p.id}`}>Profile</Link></Button>
-                            <Button onClick={() => handleMatch(p)} size="sm"><UserPlus className="h-4 w-4 mr-2" />Match</Button>
-                            <Button onClick={() => handleReject(p)} size="sm" variant="destructive"><UserX className="h-4 w-4 mr-2" />Reject</Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : <p className="text-muted-foreground text-sm">No one has expressed interest yet.</p>
-                )}
-
-                <h3 className="font-semibold mt-6 mb-2">Matched Developers ({matchedUsers.length})</h3>
-                {loadingUsers ? <Skeleton className="h-12 w-full" /> : (
-                  matchedUsers.length > 0 ? (
-                    <div className="space-y-2">
-                      {matchedUsers.map(p => (
-                        <div key={p.id} className="flex items-center justify-between p-2 rounded-md bg-green-500/10">
-                          <Link href={`/developers/${p.id}`} className="flex items-center gap-3 hover:underline">
-                            <Avatar><AvatarImage src={p.photoURL} /><AvatarFallback>{p.name?.charAt(0) || 'U'}</AvatarFallback></Avatar>
-                            <p className="font-semibold">{p.name || 'A User'}</p>
-                          </Link>
-                          {matchIdsByUser[p.id] ? (
-                            <Button size="sm" onClick={() => handleRestoreAndGoToConversation(matchIdsByUser[p.id])}>
-                              <MessageSquare className="mr-2 h-4 w-4" />Conversation
-                            </Button>
-                          ) : (
-                            <Button variant="secondary" size="sm" disabled>Matched</Button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : <p className="text-muted-foreground text-sm">No developers matched yet.</p>
-                )}
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         <div className="lg:col-span-1 space-y-6">
-          <div className="flex flex-col space-y-2">
+          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4" /> Project Stage</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{project.projectStage}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Handshake className="h-4 w-4" /> Incentives</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{project.incentives}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" /> Required Experience</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{formatExperience(project.requiredYearsOfExperience)}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Code className="h-4 w-4" />Required Tech Stack</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{project.requiredTechStack?.map(tech => <Badge key={tech} variant="secondary">{tech}</Badge>)}</CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><BrainCircuit className="h-4 w-4" />Required Skills</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{project.requiredSkills?.map(skill => <Badge key={skill} variant="outline">{skill}</Badge>)}</CardContent></Card>
+
+          <div className="flex flex-col space-y-2 !mt-8"> 
             {isOwner ? (
               <div className="flex gap-2">
-                <Button size="lg" className="w-full" asChild><Link href={`/projects/edit/${project.id}`} onClick={invalidateProjectCache}><Edit className="mr-2 h-4 w-4" />Edit Project</Link></Button>
+                <Button size="lg" className="w-full" asChild><Link href={`/projects/${project.id}/edit`} onClick={invalidateProjectCache}><Edit className="mr-2 h-4 w-4" />Edit Project</Link></Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild><Button size="icon" variant="destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                   <AlertDialogContent>
@@ -496,13 +445,67 @@ export default function ProjectDetailsPage() {
               </div>
             ) : getInterestButton()}
           </div>
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4" /> Project Stage</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{project.projectStage}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Handshake className="h-4 w-4" /> Incentives</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{project.incentives}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" /> Required Experience</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{formatExperience(project.requiredYearsOfExperience)}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Code className="h-4 w-4" />Required Tech Stack</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{project.requiredTechStack?.map(tech => <Badge key={tech} variant="secondary">{tech}</Badge>)}</CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><BrainCircuit className="h-4 w-4" />Required Skills</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{project.requiredSkills?.map(skill => <Badge key={skill} variant="outline">{skill}</Badge>)}</CardContent></Card>
         </div>
       </div>
+
+      {isOwner && (
+        <div className="mt-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Collaboration Hub</CardTitle>
+              <CardDescription>Manage developers who are interested in this project.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <h3 className="font-semibold mb-2">Interested Developers ({interestedUsers.length})</h3>
+              {loadingUsers ? <Skeleton className="h-24 w-full" /> : (
+                interestedUsers.length > 0 ? (
+                  <div className="space-y-4">
+                    {interestedUsers.map(p => (
+                      <div key={p.id} className="flex flex-col md:flex-row md:items-center md:justify-between p-2 rounded-md border">
+                        <div className="flex items-center gap-3 mb-2 md:mb-0">
+                          <Avatar><AvatarImage src={p.photoURL} /><AvatarFallback>{p.name?.charAt(0) || 'U'}</AvatarFallback></Avatar>
+                          <div>
+                            <Link href={`/developers/${p.id}`} className="font-semibold hover:underline">{p.name || 'A User'}</Link>
+                            <p className="text-sm text-muted-foreground">{p.title || 'No title'}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" asChild><Link href={`/developers/${p.id}`}>Profile</Link></Button>
+                          <Button onClick={() => handleMatch(p)} size="sm"><UserPlus className="h-4 w-4 mr-2" />Match</Button>
+                          <Button onClick={() => handleReject(p)} size="sm" variant="destructive"><UserX className="h-4 w-4 mr-2" />Reject</Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="text-muted-foreground text-sm">No one has expressed interest yet.</p>
+              )}
+
+              <h3 className="font-semibold mt-6 mb-2">Matched Developers ({matchedUsers.length})</h3>
+              {loadingUsers ? <Skeleton className="h-12 w-full" /> : (
+                matchedUsers.length > 0 ? (
+                  <div className="space-y-2">
+                    {matchedUsers.map(p => (
+                      <div key={p.id} className="flex items-center justify-between p-2 rounded-md bg-green-500/10">
+                        <Link href={`/developers/${p.id}`} className="flex items-center gap-3 hover:underline">
+                          <Avatar><AvatarImage src={p.photoURL} /><AvatarFallback>{p.name?.charAt(0) || 'U'}</AvatarFallback></Avatar>
+                          <p className="font-semibold">{p.name || 'A User'}</p>
+                        </Link>
+                        {matchIdsByUser[p.id] ? (
+                          <Button size="sm" onClick={() => handleRestoreAndGoToConversation(matchIdsByUser[p.id])}>
+                            <MessageSquare className="mr-2 h-4 w-4" />Conversation
+                          </Button>
+                        ) : (
+                          <Button variant="secondary" size="sm" disabled>Matched</Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="text-muted-foreground text-sm">No developers matched yet.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
