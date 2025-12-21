@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import SocialIcons from '@/components/ui/social-icons';
+import ContactForm from '@/components/contact-form';
 
 const WavyDivider = ({ className }: { className?: string }) => (
     <div className={cn("absolute bottom-0 left-0 w-full overflow-hidden leading-none", className)} >
@@ -316,7 +317,7 @@ export default function HomePage() {
            <WavyDividerInverted className="fill-muted/20" />
           <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="text-center space-y-4 mb-16">
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Frequently Asked Questions</h2>
+              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">About Us</h2>
               <p className="max-w-2xl mx-auto text-muted-foreground md:text-xl">
                 Curious about what sets us apart? Here are some answers.
               </p>
@@ -343,7 +344,7 @@ export default function HomePage() {
                         transition={{ duration: 0.5, ease: 'easeInOut' }}
                     >
                         <AccordionContent className="text-lg text-muted-foreground pt-2">
-                            Gain a strategic advantage in team building. Our platform analyzes interests in your products, roles and ideas to provide a holistic view of your potential collaborators and provide an avenue to engage with them. This helps you identify team strengths and uncover hidden opportunities beyond product creation- enabling you find the right talent for your growth and developemnt of your product.
+                            Gain a strategic advantage in team building. Our platform provides a holistic view of your potential collaborators and provide an avenue to engage with them. This helps you identify the right tribe and uncover hidden opportunities beyond product creation- enabling you find the right talent for your growth and development of your product and its distribution to the target market.
                         </AccordionContent>
                     </motion.div>
                 </AccordionItem>
@@ -368,6 +369,18 @@ export default function HomePage() {
                     >
                         <AccordionContent className="text-lg text-muted-foreground pt-2">
                             From open-source initiatives, school projects and personal projects to stealth-mode startups building the future, the depth of DevCollab Hub is as diverse as our community. The only limit is your imagination.
+                        </AccordionContent>
+                    </motion.div>
+                </AccordionItem>
+                <AccordionItem value="item-5">
+                  <AccordionTrigger className="text-xl hover:text-primary transition-colors">What if I need to find a tribe but want to keep it on the down low?</AccordionTrigger>
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        transition={{ duration: 0.5, ease: 'easeInOut' }}
+                    >
+                        <AccordionContent className="text-lg text-muted-foreground pt-2">
+                            That's what <strong>Roles</strong> are for. You can create a Role to post a specific need, like 'I am looking for a study partner to build projects together' without exposing much about your idea or project. They remain confidential (your business) until you choose to share it with a matched collaborator after a chat.
                         </AccordionContent>
                     </motion.div>
                 </AccordionItem>
@@ -421,6 +434,7 @@ export default function HomePage() {
             </motion.div>
           </div>
         </motion.section>
+        <ContactForm />
       </main>
     </div>
   );
