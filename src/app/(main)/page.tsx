@@ -186,7 +186,7 @@ export default function HomePage() {
         {/* Featured Projects */}
         <motion.section 
           id="features" 
-          className="relative w-full pt-20 md:pt-32 pb-20 md:pb-32 bg-muted/20"
+          className="relative w-full pt-28 md:pt-40 pb-20 md:pb-32 bg-muted/20"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.2 }}
@@ -195,9 +195,9 @@ export default function HomePage() {
           <WavyDividerInverted className="fill-muted/20" />
           <motion.div variants={itemVariants} className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="text-center space-y-4 mb-16">
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Featured Projects</h2>
+              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Featured</h2>
               <p className="max-w-2xl mx-auto text-muted-foreground md:text-xl">
-                Check out some of the exciting projects currently looking for collaborators.
+                Check out some cool projects in the hub.
               </p>
             </div>
             <motion.div 
@@ -242,8 +242,8 @@ export default function HomePage() {
             </motion.div>
              <motion.div variants={itemVariants} className="flex justify-center mt-12">
               <Button asChild variant="outline">
-                <Link href="/projects">
-                  View All Projects <ArrowRight className="ml-2 h-4 w-4" />
+                <Link href="/developers">
+                   Check it Out<ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
             </motion.div>
@@ -251,7 +251,7 @@ export default function HomePage() {
           <WavyDivider className="fill-background" />
         </motion.section>
 
-        {/* Unlock Your Potential Section */}
+        {/* Build your Tribe Section */}
         <motion.section
           id="potential"
           className="relative w-full py-20 md:py-32 bg-background"
@@ -262,7 +262,7 @@ export default function HomePage() {
         >
           <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="text-center space-y-4 mb-16">
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Unlock Your Potential</h2>
+              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Build your Tribe</h2>
               <p className="max-w-2xl mx-auto text-muted-foreground md:text-xl">
                 Discover the tools and connections to bring your boldest ideas to life.
               </p>
