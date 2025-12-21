@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/hooks/use-auth';
 import type { UserProfile, Project, Role } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Search, Filter } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import DeveloperCard from '@/components/developer-card';
 import ProjectCard from '@/components/project-card';
@@ -18,6 +18,8 @@ import { Button } from '@/components/ui/button';
 import { DiscoverFilters } from '@/components/discover-filters';
 import { logAnalyticsEvent } from '@/firebase/analytics';
 import { professionalSkills, technologies } from '@/lib/constants';
+import { useDrag } from '@use-gesture/react';
+import { animated, useSpring } from '@react-spring/web';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -114,11 +116,26 @@ export default function DiscoverPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('projects');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filtersVisible, setFiltersVisible] = useState(true);
 
   const [experienceRange, setExperienceRange] = useState<[number, number]>([0, 20]);
   const [selectedTechs, setSelectedTechs] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+
+  const [{ y }, api] = useSpring(() => ({ y: 0 }));
+  const [bounds, setBounds] = useState({ top: 0, bottom: 500 });
+
+  useEffect(() => {
+    setBounds({ top: 0, bottom: window.innerHeight - 100 });
+  }, []);
+
+  const bind = useDrag(
+    ({ down, movement: [, my] }) => {
+      api.start({ y: my });
+    },
+    { bounds }
+  );
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login');
@@ -224,7 +241,7 @@ export default function DiscoverPage() {
   };
 
   const ListSkeleton = () => (
-    <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+    <div className={`grid grid-cols-1 gap-8 sm:grid-cols-2 ${filtersVisible ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
       {[...Array(ITEMS_PER_PAGE)].map((_, i) => (
         <Card key={i}>
           <CardContent className="p-4">
@@ -247,7 +264,7 @@ export default function DiscoverPage() {
 
     return (
       <>
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={`grid grid-cols-1 gap-8 sm:grid-cols-2 ${filtersVisible ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
           {paginatedResults.map(item => {
             if (isProject(item)) return <ProjectCard key={`proj-${item.id}`} project={item} />;
             if (isRole(item)) return <RoleCard key={`role-${item.id}`} role={item} isDiscoverMode={true} />;
@@ -291,20 +308,33 @@ export default function DiscoverPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <div className="lg:col-span-1">
-          <DiscoverFilters
-            allTechs={technologies}
-            allSkills={professionalSkills}
-            experienceRange={experienceRange}
-            setExperienceRange={setExperienceRange}
-            selectedTechs={selectedTechs}
-            setSelectedTechs={setSelectedTechs}
-            selectedSkills={selectedSkills}
-            setSelectedSkills={setSelectedSkills}
-            resetFilters={resetFilters}
-          />
-        </div>
-        <div className="lg:col-span-3">
+        {filtersVisible ? (
+          <div className="lg:col-span-1">
+            <DiscoverFilters
+              allTechs={technologies}
+              allSkills={professionalSkills}
+              experienceRange={experienceRange}
+              setExperienceRange={setExperienceRange}
+              selectedTechs={selectedTechs}
+              setSelectedTechs={setSelectedTechs}
+              selectedSkills={selectedSkills}
+              setSelectedSkills={setSelectedSkills}
+              resetFilters={resetFilters}
+              onHide={() => setFiltersVisible(false)}
+            />
+          </div>
+        ) : (
+          <animated.div
+            {...bind()}
+            style={{ y, touchAction: 'none' }}
+            className="fixed top-1/2 left-0 z-20"
+          >
+            <Button onClick={() => setFiltersVisible(true)} className="pl-2 pr-3 py-6 rounded-r-full">
+              <Filter className="h-5 w-5" />
+            </Button>
+          </animated.div>
+        )}
+        <div className={filtersVisible ? "lg:col-span-3" : "lg:col-span-4"}>
           <Card className="mb-8 p-4 sticky top-4 z-10 bg-background/80 backdrop-blur-sm">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
