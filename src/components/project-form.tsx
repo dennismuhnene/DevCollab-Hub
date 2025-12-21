@@ -109,15 +109,26 @@ export default function ProjectForm({ project }: ProjectFormProps) {
   }, [project, setValue]);
 
 
-  const handleTechStackAdd = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && techStackInput.trim()) {
-      e.preventDefault();
+  const addTechStackItem = () => {
+    const newTech = techStackInput.trim();
+    if (newTech) {
       const currentTechStack = getValues('requiredTechStack') || [];
-      if (!currentTechStack.includes(techStackInput.trim())) {
-        setValue('requiredTechStack', [...currentTechStack, techStackInput.trim()]);
+      if (!currentTechStack.includes(newTech)) {
+        setValue('requiredTechStack', [...currentTechStack, newTech], { shouldValidate: true, shouldDirty: true });
       }
       setTechStackInput('');
     }
+  };
+
+  const handleTechStackKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTechStackItem();
+    }
+  };
+
+  const handleTechStackBlur = () => {
+    addTechStackItem();
   };
 
   const handleTechStackRemove = (techToRemove: string) => {
@@ -258,7 +269,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
                     <button type="button" onClick={() => handleTechStackRemove(tech)}><X className="h-4 w-4" /></button>
                   </div>
                 ))}
-                <Input id="requiredTechStack" value={techStackInput} onChange={(e) => setTechStackInput(e.target.value)} onKeyDown={handleTechStackAdd} placeholder="Type a technology and press Enter" className="flex-1 border-none shadow-none focus-visible:ring-0" />
+                <Input id="requiredTechStack" value={techStackInput} onChange={(e) => setTechStackInput(e.target.value)} onKeyDown={handleTechStackKeyDown} onBlur={handleTechStackBlur} placeholder="Type a technology and press Enter" className="flex-1 border-none shadow-none focus-visible:ring-0" />
               </div>
               {errors.requiredTechStack && <p className="text-sm text-destructive">{errors.requiredTechStack.message}</p>}
             </div>

@@ -1,6 +1,5 @@
 'use client';
 
-import type { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MultiSelect } from '@/components/ui/multi-select';
@@ -13,10 +12,11 @@ interface DiscoverFiltersProps {
   experienceRange: [number, number];
   setExperienceRange: (value: [number, number]) => void;
   selectedTechs: string[];
-  setSelectedTechs: Dispatch<SetStateAction<string[]>>;
+  setSelectedTechs: React.Dispatch<React.SetStateAction<string[]>>;
   selectedSkills: string[];
-  setSelectedSkills: Dispatch<SetStateAction<string[]>>;
+  setSelectedSkills: React.Dispatch<React.SetStateAction<string[]>>;
   resetFilters: () => void;
+  onHide: () => void;
 }
 
 export function DiscoverFilters({
@@ -29,9 +29,18 @@ export function DiscoverFilters({
   selectedSkills,
   setSelectedSkills,
   resetFilters,
+  onHide,
 }: DiscoverFiltersProps) {
   return (
-    <Card>
+    <Card className="relative">
+      <Button
+        onClick={onHide}
+        variant="ghost"
+        size="icon"
+        className="absolute top-2 right-2"
+      >
+        <X className="h-4 w-4" />
+      </Button>
       <CardHeader>
         <CardTitle>Filter Results</CardTitle>
       </CardHeader>

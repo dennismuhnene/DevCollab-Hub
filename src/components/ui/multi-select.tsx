@@ -25,47 +25,72 @@ interface MultiSelectProps {
 
 export function MultiSelect({ options, selected, onChange, className, ...props }: MultiSelectProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const commandRef = React.useRef<HTMLDivElement>(null);
   const [open, setOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState('');
+  const [isFocused, setIsFocused] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (commandRef.current && !commandRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const safeSelected = Array.isArray(selected) ? selected : [];
 
   const handleUnselect = (value: string) => {
-    onChange(selected.filter((s) => s !== value));
+    onChange(safeSelected.filter((s) => s !== value));
   };
 
-  // Combined logic for adding a new value from input
-  const addValueFromInput = () => {
+  const addValueFromInput = React.useCallback(() => {
     if (inputValue) {
       const valueToAdd = inputValue.trim();
       const exactMatch = options.find(o => o.value.toLowerCase() === valueToAdd.toLowerCase());
 
-      // Only add if it's not an exact match of an existing option
       if (!exactMatch) {
-        // And if it's not already in the selected list
-        if (!selected.find(s => s.toLowerCase() === valueToAdd.toLowerCase())) {
-            onChange(prev => [...prev, valueToAdd]);
-        }
+        onChange(prev => [...(Array.isArray(prev) ? prev : []), valueToAdd]);
       }
       setInputValue('');
     }
-  };
+  }, [inputValue, options, onChange]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' && inputValue) {
-      e.preventDefault();
-      addValueFromInput();
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      if (inputValue) {
+        e.preventDefault();
+        addValueFromInput();
+      }
     }
   };
-  
+
+  const handleFocus = () => {
+    setIsFocused(true);
+    setOpen(true);
+  };
+
   const handleBlur = () => {
-      setOpen(false);
-      addValueFromInput();
-  }
+    setIsFocused(false);
+    // A brief delay to allow other events like onSelect to be handled
+    setTimeout(() => {
+      if (!isFocused) {
+        setOpen(false);
+        addValueFromInput();
+      }
+    }, 150);
+  };
 
   return (
-    <CommandPrimitive onKeyDown={handleKeyDown} className={cn('overflow-visible bg-transparent', className)}>
+    <CommandPrimitive ref={commandRef} onKeyDown={handleKeyDown} className={cn('overflow-visible bg-transparent', className)}>
       <div className="group rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
         <div className="flex flex-wrap gap-1">
-          {selected.map((value) => {
+          {safeSelected.map((value) => {
             const option = options.find((o) => o.value === value);
             return (
               <Badge key={value} variant="secondary" className="rounded-sm px-2 py-1 font-normal">
@@ -92,8 +117,8 @@ export function MultiSelect({ options, selected, onChange, className, ...props }
             ref={inputRef}
             value={inputValue}
             onValueChange={setInputValue}
-            onBlur={handleBlur} // Updated to handle adding value on blur
-            onFocus={() => setOpen(true)}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             placeholder={props.placeholder || 'Select items...'}
             className="ml-2 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
           />
@@ -114,15 +139,16 @@ export function MultiSelect({ options, selected, onChange, className, ...props }
                       }}
                       onSelect={() => {
                         onChange(prev => {
-                          if (prev.includes(option.value)) {
-                            return prev.filter(s => s !== option.value);
+                          const newSelected = Array.isArray(prev) ? prev : [];
+                          if (newSelected.includes(option.value)) {
+                            return newSelected.filter(s => s !== option.value);
                           } else {
-                            return [...prev, option.value];
+                            return [...newSelected, option.value];
                           }
                         });
                         setInputValue('');
                       }}
-                      className={cn('cursor-pointer', selected.includes(option.value) && 'font-bold')}
+                      className={cn('cursor-pointer', safeSelected.includes(option.value) && 'font-bold')}
                     >
                       {option.label}
                     </CommandItem>
