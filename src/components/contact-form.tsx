@@ -3,46 +3,33 @@
 
 import { useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
-import { Mail, Phone, MapPin, Send, Linkedin, Github } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { sendEmail } from '@/app/(main)/contact/actions';
+import { sendEmail } from '@/app/(main)/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useActionState as useReactActionState } from 'react';
+import { cn } from '@/lib/utils';
 
-const contactInfo = [
-  {
-    icon: Mail,
-    title: 'Email',
-    value: 'Use the form',
-    href: null,
-  },
-  {
-    icon: Phone,
-    title: 'Phone',
-    value: '+254 (112) 078 119',
-    href: 'tel:+254112078119',
-  },
-  {
-    icon: MapPin,
-    title: 'Location',
-    value: 'Global',
-    href: null,
-  },
-];
-
-const socialLinks = [
-  { icon: Github, href: 'https://github.com/chombadennis', label: 'GitHub' },
-  {
-    icon: Linkedin,
-    href: 'https://www.linkedin.com/in/lukk3vdebarezz99l8yy/',
-    label: 'LinkedIn',
-  },
-];
+const WavyDividerInverted = ({ className }: { className?: string }) => (
+    <div className={cn("absolute top-0 left-0 w-full overflow-hidden leading-none", className)}>
+        <svg
+            data-name="Layer 1"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1200 120"
+            preserveAspectRatio="none"
+            className="relative block h-[60px] md:h-[120px] w-[calc(100%+1.3px)]"
+        >
+            <path
+                d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"
+                className="fill-background"
+            ></path>
+        </svg>
+    </div>
+);
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -70,7 +57,7 @@ function SubmitButton() {
 }
 
 
-export default function ContactPage() {
+export default function ContactForm() {
     const { toast } = useToast();
     const [state, formAction] = useReactActionState(sendEmail, {
         message: '',
@@ -96,12 +83,10 @@ export default function ContactPage() {
 
 
   return (
-    <div className="bg-background text-foreground">
-      <div className="container mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+    <div id="contact" className="relative bg-muted/20 text-foreground">
+        <WavyDividerInverted className="fill-muted/20" />
+      <div className="container mx-auto max-w-7xl px-4 pt-28 md:pt-40 pb-16 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <Badge variant="secondary" className="mb-4">
-            Get In Touch
-          </Badge>
           <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">
             Contact Us
           </h1>
@@ -110,7 +95,7 @@ export default function ContactPage() {
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-12">
+        <div className="grid lg:grid-cols-1 gap-12 max-w-3xl mx-auto">
           <div>
             <Card className="border-border/50">
               <CardHeader>
@@ -172,59 +157,6 @@ export default function ContactPage() {
                     <SubmitButton />
                   </div>
                 </form>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="space-y-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {contactInfo.map((info) => (
-                <Card key={info.title} className="border-border/50 hover:border-primary/20 transition-colors">
-                  <CardContent className="p-6 text-center">
-                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <info.icon className="h-6 w-6 text-primary" />
-                    </div>
-                    <h3 className="font-semibold mb-2">{info.title}</h3>
-                    {info.href ? (
-                      <a
-                        href={info.href}
-                        className="text-muted-foreground hover:text-primary transition-colors break-words"
-                      >
-                        {info.value}
-                      </a>
-                    ) : (
-                      <p className={`text-muted-foreground ${info.title === 'Email' ? 'italic' : ''}`}>{info.value}</p>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            <Card className="border-border/50">
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-4 text-center">
-                  Connect With Me
-                </h3>
-                <div className="flex justify-center space-x-4">
-                  {socialLinks.map((social) => (
-                    <Button
-                      key={social.label}
-                      variant="outline"
-                      size="lg"
-                      className="rounded-full h-12 w-12 p-0 hover:border-primary/40 hover:bg-primary/5"
-                      asChild
-                    >
-                      <a
-                        href={social.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={social.label}
-                      >
-                        <social.icon className="h-5 w-5" />
-                      </a>
-                    </Button>
-                  ))}
-                </div>
               </CardContent>
             </Card>
           </div>

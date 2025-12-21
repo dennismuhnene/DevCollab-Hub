@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { auth } from '@/lib/firebase/config';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -25,8 +25,23 @@ import ClientOnly from '@/components/client-only';
 export default function Header() {
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+
+  const handleScroll = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
+    if (pathname === '/') {
+      e.preventDefault();
+      const targetId = e.currentTarget.href.split('#')[1];
+      const targetElement = document.getElementById(targetId);
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+        router.push('/#contact');
+    }
+    setIsSheetOpen(false);
+  };
 
 
   const handleLogout = async () => {
@@ -53,7 +68,7 @@ export default function Header() {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/messages", label: "Messages", icon: MessageSquare },
     { href: "/blogs", label: "Blog", icon: PenSquare },
-    { href: "/contact", label: "Contact", icon: Contact },
+    { href: "/#contact", label: "Contact", icon: Contact },
   ];
   
   const mobileNavLinks = [
@@ -75,7 +90,12 @@ export default function Header() {
                   {user && (
                     <>
                       {navLinks.map((link) => (
-                        <Link key={link.href} href={link.href} className="transition-colors hover:text-foreground/80 text-foreground/60">
+                        <Link 
+                          key={link.href} 
+                          href={link.href} 
+                          onClick={link.href === '/#contact' ? handleScroll : undefined}
+                          className="transition-colors hover:text-foreground/80 text-foreground/60"
+                        >
                           {link.label}
                         </Link>
                       ))}
@@ -158,7 +178,7 @@ export default function Header() {
                 ) : (
                   <div className='hidden md:flex items-center space-x-2'>
                     <Button variant="ghost" asChild>
-                        <Link href="/contact">
+                        <Link href="/#contact" onClick={handleScroll}>
                         Contact
                         </Link>
                     </Button>
@@ -199,7 +219,11 @@ export default function Header() {
                                   {user ? (
                                       mobileNavLinks.map((link) => (
                                           <SheetClose asChild key={link.href}>
-                                              <Link href={link.href} className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
+                                              <Link 
+                                                href={link.href} 
+                                                onClick={link.href === '/#contact' ? handleScroll : () => setIsSheetOpen(false)}
+                                                className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2"
+                                               >
                                                   <link.icon className="h-5 w-5" />
                                                   {link.label}
                                               </Link>
@@ -214,7 +238,7 @@ export default function Header() {
                                               </Link>
                                           </SheetClose>
                                           <SheetClose asChild>
-                                              <Link href="/contact" className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
+                                              <Link href="/#contact" onClick={handleScroll} className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
                                                   <Contact className="h-5 w-5" />
                                                   Contact
                                               </Link>

@@ -273,7 +273,7 @@ export default function DashboardPage() {
           <Card className="bg-gradient-to-br from-primary/5 to-transparent">
             <CardHeader>
                 <CardTitle className="flex items-center gap-3"><Lightbulb className="h-6 w-6 text-yellow-400" /><span>Insights</span></CardTitle>
-                <CardDescription>Analyze developers interested in your projects to uncover collaboration opportunities and profile improvement suggestions.</CardDescription>
+                <CardDescription>Uncover collaboration opportunities and profile optimization suggestions.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
                 {isAiInsightsLoading ? (
