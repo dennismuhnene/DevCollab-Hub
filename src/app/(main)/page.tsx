@@ -163,9 +163,9 @@ export default function HomePage() {
               variants={containerVariants}
             >
               {[
-                { icon: Search, title: '1. Discover', description: 'Explore a curated ecosystem of ambitious projects, open roles, and skilled professionals. Our intelligent platform helps you find the perfect opportunity or partner.' },
-                { icon: Handshake, title: '2. Connect', description: 'Initiate meaningful collaborations by expressing interest. Project owners can review and match with the best-fit talent for their team.' },
-                { icon: Rocket, title: '3. Build & Launch', description: 'Leverage integrated tools and AI-driven insights to streamline your workflow. Move from concept to launch with a dedicated team and a shared vision.' }
+                { icon: Search, title: '1. Discover', description: 'Explore a curated ecosystem of projects, roles and build a skilled team. Our intelligent platform helps you find the perfect tribe.' },
+                { icon: Handshake, title: '2. Connect', description: 'Initiate meaningful collaborations by expressing interest. The tribal chief will review and match with the best-fit for their vision.' },
+                { icon: Rocket, title: '3. Build & Launch', description: "Use the messaging feature to align on goals, share ideas and begin your collaboration. It's time to build your vision and bring it to life, from idea to project to distribution." }
               ].map((feature, index) => (
                  <motion.div key={index} variants={itemVariants} whileHover={{ y: -8, transition: { duration: 0.2 } }}>
                    <Card className="relative overflow-hidden h-full bg-white/10 backdrop-blur-sm border-white/20 hover:border-primary/50 transition-all duration-300 transform hover:shadow-glow">
@@ -284,7 +284,7 @@ export default function HomePage() {
                 },
                 {
                   icon: Package,
-                  title: 'From Project to Product',
+                  title: 'From Project to Product to distribution',
                   description: 'Gain the support, structure and collaborative power to transform your project from a great idea into a market-ready, valuable product.',
                 },
               ].map((feature, index) => (
@@ -394,10 +394,9 @@ export default function HomePage() {
         <motion.section
           id="cta"
           className="relative w-full py-20 md:py-32 bg-background"
-          initial="hidden"
-          whileInView="visible"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
           viewport={{ once: true, amount: 0.5 }}
-          variants={containerVariants}
         >
           <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <motion.div
