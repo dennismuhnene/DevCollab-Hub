@@ -62,10 +62,18 @@ export function MultiSelect({ options, selected, onChange, className, ...props }
   }, [inputValue, options, onChange]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' || e.key === 'Tab') {
+    if (e.key === 'Enter') {
       if (inputValue) {
         e.preventDefault();
         addValueFromInput();
+      }
+    }
+
+    // This specifically handles the 'Tab' key, often triggered by the 'next' button on mobile keyboards.
+    if (e.key === 'Tab') {
+      if (inputValue) {
+        e.preventDefault(); // Prevents focus from moving to the next element.
+        addValueFromInput(); // Adds the current input value to the selection.
       }
     }
   };
