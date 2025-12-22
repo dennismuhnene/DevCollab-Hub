@@ -235,7 +235,7 @@ export default function ProfilePage() {
         </div>
 
         <div className="flex-1 pt-4">
-          <h1 className="text-4xl font-bold">{finalProfile.name}</h1>
+          <h1 className="text-3xl font-bold">{finalProfile.name}</h1>
           <p className="text-muted-foreground text-lg">{finalProfile.email}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {finalProfile.skills?.map((skill: string) => (

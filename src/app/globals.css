@@ -4,13 +4,13 @@
 
 @layer base {
   :root {
-    --background: 20 14% 97%;
+    --background: 0 0% 100%;
     --foreground: 20 14% 9%;
 
-    --card: 20 14% 97%;
+    --card: 0 0% 100%;
     --card-foreground: 20 14% 9%;
 
-    --popover: 20 14% 97%;
+    --popover: 0 0% 100%;
     --popover-foreground: 20 14% 9%;
 
     --primary: 35 91% 50%; /* Gold/Orange */
@@ -36,14 +36,14 @@
   }
 
   .dark {
-    --background: 20 14% 4%; /* Near Black */
-    --foreground: 20 5% 94%;
+    --background: 0 0% 100%; /* White */
+    --foreground: 20 14% 9%;   /* Dark Gray for readability */
 
-    --card: 20 10% 8%;
-    --card-foreground: 20 5% 94%;
+    --card: 45 83% 94%; /* Parchment */
+    --card-foreground: 20 14% 9%; /* Dark Gray for readability */
 
-    --popover: 20 14% 4%;
-    --popover-foreground: 20 5% 94%;
+    --popover: 45 83% 94%; /* Parchment */
+    --popover-foreground: 20 14% 9%; /* Dark Gray for readability */
 
     --primary: 38 92% 50%; /* Gold */
     --primary-foreground: 38 100% 10%;
@@ -51,17 +51,17 @@
     --secondary: 25 84% 55%; /* Shiny Orange */
     --secondary-foreground: 25 100% 10%;
 
-    --muted: 20 10% 12%;
-    --muted-foreground: 20 5% 64%;
+    --muted: 20 10% 90%; /* Light gray for muted backgrounds */
+    --muted-foreground: 20 10% 45%; /* Dark gray for muted text */
 
-    --accent: 20 14% 12%;
-    --accent-foreground: 20 5% 94%;
+    --accent: 20 10% 92%; /* Lighter gray for accents */
+    --accent-foreground: 20 14% 9%; /* Dark gray for accent text */
 
     --destructive: 0 63% 31%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 20 14% 12%;
-    --input: 20 14% 12%;
+    --border: 20 10% 85%;
+    --input: 20 10% 85%;
     --ring: 38 92% 50%;
   }
 }
@@ -73,6 +73,9 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  h1 {
+    @apply text-2xl font-semibold leading-none tracking-tight;
   }
   .fill-background {
     fill: hsl(var(--background));

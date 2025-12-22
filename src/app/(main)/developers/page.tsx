@@ -291,7 +291,7 @@ export default function DiscoverPage() {
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8">
       <div className="mb-12 text-center">
-        <h1 className="text-4xl font-bold tracking-tight font-headline">Discover Your Tribe</h1>
+        <h1 className="text-3xl font-bold tracking-tight font-headline">Discover Your Tribe</h1>
         <p className="mt-3 text-lg text-muted-foreground">Find projects, connect with developers, or explore open posts.</p>
       </div>
 
