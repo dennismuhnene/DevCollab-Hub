@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
@@ -49,10 +48,8 @@ export default function DeveloperCard({ developer }: DeveloperCardProps) {
             </div>
           </div>
         </div>
-        <Button asChild variant="outline" className="w-full mt-4">
-          <Link href={`/developers/${developer.uid}`}>
+        <Button variant="outline" className="w-full mt-4">
             View Profile <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
         </Button>
       </CardContent>
     </Card>

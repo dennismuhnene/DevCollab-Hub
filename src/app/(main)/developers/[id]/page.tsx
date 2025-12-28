@@ -16,51 +16,27 @@ import Link from 'next/link';
 import { Briefcase, BadgeCheck, BadgeX, Clock, BrainCircuit, Code, Target, Link as LinkIcon, Handshake } from 'lucide-react';
 import { logAnalyticsEvent } from '@/firebase/analytics';
 
-export default function DeveloperProfilePage() {
-  const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
-  const params = useParams();
-  const developerId = params.id as string;
-
-  const [developer, setDeveloper] = useState<UserProfile | null>(null);
+// 1. Export the Content component
+export const DeveloperProfileContent = ({ developer }: { developer: UserProfile }) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // 2. Move project fetching logic inside the content component
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    }
-  }, [user, authLoading, router]);
+    if (!developer.uid) return;
 
-  useEffect(() => {
-    if (!developerId || !user) return;
-
-    const fetchDeveloperData = async () => {
+    const fetchProjects = async () => {
       setLoading(true);
-
-      const developerDocRef = doc(db, 'users', developerId);
-      const developerDoc = await getDoc(developerDocRef);
-
-      if (developerDoc.exists()) {
-        const devData = { uid: developerDoc.id, ...developerDoc.data() } as UserProfile;
-        setDeveloper(devData);
-        logAnalyticsEvent('profile_view', { user_id: user.uid, viewed_user_id: developerId });
-      } else {
-        router.push('/developers');
-        return;
-      }
-
       const projectsCol = collection(db, 'projects');
-      const q = query(projectsCol, where('ownerId', '==', developerId));
+      const q = query(projectsCol, where('ownerId', '==', developer.uid));
       const querySnapshot = await getDocs(q);
       const devProjects = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
       setProjects(devProjects);
-
       setLoading(false);
     };
 
-    fetchDeveloperData();
-  }, [developerId, user, router]);
+    fetchProjects();
+  }, [developer.uid]);
 
   const getInitials = (name?: string) => {
     if (!name) return 'U';
@@ -95,38 +71,6 @@ export default function DeveloperProfilePage() {
         ),
       ].filter((link): link is { label: string; url: string } => !!link)
     : [];
-
-  if (loading || authLoading) {
-    return (
-      <div className="container mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex items-center space-x-6 mb-8">
-          <Skeleton className="h-32 w-32 rounded-full" />
-          <div className="space-y-3">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-6 w-64" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        </div>
-        <div className="space-y-8">
-          <Card>
-            <CardHeader><Skeleton className="h-8 w-32" /></CardHeader>
-            <CardContent><Skeleton className="h-20 w-full" /></CardContent>
-          </Card>
-          <Card>
-            <CardHeader><Skeleton className="h-8 w-48" /></CardHeader>
-            <CardContent className="grid grid-cols-1 gap-8 sm:grid-cols-2">
-              <Skeleton className="h-64 w-full" />
-              <Skeleton className="h-64 w-full" />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  if (!developer) {
-    return <div className="text-center py-20">Developer not found.</div>;
-  }
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
@@ -226,7 +170,12 @@ export default function DeveloperProfilePage() {
               <Briefcase className="h-7 w-7 text-primary mr-3" />
               <h2 className="text-lg font-bold tracking-tight">Projects</h2>
           </div>
-          {projects.length > 0 ? (
+          {loading ? (
+             <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
+              <Skeleton className="h-64 w-full" />
+              <Skeleton className="h-64 w-full" />
+            </div>
+          ) : projects.length > 0 ? (
             <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
               {projects.map((project) => <ProjectCard key={project.id} project={project} />)}
             </div>
@@ -239,4 +188,77 @@ export default function DeveloperProfilePage() {
       </div>
     </div>
   );
+}
+
+// The page component now just fetches the main data and renders the content component.
+export default function DeveloperProfilePage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const params = useParams();
+  const developerId = params.id as string;
+
+  const [developer, setDeveloper] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (!developerId || !user) return;
+
+    const fetchDeveloperData = async () => {
+      setLoading(true);
+      const developerDocRef = doc(db, 'users', developerId);
+      const developerDoc = await getDoc(developerDocRef);
+
+      if (developerDoc.exists()) {
+        const devData = { uid: developerDoc.id, ...developerDoc.data() } as UserProfile;
+        setDeveloper(devData);
+        logAnalyticsEvent('profile_view', { user_id: user.uid, viewed_user_id: developerId });
+      } else {
+        router.push('/developers');
+        return;
+      }
+      setLoading(false);
+    };
+
+    fetchDeveloperData();
+  }, [developerId, user, router]);
+
+  if (loading || authLoading) {
+    return (
+      <div className="container mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="flex items-center space-x-6 mb-8">
+          <Skeleton className="h-32 w-32 rounded-full" />
+          <div className="space-y-3">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-6 w-64" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </div>
+        <div className="space-y-8">
+          <Card>
+            <CardHeader><Skeleton className="h-8 w-32" /></CardHeader>
+            <CardContent><Skeleton className="h-20 w-full" /></CardContent>
+          </Card>
+          <Card>
+            <CardHeader><Skeleton className="h-8 w-48" /></CardHeader>
+            <CardContent className="grid grid-cols-1 gap-8 sm:grid-cols-2">
+              <Skeleton className="h-64 w-full" />
+              <Skeleton className="h-64 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (!developer) {
+    return <div className="text-center py-20">Developer not found.</div>;
+  }
+
+  return <DeveloperProfileContent developer={developer} />;
 }

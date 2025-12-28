@@ -34,16 +34,13 @@ interface UserWithId extends UserProfile {
 
 const MAX_REJECTIONS = 3;
 
-export default function RoleDetailsPage() {
+export const RoleDetailsContent = ({ role: initialRole }: { role: Role }) => {
   const { user, userProfile, loading: authLoading } = useAuth();
   const router = useRouter();
-  const params = useParams();
-  const roleId = params.roleId as string;
+  const { toast } = useToast();
 
-  const [role, setRole] = useState<Role | null>(null);
+  const [role, setRole] = useState<Role>(initialRole);
   const [project, setProject] = useState<Project | null>(null);
-  const [roleLoading, setRoleLoading] = useState(true);
-  
   const [owner, setOwner] = useState<UserProfile | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
@@ -55,62 +52,38 @@ export default function RoleDetailsPage() {
   const [interestedUsers, setInterestedUsers] = useState<UserWithId[]>([]);
   const [matchedUsers, setMatchedUsers] = useState<UserWithId[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  
-  const { toast } = useToast();
 
   const isPermanentlyRejected = rejectionCount >= MAX_REJECTIONS;
 
   const invalidateRoleCache = useCallback(() => {
     try {
-      sessionStorage.removeItem(`role_${roleId}`);
+      sessionStorage.removeItem(`role_${role.id}`);
     } catch (error) {
       console.warn('Could not remove from session storage', error);
     }
-  }, [roleId]);
+  }, [role.id]);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    }
-  }, [user, authLoading, router]);
+    if (!role.id || !user) return;
 
-  useEffect(() => {
-    if (!roleId || !user) return;
-
-    setRoleLoading(true);
-    const roleDocRef = doc(db, 'roles', roleId);
-
-    const unsubscribe = onSnapshot(roleDocRef, async (docSnap) => {
+    const unsubscribe = onSnapshot(doc(db, 'roles', role.id), async (docSnap) => {
       if (docSnap.exists()) {
         const roleData = { id: docSnap.id, ...docSnap.data() } as Role;
         setRole(roleData);
         setRejectionCount(roleData.rejections?.[user.uid] || 0);
 
-        if (user && user.uid !== roleData.ownerId && !sessionStorage.getItem(`role_viewed_${roleId}`)) {
-          logAnalyticsEvent('role_view', { role_id: roleId });
-          sessionStorage.setItem(`role_viewed_${roleId}`, 'true');
-        }
-
         if (roleData.projectId) {
-            const projectDocRef = doc(db, 'projects', roleData.projectId);
-            const projectDoc = await getDoc(projectDocRef);
-            if (projectDoc.exists()) {
-                setProject({ id: projectDoc.id, ...projectDoc.data() } as Project);
-            }
+          const projectDocRef = doc(db, 'projects', roleData.projectId);
+          const projectDoc = await getDoc(projectDocRef);
+          if (projectDoc.exists()) {
+            setProject({ id: projectDoc.id, ...projectDoc.data() } as Project);
+          }
         }
-      } else {
-        toast({ variant: 'destructive', title: 'Not Found', description: 'This role could not be found.' });
-        router.push('/roles');
       }
-      setRoleLoading(false);
-    }, (error) => {
-      console.error("Error fetching role data in real-time:", error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not load role data.' });
-      setRoleLoading(false);
     });
 
     return () => unsubscribe();
-  }, [roleId, user, router, toast]);
+  }, [role.id, user]);
 
   useEffect(() => {
     if (!role || !user) return;
@@ -341,7 +314,7 @@ export default function RoleDetailsPage() {
 
   const handleDeleteRole = async () => {
     if (!role || !user || !isOwner) return;
-    setRoleLoading(true);
+    setLoadingUsers(true);
     invalidateRoleCache();
     try {
         const roleRef = doc(db, 'roles', role.id);
@@ -351,7 +324,7 @@ export default function RoleDetailsPage() {
     } catch (error: any) {
         console.error("Role deletion error:", error);
         toast({ variant: 'destructive', title: 'Error deleting role', description: error.message });
-        setRoleLoading(false);
+        setLoadingUsers(false);
     }
   };
   
@@ -371,23 +344,14 @@ export default function RoleDetailsPage() {
     return <Button size="lg" className="w-full" onClick={handleInterest} disabled={isInterestLoading}><Hand className="mr-2 h-4 w-4" />I&apos;m interested</Button>;
   };
 
-  const loading = authLoading || roleLoading;
-
-  if (loading || !role) return (
-    <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <Skeleton className="h-10 w-3/4 mb-4" />
-        <Skeleton className="h-6 w-1/2 mb-8" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6"><Skeleton className="h-64 w-full" /></div>
-            <div className="lg:col-span-1 space-y-6"><Skeleton className="h-48 w-full" /></div>
-        </div>
-    </div>
-  );
+  if (!role) {
+    return <div className="text-center py-20">Role data not available.</div>;
+  }
   
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold tracking-tight mb-2">{role.title}</h1>
+        <h1 className="text-2xl font-semibold leading-none tracking-tight">{role.title}</h1>
         {owner && <div className="flex items-center space-x-2 text-muted-foreground"><Avatar className="h-6 w-6"><AvatarImage src={owner.photoURL} /><AvatarFallback>{owner.name?.charAt(0) || 'U'}</AvatarFallback></Avatar><span>by <Link href={`/developers/${owner.uid}`} className="hover:underline">{owner.name || 'A user'}</Link></span></div>}
       </div>
 
@@ -395,7 +359,7 @@ export default function RoleDetailsPage() {
         <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader><CardTitle className="text-2xl font-semibold">About this Role</CardTitle></CardHeader>
-              <CardContent><p className="text-lg leading-relaxed text-foreground/80 whitespace-pre-wrap">{role.roleDescription}</p></CardContent>
+              <CardContent><p className="text-base text-foreground/80 whitespace-pre-wrap">{role.roleDescription}</p></CardContent>
             </Card>
 
             {project && (
@@ -403,16 +367,16 @@ export default function RoleDetailsPage() {
                 <CardHeader><CardTitle className="text-xl flex items-center gap-3"><LinkIcon className="h-5 w-5"/> Associated Project</CardTitle></CardHeader>
                 <CardContent>
                     <Link href={`/projects/${project.id}`} className="font-semibold text-lg text-blue-500 hover:underline">{project.title}</Link>
-                    <p className="text-foreground/80 leading-relaxed mt-2">{project.description.substring(0, 200)}...</p>
+                    <p className="text-foreground/80 mt-2">{project.description.substring(0, 200)}...</p>
                 </CardContent>
               </Card>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4"/> Commitment</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{role.commitmentLevel}</p></CardContent></Card>
-              <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Handshake className="h-4 w-4"/> Incentives</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{role.incentives}</p></CardContent></Card>
-              <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4"/> Collaboration Type</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{role.collaborationType}</p></CardContent></Card>
-              <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" /> Required Experience</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{formatExperience(role.requiredYearsOfExperience)}</p></CardContent></Card>
+              <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4"/> Commitment</CardTitle></CardHeader><CardContent><p className="text-sm">{role.commitmentLevel}</p></CardContent></Card>
+              <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Handshake className="h-4 w-4"/> Incentives</CardTitle></CardHeader><CardContent><p className="text-sm">{role.incentives}</p></CardContent></Card>
+              <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4"/> Collaboration Type</CardTitle></CardHeader><CardContent><p className="text-sm">{role.collaborationType}</p></CardContent></Card>
+              <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" /> Required Experience</CardTitle></CardHeader><CardContent><p className="text-sm">{formatExperience(role.requiredYearsOfExperience)}</p></CardContent></Card>
               <Card className="md:col-span-2"><CardHeader><CardTitle className="text-base flex items-center gap-2"><Code className="h-4 w-4"/>Required Tech Stack</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{role.requiredTechStack?.map((tech) => <Badge key={tech} variant="secondary">{tech}</Badge>)}</CardContent></Card>
               <Card className="md:col-span-2"><CardHeader><CardTitle className="text-base flex items-center gap-2"><BrainCircuit className="h-4 w-4"/>Required Skills</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{role.requiredSkills?.map((skill) => <Badge key={skill} variant="outline">{skill}</Badge>)}</CardContent></Card>
               <Card className="md:col-span-2"><CardHeader><CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4"/>Locations</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{role.locations?.map((location) => <Badge key={location} variant="default">{location}</Badge>)}</CardContent></Card>
@@ -504,4 +468,64 @@ export default function RoleDetailsPage() {
       </div>
     </div>
   );
+}
+
+export default function RoleDetailsPage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const params = useParams();
+  const roleId = params.roleId as string;
+
+  const [role, setRole] = useState<Role | null>(null);
+  const [roleLoading, setRoleLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (!roleId) return;
+
+    setRoleLoading(true);
+    const roleDocRef = doc(db, 'roles', roleId);
+
+    const unsubscribe = onSnapshot(roleDocRef, async (docSnap) => {
+      if (docSnap.exists()) {
+        const roleData = { id: docSnap.id, ...docSnap.data() } as Role;
+        setRole(roleData);
+      } else {
+        toast({ variant: 'destructive', title: 'Not Found', description: 'This role could not be found.' });
+        router.push('/roles');
+      }
+      setRoleLoading(false);
+    }, (error) => {
+      console.error("Error fetching role data in real-time:", error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not load role data.' });
+      setRoleLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [roleId, router, toast]);
+
+  if (roleLoading || authLoading) {
+    return (
+        <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+            <Skeleton className="h-10 w-3/4 mb-4" />
+            <Skeleton className="h-6 w-1/2 mb-8" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 space-y-6"><Skeleton className="h-64 w-full" /></div>
+                <div className="lg:col-span-1 space-y-6"><Skeleton className="h-48 w-full" /></div>
+            </div>
+        </div>
+    );
+  }
+
+  if (!role) {
+    return <div className="text-center py-20">Role not found.</div>;
+  }
+
+  return <RoleDetailsContent role={role} />;
 }

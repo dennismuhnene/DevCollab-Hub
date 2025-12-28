@@ -34,15 +34,12 @@ interface UserWithId extends UserProfile {
 
 const MAX_REJECTIONS = 3;
 
-export default function ProjectDetailsPage() {
+export const ProjectDetailsContent = ({ project: initialProject }: { project: Project }) => {
   const { user, userProfile, loading: authLoading } = useAuth();
   const router = useRouter();
-  const params = useParams();
-  const projectId = params.id as string;
+  const { toast } = useToast();
 
-  const [project, setProject] = useState<Project | null>(null);
-  const [projectLoading, setProjectLoading] = useState(true);
-
+  const [project, setProject] = useState<Project>(initialProject);
   const [owner, setOwner] = useState<UserProfile | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
@@ -55,53 +52,29 @@ export default function ProjectDetailsPage() {
   const [matchedUsers, setMatchedUsers] = useState<UserWithId[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
-  const { toast } = useToast();
-
   const isPermanentlyRejected = rejectionCount >= MAX_REJECTIONS;
 
   const invalidateProjectCache = useCallback(() => {
     try {
-      sessionStorage.removeItem(`project_${projectId}`);
+      sessionStorage.removeItem(`project_${project.id}`);
     } catch (error) {
       console.warn('Could not remove from session storage', error);
     }
-  }, [projectId]);
+  }, [project.id]);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    }
-  }, [user, authLoading, router]);
+    if (!project.id || !user) return;
 
-  useEffect(() => {
-    if (!projectId || !user) return;
-
-    setProjectLoading(true);
-    const projectDocRef = doc(db, 'projects', projectId);
-
-    const unsubscribe = onSnapshot(projectDocRef, (docSnap) => {
+    const unsubscribe = onSnapshot(doc(db, 'projects', project.id), (docSnap) => {
       if (docSnap.exists()) {
         const projectData = { id: docSnap.id, ...docSnap.data() } as Project;
         setProject(projectData);
         setRejectionCount(projectData.rejections?.[user.uid] || 0);
-
-        if (user && user.uid !== projectData.ownerId && !sessionStorage.getItem(`project_viewed_${projectId}`)) {
-          logAnalyticsEvent('project_view', { project_id: projectId });
-          sessionStorage.setItem(`project_viewed_${projectId}`, 'true');
-        }
-      } else {
-        toast({ variant: 'destructive', title: 'Not Found', description: 'This project could not be found.' });
-        router.push('/projects');
       }
-      setProjectLoading(false);
-    }, (error) => {
-      console.error('Error fetching project data in real-time:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not load project data.' });
-      setProjectLoading(false);
     });
 
     return () => unsubscribe();
-  }, [projectId, user, router, toast]);
+  }, [project.id, user]);
 
   useEffect(() => {
     if (!project || !user) return;
@@ -338,7 +311,6 @@ export default function ProjectDetailsPage() {
 
   const handleDeleteProject = async () => {
     if (!project || !user || !isOwner) return;
-    setProjectLoading(true);
     invalidateProjectCache();
     try {
       const projectRef = doc(db, 'projects', project.id);
@@ -348,7 +320,6 @@ export default function ProjectDetailsPage() {
     } catch (error: any) {
       console.error('Project deletion error:', error);
       toast({ variant: 'destructive', title: 'Error deleting project', description: error.message });
-      setProjectLoading(false);
     }
   };
 
@@ -368,23 +339,14 @@ export default function ProjectDetailsPage() {
     return <Button size="lg" className="w-full" onClick={handleInterest} disabled={isInterestLoading}><Hand className="mr-2 h-4 w-4" />I&apos;m interested</Button>;
   };
 
-  const loading = authLoading || projectLoading;
-
-  if (loading || !project) return (
-    <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-      <Skeleton className="h-10 w-3/4 mb-4" />
-      <Skeleton className="h-6 w-1/2 mb-8" />
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6"><Skeleton className="h-64 w-full" /></div>
-        <div className="lg:col-span-1 space-y-6"><Skeleton className="h-48 w-full" /></div>
-      </div>
-    </div>
-  );
+  if (!project) {
+    return <div className="text-center py-20">Project data is not available.</div>
+  }
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold tracking-tight mb-2">{project.title}</h1>
+        <h1 className="text-2xl font-semibold leading-none tracking-tight">{project.title}</h1>
         {owner && (
           <div className="flex items-center space-x-2 text-muted-foreground">
             <Avatar className="h-6 w-6"><AvatarImage src={owner.photoURL} /><AvatarFallback>{owner.name?.charAt(0) || 'U'}</AvatarFallback></Avatar>
@@ -405,12 +367,12 @@ export default function ProjectDetailsPage() {
 
           <Card>
             <CardHeader><CardTitle className="text-2xl font-semibold">About this Project</CardTitle></CardHeader>
-            <CardContent><p className="text-lg leading-relaxed text-foreground/80 whitespace-pre-wrap">{project.description}</p></CardContent>
+            <CardContent><p className="text-base text-foreground/80 whitespace-pre-wrap">{project.description}</p></CardContent>
           </Card>
 
           <Card>
             <CardHeader><CardTitle className="text-xl flex items-center gap-3"><UserPlus className="h-5 w-5" /> Seeking Collaborators</CardTitle></CardHeader>
-            <CardContent><p className="text-foreground/80 leading-relaxed mt-2">{project.roleRequirements}</p></CardContent>
+            <CardContent><p className="text-foreground/80 mt-2">{project.roleRequirements}</p></CardContent>
           </Card>
         </div>
 
@@ -508,4 +470,64 @@ export default function ProjectDetailsPage() {
       )}
     </div>
   );
+};
+
+export default function ProjectDetailsPage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const params = useParams();
+  const projectId = params.id as string;
+
+  const [project, setProject] = useState<Project | null>(null);
+  const [projectLoading, setProjectLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (!projectId) return;
+
+    setProjectLoading(true);
+    const projectDocRef = doc(db, 'projects', projectId);
+
+    const unsubscribe = onSnapshot(projectDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const projectData = { id: docSnap.id, ...docSnap.data() } as Project;
+        setProject(projectData);
+      } else {
+        toast({ variant: 'destructive', title: 'Not Found', description: 'This project could not be found.' });
+        router.push('/projects');
+      }
+      setProjectLoading(false);
+    }, (error) => {
+      console.error('Error fetching project data in real-time:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not load project data.' });
+      setProjectLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [projectId, router, toast]);
+
+  if (projectLoading || authLoading) {
+    return (
+      <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <Skeleton className="h-10 w-3/4 mb-4" />
+        <Skeleton className="h-6 w-1/2 mb-8" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6"><Skeleton className="h-64 w-full" /></div>
+          <div className="lg:col-span-1 space-y-6"><Skeleton className="h-48 w-full" /></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!project) {
+    return <div className="text-center py-20">Project not found.</div>;
+  }
+
+  return <ProjectDetailsContent project={project} />;
 }
