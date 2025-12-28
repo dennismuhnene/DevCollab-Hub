@@ -74,52 +74,54 @@ export function ItemDialog({ open, onOpenChange, items, initialIndex, viewMode }
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
         {...bind()} 
-        className="max-w-4xl h-[90vh] flex flex-col p-0 relative"
+        className="max-w-4xl h-[90vh] flex flex-col p-0" 
         style={{ touchAction: 'pan-y' }}
       >
-        {/* Mobile Navigation Arrows */}
-        <div className="md:hidden absolute top-1/2 -translate-y-1/2 left-1 z-20">
-            <Button
-                variant="ghost"
-                size="icon"
-                onClick={handlePrevious}
-                disabled={currentIndex === 0}
-                className="rounded-full h-8 w-8 bg-black/20 text-white hover:bg-black/40 disabled:bg-transparent disabled:text-gray-400"
-            >
-                <ArrowLeft className="h-4 w-4" />
-            </Button>
-        </div>
-        <div className="md:hidden absolute top-1/2 -translate-y-1/2 right-1 z-20">
-            <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleNext}
-                disabled={currentIndex === items.length - 1}
-                className="rounded-full h-8 w-8 bg-black/20 text-white hover:bg-black/40 disabled:bg-transparent disabled:text-gray-400"
-            >
-                <ArrowRight className="h-4 w-4" />
-            </Button>
-        </div>
+        <div className="relative w-full h-full flex flex-col">
+            {/* Mobile Navigation Arrows */}
+            <div className="md:hidden absolute top-1/2 -translate-y-1/2 left-1 z-20">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handlePrevious}
+                    disabled={currentIndex === 0}
+                    className="rounded-full h-8 w-8 bg-black/20 text-white hover:bg-black/40 disabled:bg-transparent disabled:text-gray-400"
+                >
+                    <ArrowLeft className="h-4 w-4" />
+                </Button>
+            </div>
+            <div className="md:hidden absolute top-1/2 -translate-y-1/2 right-1 z-20">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleNext}
+                    disabled={currentIndex === items.length - 1}
+                    className="rounded-full h-8 w-8 bg-black/20 text-white hover:bg-black/40 disabled:bg-transparent disabled:text-gray-400"
+                >
+                    <ArrowRight className="h-4 w-4" />
+                </Button>
+            </div>
 
-        <DialogHeader className="p-6 pb-0 flex-shrink-0">
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
+            <DialogHeader className="p-6 pb-0 flex-shrink-0">
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>{description}</DialogDescription>
+            </DialogHeader>
 
-        <div className="flex-grow overflow-y-auto relative">
-          {renderContent()}
+            <div className="flex-grow overflow-y-auto">
+            {renderContent()}
+            </div>
+
+            <DialogFooter className="hidden md:flex mt-auto p-6 pt-4 border-t flex-shrink-0">
+            <div className="flex justify-between w-full">
+                <Button onClick={handlePrevious} disabled={currentIndex === 0}>
+                <ArrowLeft className="h-4 w-4 mr-2" /> Previous
+                </Button>
+                <Button onClick={handleNext} disabled={currentIndex === items.length - 1}>
+                Next <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+            </div>
+            </DialogFooter>
         </div>
-
-        <DialogFooter className="hidden md:flex mt-auto p-6 pt-4 border-t flex-shrink-0">
-          <div className="flex justify-between w-full">
-            <Button onClick={handlePrevious} disabled={currentIndex === 0}>
-              <ArrowLeft className="h-4 w-4 mr-2" /> Previous
-            </Button>
-            <Button onClick={handleNext} disabled={currentIndex === items.length - 1}>
-              Next <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          </div>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
