@@ -127,7 +127,7 @@ export default function FeedbackPage() {
   const currentFeedback = feedback.length > 0 ? feedback[currentIndex] : null;
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-900 text-white">
+    <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-1">
         <div className="container mx-auto p-4 sm:p-6 md:p-8">
@@ -170,19 +170,19 @@ export default function FeedbackPage() {
                   </div>
               </div>
 
-              <Card key={currentFeedback.id} className="bg-gray-800 border-gray-700 shadow-lg w-full">
+              <Card key={currentFeedback.id} className="bg-[#FFFFF0] shadow-lg w-full">
                 <CardHeader>
-                  <CardTitle className="text-white text-lg sm:text-xl">Feedback from {currentFeedback.userId}</CardTitle>
-                  <CardDescription className="text-gray-400 text-xs sm:text-sm">
+                  <CardTitle className="text-lg sm:text-xl">Feedback from {currentFeedback.userId}</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
                     Submitted on {new Date(currentFeedback.createdAt.seconds * 1000).toLocaleString()} from {currentFeedback.url}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
-                      <TableRow className="border-b border-gray-700">
-                        <TableHead className="font-bold text-white">Question</TableHead>
-                        <TableHead className="font-bold text-white">Answer</TableHead>
+                      <TableRow>
+                        <TableHead className="font-bold">Question</TableHead>
+                        <TableHead className="font-bold">Answer</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -191,9 +191,9 @@ export default function FeedbackPage() {
                         if (answer === undefined) return null;
                         const answerText = Array.isArray(answer) ? answer.join(', ') : String(answer);
                         return (
-                          <TableRow key={question.id} className="border-b border-gray-700 hover:bg-gray-700/50">
-                            <TableCell className="font-medium text-gray-300 py-3 px-4">{question.question}</TableCell>
-                            <TableCell className="text-gray-300 py-3 px-4">{answerText}</TableCell>
+                          <TableRow key={question.id}>
+                            <TableCell className="font-medium py-3 px-4">{question.question}</TableCell>
+                            <TableCell className="py-3 px-4">{answerText}</TableCell>
                           </TableRow>
                         );
                       })}
@@ -203,7 +203,7 @@ export default function FeedbackPage() {
               </Card>
             </>
           ) : (
-            <div className="text-center text-gray-400 py-16">
+            <div className="text-center py-16">
               <p>No feedback submissions found.</p>
             </div>
           )}

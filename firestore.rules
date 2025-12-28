@@ -1,52 +1,88 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
     function uid() {
       return request.auth.uid;
     }
+    // Securely checks if the user is an admin
+    function isAdmin() {
+      return request.auth.token.get('admin', false) == true || request.auth.uid == 'Jv4XV8flpAgUqJpd2P7SKr3PijX2';
+    }
+
+    // Rule for Admin Page: Allows admins to query all applications
+    match /{path=**}/advisorApplications/{applicationId} {
+      allow list: if isAdmin();
+    }
 
     // USERS
     match /users/{userId} {
+      // This permissive rule is required by pages like /developers to list users.
       allow get, list: if isSignedIn();
-      // Only allow a user to create/update their own profile.
-      // Deletion is denied from the client to allow the backend function to clean up.
-      allow create, update: if isSignedIn() && uid() == userId;
+      
+      // Allow user to create their own profile
+      allow create: if isSignedIn() && uid() == userId;
+
+      // Secure update rule: Prevents users from escalating their own privileges.
+      allow update: if
+        isAdmin()
+      ||
+        (
+          uid() == userId &&
+          // Prevent self-admin promotion
+          !(
+            resource.data.get('roles', {}).get('admin', false) == false &&
+            request.resource.data.get('roles', {}).get('admin', false) == true
+          ) &&
+          // Prevent self-verification
+          !(
+            resource.data.get('advisorProfile', {}).get('verificationStatus', '') != 'verified' &&
+            request.resource.data.get('advisorProfile', {}).get('verificationStatus', '') == 'verified'
+          )
+        );
       allow delete: if false;
 
+      // Advisor Applications Subcollection
+      match /advisorApplications/{applicationId} {
+        allow get, list: if isSignedIn() && (uid() == userId || isAdmin());
+        allow create: if isSignedIn() && uid() == userId;
+        // UPDATED RULE: Allows a user to either update their application without changing the verification
+        // status, OR to change the status from 'rejected' back to 'pending' upon resubmission.
+        allow update: if isSignedIn() && (isAdmin() || (uid() == userId && (request.resource.data.verificationStatus == resource.data.verificationStatus || (resource.data.verificationStatus == 'rejected' && request.resource.data.verificationStatus == 'pending'))));
+        allow delete: if false;
+      }
 
-      // Allow a user to read, update, or delete their own notifications.
-      // Crucially, allow ANY signed-in user to create a notification for another user.
+      // User's own notifications
       match /notifications/{notificationId} {
         allow read, list, update, delete: if isSignedIn() && uid() == userId;
-        allow create: if isSignedIn();
+        allow create: if isSignedIn(); // Other users/functions can create notifications for this user
       }
       
-      // Allow any signed-in user to log a view, but only the profile owner can read views.
+      // User's own views
       match /views/{viewId} {
         allow read, list: if isSignedIn() && uid() == userId;
         allow create: if isSignedIn() && request.resource.data.visitorId == uid();
       }
+    }
+    
+    // Public profiles for verified advisors
+    match /publicAdvisorProfiles/{advisorId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if false; // Managed by backend functions
     }
 
     // PROJECTS
     match /projects/{projectId} {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.ownerId == uid();
-      
-      // Combined, unambiguous update rule:
-      // - The user is the owner, they can change anything.
-      // - OR, a non-owner is ONLY changing the 'interestedUsers' or 'rejections' map.
-      allow update: if isSignedIn() && 
-                    (resource.data.ownerId == uid() || 
-                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers', 'rejections']));
-      
+      allow update: if isSignedIn() && (resource.data.ownerId == uid() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers', 'rejections']));
       allow delete: if isSignedIn() && resource.data.ownerId == uid();
 
-      // Allow any signed-in user to log a view, but only the project owner can read views.
       match /views/{viewId} {
           allow read, list: if isSignedIn() && get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == uid();
           allow create: if isSignedIn() && request.resource.data.visitorId == uid();
@@ -57,68 +93,54 @@ service cloud.firestore {
     match /roles/{roleId} {
       allow get, list: if true;
       allow create: if isSignedIn() && request.resource.data.ownerId == uid();
-
-      // Allow owner to update any field.
-      // Allow non-owners to ONLY update the interestedUsers and rejections fields.
-      allow update: if isSignedIn() && 
-                    (resource.data.ownerId == uid() || 
-                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers', 'rejections']));
-
-      // Only the owner can delete a role.
+      allow update: if isSignedIn() && (resource.data.ownerId == uid() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers', 'rejections']));
       allow delete: if isSignedIn() && resource.data.ownerId == uid();
     }
 
     // BLOGS
     match /blogs/{blogId} {
-      // Allow public read access to all posts. The UI will filter for published posts.
       allow get, list: if true;
-      // Allow any authenticated user to attempt to write. The admin check is handled in the app's logic.
-      allow create, update, delete: if isSignedIn();
+      allow create, update, delete: if isSignedIn(); // Logic handled in app
     }
 
-    // MATCHES
+    // MATCHES & MESSAGES
     match /matches/{matchId} {
-      // PERMISSIVE RULE TO FIX DEPLOYMENT CONFLICT.
-      // This allows any signed-in user to read/list match documents, but not messages.
       allow read, list: if isSignedIn();
-      
-      // CREATE rule remains secure
-      allow create: if isSignedIn()
-          && request.resource.data.keys().hasAll(['participants', 'participantsDetails'])
-          && request.resource.data.participants is list
-          && uid() in request.resource.data.participants;
-
-      // UPDATE rule remains secure
-      allow update: if isSignedIn()
-          && uid() in resource.data.participants;
-
-      // Do not allow matches to be deleted from the client. This should be handled by backend functions.
+      allow create: if isSignedIn() && request.resource.data.keys().hasAll(['participants', 'participantsDetails']) && request.resource.data.participants is list && uid() in request.resource.data.participants;
+      allow update: if isSignedIn() && uid() in resource.data.participants;
       allow delete: if false;
       
-      // Message subcollection
       match /messages/{messageId} {
         function isParticipant() {
-          return exists(/databases/$(database)/documents/matches/$(matchId))
-            && uid() in get(/databases/$(database)/documents/matches/$(matchId)).data.participants;
+          return exists(/databases/$(database)/documents/matches/$(matchId)) && uid() in get(/databases/$(database)/documents/matches/$(matchId)).data.participants;
         }
-
         allow read, get, list: if isSignedIn() && isParticipant();
         allow create: if isSignedIn() && isParticipant() && request.resource.data.senderId == uid();
-        // A user can "delete" a message for themselves by adding their UID to the 'deletedFor' field.
-        // This is an update operation.
-        allow update: if isSignedIn() && isParticipant()
-                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletedFor'])
-                      && uid() in request.resource.data.deletedFor;
-        allow delete: if false; // Disallow full deletion of messages from client
+        allow update: if isSignedIn() && isParticipant() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletedFor']) && uid() in request.resource.data.deletedFor;
+        allow delete: if false;
       }
     }
+
     // FEEDBACK
     match /feedback/{feedbackId} {
       allow create: if isSignedIn();
-      // Allow user to read their own feedback, and admin to read all feedback
       allow read, list: if isSignedIn() && (resource.data.userId == uid() || request.auth.token.email == 'dennis.cmuhnene@gmail.com');
-      // Only admin can update or delete
       allow update, delete: if isSignedIn() && request.auth.token.email == 'dennis.cmuhnene@gmail.com';
+    }
+
+    // ENGAGEMENTS & REVIEWS
+    match /engagements/{engagementId} {
+      allow create: if isSignedIn() && request.resource.data.developerId == uid();
+      allow read: if isSignedIn() && (uid() == resource.data.developerId || uid() == resource.data.advisorId);
+      allow update: if isSignedIn() && ((resource.data.status == 'requested' && request.resource.data.status == 'active' && uid() == resource.data.advisorId) || (resource.data.status == 'active' && request.resource.data.status == 'closed' && (uid() == resource.data.developerId || uid() == resource.data.advisorId)));
+
+      match /messages/{messageId} {
+          allow read, write: if isSignedIn() && (uid() == get(/databases/$(database)/documents/engagements/$(engagementId)).data.developerId || uid() == get(/databases/$(database)/documents/engagements/$(engagementId)).data.advisorId) && get(/databases/$(database)/documents/engagements/$(engagementId)).data.status == 'active';
+      }
+    }
+    match /advisor_reviews/{reviewId} {
+        allow create: if isSignedIn() && exists(/databases/$(database)/documents/engagements/$(request.resource.data.engagementId)) && get(/databases/$(database)/documents/engagements/$(request.resource.data.engagementId)).data.status == 'closed' && get(/databases/$(database)/documents/engagements/$(request.resource.data.engagementId)).data.developerId == uid() && request.resource.data.advisorId == get(/databases/$(database)/documents/engagements/$(request.resource.data.engagementId)).data.advisorId && !exists(/databases/$(database)/documents/advisor_reviews/{reviewId});
+        allow update: if isSignedIn() && uid() == resource.data.advisorId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['advisorResponse']);
     }
   }
 }

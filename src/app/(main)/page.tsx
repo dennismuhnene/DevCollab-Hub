@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -116,10 +115,10 @@ export default function HomePage() {
               animate="visible"
             >
                 <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
-                  <motion.h1 variants={itemVariants} className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tighter !leading-tight">
+                  <motion.h1 variants={itemVariants}>
                     From Idea to Impact: <br /> Build What's Next, Together.
                   </motion.h1>
-                  <motion.p variants={itemVariants} className="max-w-3xl mx-auto text-lg md:text-xl mt-4">
+                  <motion.p variants={itemVariants} className="max-w-3xl mx-auto text-base mt-4">
                     DevCollab Hub is the premier platform for creators, developers and product experts to connect, collaborate and transform innovative projects into market-ready products.
                   </motion.p>
                   <motion.div variants={itemVariants} className="mt-8 flex flex-col items-center gap-4 min-[400px]:flex-row justify-center">
@@ -153,7 +152,7 @@ export default function HomePage() {
         >
           <motion.div variants={itemVariants} className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="text-center space-y-4 mb-16">
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">How It Works</h2>
+              <h2 className="text-2xl font-semibold leading-none tracking-tight">How It Works</h2>
               <p className="max-w-2xl mx-auto text-muted-foreground md:text-xl">
                 Find your crew, build your vision
               </p>
@@ -173,8 +172,8 @@ export default function HomePage() {
                           <div className="mb-6 bg-primary/10 p-4 rounded-full border border-primary/20">
                               <feature.icon className="h-10 w-10 text-primary" />
                           </div>
-                          <h3 className="text-2xl font-bold mb-2">{feature.title}</h3>
-                          <p className="text-muted-foreground">{feature.description}</p>
+                          <h3 className="text-base font-bold mb-2">{feature.title}</h3>
+                          <p className="text-base text-muted-foreground">{feature.description}</p>
                       </CardContent>
                    </Card>
                  </motion.div>
@@ -195,7 +194,7 @@ export default function HomePage() {
           <WavyDividerInverted className="fill-muted/20" />
           <motion.div variants={itemVariants} className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="text-center space-y-4 mb-16">
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Featured</h2>
+              <h2 className="text-2xl font-semibold leading-none tracking-tight">Featured</h2>
               <p className="max-w-2xl mx-auto text-muted-foreground md:text-xl">
                 Check out some cool projects in the hub.
               </p>
@@ -220,12 +219,12 @@ export default function HomePage() {
                             </div>
                         </CardContent>
                         <div className="p-6 flex-grow flex flex-col">
-                            <h3 className="mb-2 text-xl font-bold leading-tight">
+                            <h3 className="mb-2 text-base font-bold leading-tight">
                               {index === 0 && 'AI-Powered Chatbot'}
                               {index === 1 && 'E-commerce Platform'}
                               {index === 2 && 'Mobile Fitness App'}
                             </h3>
-                            <p className="mb-4 line-clamp-2 flex-grow text-muted-foreground">
+                            <p className="mb-4 line-clamp-2 flex-grow text-base text-muted-foreground">
                               {index === 0 && 'A cutting-edge chatbot for customer service.'}
                               {index === 1 && 'Build a scalable online store from scratch.'}
                               {index === 2 && 'An app to track workouts and nutrition.'}
@@ -262,7 +261,7 @@ export default function HomePage() {
         >
           <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="text-center space-y-4 mb-16">
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Build your Tribe</h2>
+              <h2 className="text-2xl font-semibold leading-none tracking-tight">Build your Tribe</h2>
               <p className="max-w-2xl mx-auto text-muted-foreground md:text-xl">
                 Discover the tools and connections to bring your boldest ideas to life.
               </p>
@@ -294,8 +293,8 @@ export default function HomePage() {
                       <div className="mb-6 bg-gradient-to-br from-yellow-400/20 to-orange-500/20 p-4 rounded-full border border-orange-400/30">
                         <feature.icon className="h-10 w-10 text-orange-400" />
                       </div>
-                      <h3 className="text-2xl font-bold mb-2">{feature.title}</h3>
-                      <p className="text-muted-foreground">{feature.description}</p>
+                      <h3 className="text-base font-bold mb-2">{feature.title}</h3>
+                      <p className="text-base text-muted-foreground">{feature.description}</p>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -303,7 +302,6 @@ export default function HomePage() {
             </motion.div>
           </div>
         </motion.section>
-        
 
         {/* About Us Section */}
         <motion.section
@@ -317,7 +315,7 @@ export default function HomePage() {
            <WavyDividerInverted className="fill-muted/20" />
           <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="text-center space-y-4 mb-16">
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">About Us</h2>
+              <h2 className="text-2xl font-semibold leading-none tracking-tight">About Us</h2>
               <p className="max-w-2xl mx-auto text-muted-foreground md:text-xl">
                 Curious about what sets us apart? Here are some answers.
               </p>
@@ -325,61 +323,61 @@ export default function HomePage() {
             <motion.div variants={itemVariants} className="max-w-3xl mx-auto">
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="item-1">
-                  <AccordionTrigger className="text-xl hover:text-primary transition-colors">What distinguishes us?</AccordionTrigger>
+                  <AccordionTrigger className="text-lg hover:text-primary transition-colors">What distinguishes us?</AccordionTrigger>
                     <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         transition={{ duration: 0.5, ease: 'easeInOut' }}
                     >
-                        <AccordionContent className="text-lg text-muted-foreground pt-2">
+                        <AccordionContent className="text-base text-muted-foreground pt-2">
                            We are a dedicated ecosystem that provides the strategic framework to connect you with your perfect collaborators, cut through the noise and foster long-term partnerships that build, launch and scale your products at every stage—while growing the tribe that drives your success. 
                         </AccordionContent>
                     </motion.div>
                 </AccordionItem>
                 <AccordionItem value="item-2">
-                  <AccordionTrigger className="text-xl hover:text-primary transition-colors">How do AI insights work?</AccordionTrigger>
+                  <AccordionTrigger className="text-lg hover:text-primary transition-colors">How do AI insights work?</AccordionTrigger>
                     <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         transition={{ duration: 0.5, ease: 'easeInOut' }}
                     >
-                        <AccordionContent className="text-lg text-muted-foreground pt-2">
+                        <AccordionContent className="text-base text-muted-foreground pt-2">
                             Gain a strategic advantage in team building. Our platform provides a holistic view of your potential collaborators and provide an avenue to engage with them. This helps you identify the right tribe and uncover hidden opportunities beyond product creation- enabling you find the right talent for your growth and development of your product and its distribution to the target market.
                         </AccordionContent>
                     </motion.div>
                 </AccordionItem>
                 <AccordionItem value="item-3">
-                  <AccordionTrigger className="text-xl hover:text-primary transition-colors">Is it just for coders?</AccordionTrigger>
+                  <AccordionTrigger className="text-lg hover:text-primary transition-colors">Is it just for coders?</AccordionTrigger>
                     <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         transition={{ duration: 0.5, ease: 'easeInOut' }}
                     >
-                        <AccordionContent className="text-lg text-muted-foreground pt-2">
+                        <AccordionContent className="text-base text-muted-foreground pt-2">
                             DevCollab Hub is for all creators in the tech space. Whether you're a designer, a project manager, a data scientist, product manager, Marketing, finance and branding expert or a visionary, you'll find your place here.
                         </AccordionContent>
                     </motion.div>
                 </AccordionItem>
                 <AccordionItem value="item-4">
-                  <AccordionTrigger className="text-xl hover:text-primary transition-colors">What kind of projects and roles can I find?</AccordionTrigger>
+                  <AccordionTrigger className="text-lg hover:text-primary transition-colors">What kind of projects and roles can I find?</AccordionTrigger>
                     <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         transition={{ duration: 0.5, ease: 'easeInOut' }}
                     >
-                        <AccordionContent className="text-lg text-muted-foreground pt-2">
+                        <AccordionContent className="text-base text-muted-foreground pt-2">
                             From open-source initiatives, school projects and personal projects to stealth-mode startups building the future, the depth of DevCollab Hub is as diverse as our community. The only limit is your imagination.
                         </AccordionContent>
                     </motion.div>
                 </AccordionItem>
                 <AccordionItem value="item-5">
-                  <AccordionTrigger className="text-xl hover:text-primary transition-colors">What if I need to find a tribe but want to keep it on the down low?</AccordionTrigger>
+                  <AccordionTrigger className="text-lg hover:text-primary transition-colors">What if I need to find a tribe but want to keep it on the down low?</AccordionTrigger>
                     <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         transition={{ duration: 0.5, ease: 'easeInOut' }}
                     >
-                        <AccordionContent className="text-lg text-muted-foreground pt-2">
+                        <AccordionContent className="text-base text-muted-foreground pt-2">
                             That's what <strong>Roles</strong> are for. You can create a Role to post a specific need, like 'I am looking for a study partner to build projects together' without exposing much about your idea or project. They remain confidential (your business) until you choose to share it with a matched collaborator after a chat.
                         </AccordionContent>
                     </motion.div>
@@ -404,10 +402,10 @@ export default function HomePage() {
               whileHover={{ scale: 1.05, boxShadow: '0px 10px 30px -5px rgba(255, 165, 0, 0.4)' }}
               transition={{ duration: 0.3 }}
             >
-              <h2 className="mx-auto max-w-2xl text-3xl font-bold tracking-tight text-white sm:text-4xl [text-shadow:0_2px_4px_rgba(0,0,0,0.4)]">
+              <h2 className="mx-auto max-w-2xl text-2xl font-semibold leading-none tracking-tight text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.4)]">
                 Ready to Build What's Next?
               </h2>
-              <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.2)]">
+              <p className="mx-auto mt-6 max-w-xl text-base text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.2)]">
               Sometimes you don't have the time to build everything, sometimes you don't know how and where to find the technical team to build a feature; or sometimes you need to maybe iterate your MVP, or you wanna find better ways to reach your target market and sometimes there are legalese you wanna figure out etc...That's the tribe you are missing. That's what this platfrom is about. Join a community of innovators and builders. Find your perfect tribe and transform your vision into a real-world product.
               </p>
               <div className="mt-10 flex items-center justify-center gap-x-6">

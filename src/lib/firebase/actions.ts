@@ -1,7 +1,6 @@
 'use server';
 
 import admin from 'firebase-admin';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 // Initialize firebase-admin once (singleton pattern).
 if (!admin.apps.length) {
@@ -17,9 +16,10 @@ if (!admin.apps.length) {
 
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    // Optional: if you use databaseURL in other admin APIs add it to env and here:
-    // databaseURL: process.env.FIREBASE_DATABASE_URL,
   });
 }
 
-const adminDb = getFirestore();
+// Note: FieldValue is accessed via admin.firestore.FieldValue, not imported directly.
+const adminDb = admin.firestore();
+
+export { admin, adminDb };
