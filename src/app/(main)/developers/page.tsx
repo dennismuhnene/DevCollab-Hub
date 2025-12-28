@@ -124,7 +124,7 @@ export default function DiscoverPage() {
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [selectedItemIndex, setSelectedItemIndex] = useState(0);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const [{ y }, api] = useSpring(() => ({ y: 0 }));
@@ -237,8 +237,8 @@ export default function DiscoverPage() {
   const totalPages = Math.ceil(sortedAndFilteredResults.length / ITEMS_PER_PAGE);
   const paginatedResults = sortedAndFilteredResults.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  const handleCardClick = (item: Item) => {
-    setSelectedItem(item);
+  const handleCardClick = (item: Item, index: number) => {
+    setSelectedItemIndex(index);
     setIsDialogOpen(true);
   };
 
@@ -274,10 +274,11 @@ export default function DiscoverPage() {
     return (
       <>
         <div className={`grid grid-cols-1 gap-8 sm:grid-cols-2 ${filtersVisible ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
-          {paginatedResults.map(item => {
-            if (isProject(item)) return <div key={`proj-${item.id}`} onClick={() => handleCardClick(item)}><ProjectCard project={item} /></div>;
-            if (isRole(item)) return <div key={`role-${item.id}`} onClick={() => handleCardClick(item)}><RoleCard role={item} isDiscoverMode={true} /></div>;
-            return <div key={`dev-${(item as UserProfile).uid}`} onClick={() => handleCardClick(item)}><DeveloperCard developer={item as UserProfile} /></div>;
+          {paginatedResults.map((item, index) => {
+            const itemIndex = ((currentPage - 1) * ITEMS_PER_PAGE) + index;
+            if (isProject(item)) return <div key={`proj-${item.id}`} onClick={() => handleCardClick(item, itemIndex)}><ProjectCard project={item} /></div>;
+            if (isRole(item)) return <div key={`role-${item.id}`} onClick={() => handleCardClick(item, itemIndex)}><RoleCard role={item} isDiscoverMode={true} /></div>;
+            return <div key={`dev-${(item as UserProfile).uid}`} onClick={() => handleCardClick(item, itemIndex)}><DeveloperCard developer={item as UserProfile} /></div>;
           })}
         </div>
         {totalPages > 1 && (
@@ -360,11 +361,12 @@ export default function DiscoverPage() {
           {loading || authLoading ? <ListSkeleton /> : renderResults()}
         </div>
       </div>
-      {selectedItem && (
+      {isDialogOpen && (
         <ItemDialog
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}
-          item={selectedItem}
+          items={sortedAndFilteredResults}
+          initialIndex={selectedItemIndex}
           viewMode={viewMode}
         />
       )}
