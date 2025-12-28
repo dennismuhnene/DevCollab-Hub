@@ -67,7 +67,7 @@ export default function EditRolePage() {
   return (
     <div className="container mx-auto max-w-3xl px-4 py-12">
       <div className="space-y-2 mb-8">
-        <h1 className="text-3xl font-bold font-headline">Edit Role</h1>
+        <h1 className="text-2xl font-semibold leading-none tracking-tight">Edit Role</h1>
         <p className="text-muted-foreground">Update the details for your posted role.</p>
       </div>
       {loading ? (

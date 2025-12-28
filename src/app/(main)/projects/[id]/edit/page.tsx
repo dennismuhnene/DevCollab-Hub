@@ -68,9 +68,9 @@ export default function EditProjectPage() {
 
   return (
     <div className="container mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="space-y-4 mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Edit Project</h1>
-        <p className="text-muted-foreground">Update the details for your project.</p>
+      <div className="space-y-2 mb-8">
+        <h1 className="text-2xl font-semibold tracking-tight">Edit Project</h1>
+        <p className="text-sm text-muted-foreground">Update the details for your project.</p>
       </div>
       {project ? <ProjectForm project={project} /> : <p>Project not found or you do not have permission to edit it.</p>}
     </div>

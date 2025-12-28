@@ -377,11 +377,11 @@ export const ProjectDetailsContent = ({ project: initialProject }: { project: Pr
         </div>
 
         <div className="lg:col-span-1 space-y-6">
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4" /> Project Stage</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{project.projectStage}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Handshake className="h-4 w-4" /> Incentives</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{project.incentives}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" /> Required Experience</CardTitle></CardHeader><CardContent><p className="font-semibold text-lg">{formatExperience(project.requiredYearsOfExperience)}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Code className="h-4 w-4" />Required Tech Stack</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{project.requiredTechStack?.map(tech => <Badge key={tech} variant="secondary">{tech}</Badge>)}</CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><BrainCircuit className="h-4 w-4" />Required Skills</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{project.requiredSkills?.map(skill => <Badge key={skill} variant="outline">{skill}</Badge>)}</CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-lg font-semibold flex items-center gap-2"><Briefcase className="h-4 w-4" /> Project Stage</CardTitle></CardHeader><CardContent><p className="text-base">{project.projectStage}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-lg font-semibold flex items-center gap-2"><Handshake className="h-4 w-4" /> Incentives</CardTitle></CardHeader><CardContent><p className="text-base">{project.incentives}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-lg font-semibold flex items-center gap-2"><Clock className="h-4 w-4" /> Required Experience</CardTitle></CardHeader><CardContent><p className="text-base">{formatExperience(project.requiredYearsOfExperience)}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-lg font-semibold flex items-center gap-2"><Code className="h-4 w-4" />Required Tech Stack</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{project.requiredTechStack?.map(tech => <Badge key={tech} variant="secondary">{tech}</Badge>)}</CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-lg font-semibold flex items-center gap-2"><BrainCircuit className="h-4 w-4" />Required Skills</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{project.requiredSkills?.map(skill => <Badge key={skill} variant="outline">{skill}</Badge>)}</CardContent></Card>
 
           <div className="flex flex-col space-y-2 !mt-8"> 
             {isOwner ? (
@@ -414,11 +414,11 @@ export const ProjectDetailsContent = ({ project: initialProject }: { project: Pr
         <div className="mt-8">
           <Card>
             <CardHeader>
-              <CardTitle>Collaboration Hub</CardTitle>
-              <CardDescription>Manage developers who are interested in this project.</CardDescription>
+              <CardTitle className="text-2xl font-semibold">Collaboration Hub</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">Manage developers who are interested in this project.</CardDescription>
             </CardHeader>
             <CardContent>
-              <h3 className="font-semibold mb-2">Interested Developers ({interestedUsers.length})</h3>
+              <h3 className="text-lg font-semibold mb-2">Interested Developers ({interestedUsers.length})</h3>
               {loadingUsers ? <Skeleton className="h-24 w-full" /> : (
                 interestedUsers.length > 0 ? (
                   <div className="space-y-4">
@@ -442,7 +442,7 @@ export const ProjectDetailsContent = ({ project: initialProject }: { project: Pr
                 ) : <p className="text-muted-foreground text-sm">No one has expressed interest yet.</p>
               )}
 
-              <h3 className="font-semibold mt-6 mb-2">Matched Developers ({matchedUsers.length})</h3>
+              <h3 className="text-lg font-semibold mt-6 mb-2">Matched Developers ({matchedUsers.length})</h3>
               {loadingUsers ? <Skeleton className="h-12 w-full" /> : (
                 matchedUsers.length > 0 ? (
                   <div className="space-y-2">

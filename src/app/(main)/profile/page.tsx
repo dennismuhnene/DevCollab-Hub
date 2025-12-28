@@ -13,7 +13,6 @@ import { doc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import { db, storage, auth } from '@/lib/firebase/config';
 import { useToast } from '@/hooks/use-toast';
-import { Progress } from '@/components/ui/progress';
 import { Camera, Save, X, Loader2, Link as LinkIcon } from 'lucide-react';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Button } from '@/components/ui/button';
@@ -255,7 +254,7 @@ export default function ProfilePage() {
             <CardContent className="flex flex-wrap gap-4">
               {allLinks.map((link, index) => (
                 <Button key={index} variant="outline" asChild>
-                  <Link href={link.url} target="_blank">
+                  <Link href={link.url} target="_blank" className="break-all">
                     <LinkIcon className="mr-2 h-4 w-4" />
                     {link.url}
                   </Link>

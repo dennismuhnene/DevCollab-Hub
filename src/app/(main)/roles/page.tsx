@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { PlusCircle } from 'lucide-react';
 import { Role } from '@/types';
-import RoleCard from '@/components/role-card';
+import RoleCardEdit from '@/components/role-card-edit';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function MyRolesPage() {
@@ -64,7 +64,7 @@ export default function MyRolesPage() {
       ) : roles.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {roles.map(role => (
-            <RoleCard key={role.id} role={role} />
+            <RoleCardEdit key={role.id} role={role} />
           ))}
         </div>
       ) : (

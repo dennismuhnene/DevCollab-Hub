@@ -242,17 +242,17 @@ export default function ProjectForm({ project }: ProjectFormProps) {
     <>
       <form onSubmit={handleSubmit(onSubmit)}>
         <Card>
-          <CardHeader><CardTitle>{project ? 'Edit Project Details' : 'New Project Details'}</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-lg font-semibold">{project ? 'Edit Project Details' : 'New Project Details'}</CardTitle></CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="title">Project Title</Label>
+              <Label htmlFor="title" className="font-semibold">Project Title</Label>
               <Input id="title" {...register('title')} placeholder="e.g., AI-Powered Note Taking App" />
               <p className="text-sm text-muted-foreground pt-1">If your project is confidential, consider a more generic title like "Stealth Startup in FinTech".</p>
               {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
             </div>
 
              <div className="space-y-2">
-                <Label>Project Stage</Label>
+                <Label className="font-semibold">Project Stage</Label>
                 <Select onValueChange={(value) => setValue('projectStage', value, { shouldValidate: true })} defaultValue={getValues('projectStage')}>
                     <SelectTrigger><SelectValue placeholder="Select the current stage of your project" /></SelectTrigger>
                     <SelectContent>{projectStages.map(stage => <SelectItem key={stage} value={stage}>{stage}</SelectItem>)}</SelectContent>
@@ -261,7 +261,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="requiredTechStack">Required Tech Stack</Label>
+              <Label htmlFor="requiredTechStack" className="font-semibold">Required Tech Stack</Label>
               <div className="flex flex-wrap gap-2 rounded-md border p-2">
                 {techStack.map((tech) => (
                   <div key={tech} className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
@@ -275,7 +275,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Required Skills</Label>
+              <Label className="font-semibold">Required Skills</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" role="combobox" className="w-full justify-between">
@@ -291,20 +291,20 @@ export default function ProjectForm({ project }: ProjectFormProps) {
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="requiredYearsOfExperience">Required Years of Experience</Label>
+                <Label htmlFor="requiredYearsOfExperience" className="font-semibold">Required Years of Experience</Label>
                 <Input id="requiredYearsOfExperience" type="number" step="0.5" {...register('requiredYearsOfExperience')} />
                 <p className="text-sm text-muted-foreground pt-1">Use decimals for half-year increments (e.g., 2.5). For less than a year, use decimals (e.g. 0.5 for 6 months).</p>
                 {errors.requiredYearsOfExperience && <p className="text-sm text-destructive">{errors.requiredYearsOfExperience.message}</p>}
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="roleRequirements">Role Requirements</Label>
+                <Label htmlFor="roleRequirements" className="font-semibold">Role Requirements</Label>
                 <Textarea id="roleRequirements" {...register('roleRequirements')} rows={4} placeholder="e.g., Seeking a UI/UX designer to create high-fidelity mockups and prototypes in Figma..." />
                 {errors.roleRequirements && <p className="text-sm text-destructive">{errors.roleRequirements.message}</p>}
             </div>
 
              <div className="space-y-2">
-                <Label>Incentives</Label>
+                <Label className="font-semibold">Incentives</Label>
                 <Select onValueChange={(value) => setValue('incentives', value, { shouldValidate: true })} defaultValue={getValues('incentives')}>
                     <SelectTrigger><SelectValue placeholder="What do you offer collaborators?" /></SelectTrigger>
                     <SelectContent>{incentiveOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
@@ -313,7 +313,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
             </div>
 
             <div className="space-y-4">
-                <Label>Project Links (Optional, max 2)</Label>
+                <Label className="font-semibold">Project Links (Optional, max 2)</Label>
                 {fields.map((field, index) => (
                     <div key={field.id} className="flex items-center gap-2">
                         <Select onValueChange={(value) => setValue(`projectLinks.${index}.type`, value)} defaultValue={field.type}>
@@ -330,7 +330,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
 
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description" className="font-semibold">Description</Label>
                 <Button type="button" variant="outline" size="sm" onClick={handleGenerateDescription} disabled={isAiPending}>{isAiPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />}Generate with AI</Button>
               </div>
               <Textarea id="description" {...register('description')} rows={6} placeholder="Describe your project in detail..." />
@@ -338,13 +338,13 @@ export default function ProjectForm({ project }: ProjectFormProps) {
             </div>
             
             <div className="space-y-2">
-              <Label>Project Image</Label>
+              <Label className="font-semibold">Project Image</Label>
               <ImageUploader onFileSelect={setImageFile} initialUrl={imageUrlValue} />
             </div>
 
             <div className="flex items-center space-x-3 rounded-md border p-4">
                 <Switch id="collaborationOpen" checked={collaborationOpenValue} onCheckedChange={(checked) => setValue('collaborationOpen', checked, { shouldValidate: true, shouldDirty: true })} />
-                <div className="space-y-0.5"><Label htmlFor="collaborationOpen" className="text-base">Open for Collaboration</Label><p className="text-sm text-muted-foreground">Allow other developers to find and show interest in this project.</p></div>
+                <div className="space-y-0.5"><Label htmlFor="collaborationOpen" className="text-base font-semibold">Open for Collaboration</Label><p className="text-sm font-normal text-muted-foreground">Allow other developers to find and show interest in this project.</p></div>
             </div>
           </CardContent>
           <CardFooter>
