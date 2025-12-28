@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from './ui/card';
 import { Badge } from './ui/badge';
@@ -22,7 +21,6 @@ export default function ProjectCard({ project, owner }: ProjectCardProps) {
 
   return (
     <Card className="h-full transform transition-all duration-300 hover:shadow-xl dark:hover:shadow-primary/20 flex flex-col">
-      <Link href={`/projects/${project.id}`} className="block h-full flex flex-col">
         <CardHeader className="p-0">
           <div className="aspect-[3/2] w-full overflow-hidden rounded-t-lg">
             <Image
@@ -62,10 +60,8 @@ export default function ProjectCard({ project, owner }: ProjectCardProps) {
             </div>
           </div>
         </CardContent>
-      </Link>
       {owner && (
         <CardFooter className="p-4 pt-0 border-t mt-4">
-          <Link href={`/developers/${owner.uid}`} className="flex items-center gap-3 w-full hover:bg-secondary/50 rounded-md p-2 -m-2 transition-colors">
             <Avatar className="h-10 w-10">
               <AvatarImage src={owner.photoURL} alt={owner.name || 'Owner avatar'} />
               <AvatarFallback>{getInitials(owner.name)}</AvatarFallback>
@@ -74,7 +70,6 @@ export default function ProjectCard({ project, owner }: ProjectCardProps) {
                 <p className="text-sm font-semibold">{owner.name}</p>
                 <p className="text-xs text-muted-foreground">Project Owner</p>
             </div>
-          </Link>
         </CardFooter>
       )}
     </Card>

@@ -335,7 +335,7 @@ export default function HomePage() {
                     </motion.div>
                 </AccordionItem>
                 <AccordionItem value="item-2">
-                  <AccordionTrigger className="text-lg hover:text-primary transition-colors">How do AI insights work?</AccordionTrigger>
+                  <AccordionTrigger className="text-lg hover:text-primary transition-colors">How do insights work?</AccordionTrigger>
                     <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}

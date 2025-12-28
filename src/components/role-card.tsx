@@ -3,7 +3,6 @@
 import { Role } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
 import { Badge } from './ui/badge';
 import { DollarSign, Briefcase, MapPin } from 'lucide-react';
 
@@ -32,8 +31,8 @@ export default function RoleCard({ role, isDiscoverMode = false }: RoleCardProps
         </div>
       </CardContent>
       <CardFooter>
-        <Button asChild variant="default" className="w-full">
-          <Link href={`/roles/${role.id}`}>View Role</Link>
+        <Button variant="default" className="w-full">
+          View Role
         </Button>
       </CardFooter>
     </Card>
