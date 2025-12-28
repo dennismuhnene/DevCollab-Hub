@@ -153,7 +153,7 @@ export default function HomePage() {
           <motion.div variants={itemVariants} className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="text-center space-y-4 mb-16">
               <h2 className="text-2xl font-semibold leading-none tracking-tight">How It Works</h2>
-              <p className="max-w-2xl mx-auto text-muted-foreground md:text-xl">
+              <p className="max-w-2xl mx-auto text-muted-foreground text-base">
                 Find your crew, build your vision
               </p>
             </div>
@@ -195,7 +195,7 @@ export default function HomePage() {
           <motion.div variants={itemVariants} className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="text-center space-y-4 mb-16">
               <h2 className="text-2xl font-semibold leading-none tracking-tight">Featured</h2>
-              <p className="max-w-2xl mx-auto text-muted-foreground md:text-xl">
+              <p className="max-w-2xl mx-auto text-muted-foreground text-base">
                 Check out some cool projects in the hub.
               </p>
             </div>
@@ -262,7 +262,7 @@ export default function HomePage() {
           <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="text-center space-y-4 mb-16">
               <h2 className="text-2xl font-semibold leading-none tracking-tight">Build your Tribe</h2>
-              <p className="max-w-2xl mx-auto text-muted-foreground md:text-xl">
+              <p className="max-w-2xl mx-auto text-muted-foreground text-base">
                 Discover the tools and connections to bring your boldest ideas to life.
               </p>
             </div>
@@ -316,7 +316,7 @@ export default function HomePage() {
           <div className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="text-center space-y-4 mb-16">
               <h2 className="text-2xl font-semibold leading-none tracking-tight">About Us</h2>
-              <p className="max-w-2xl mx-auto text-muted-foreground md:text-xl">
+              <p className="max-w-2xl mx-auto text-muted-foreground text-base">
                 Curious about what sets us apart? Here are some answers.
               </p>
             </div>
