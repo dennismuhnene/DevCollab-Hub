@@ -50,7 +50,7 @@ export function ItemDialog({ open, onOpenChange, items, initialIndex, viewMode }
     {
       axis: 'x',
       filterTaps: true,
-      swipe: { distance: 50 },
+      swipe: { distance: 25 }, // Reduced distance for better sensitivity
     }
   );
   
