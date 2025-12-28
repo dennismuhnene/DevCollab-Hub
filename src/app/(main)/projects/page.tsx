@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/hooks/use-auth';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { Project } from '@/types';
-import ProjectCard from '@/components/project-card';
+import OwnedProjectCard from '@/components/owned-project-card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { PlusCircle } from 'lucide-react';
@@ -73,7 +73,7 @@ export default function ProjectsPage() {
       {projects.length > 0 ? (
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <OwnedProjectCard key={project.id} project={project} />
           ))}
         </div>
       ) : (
