@@ -64,7 +64,7 @@ const calculateMatchScore = (item: Item, currentUserProfile: UserProfile): numbe
         score += 4;
       }
 
-      if (currentUserProfile.collaborationPreferences?.includes(item.collaborationType)) {
+      if (currentUserProfile.collaborationTypes?.includes(item.collaborationType)) {
         score += 4;
       }
 
@@ -256,7 +256,7 @@ export default function DiscoverPage() {
     if (sortedAndFilteredResults.length === 0) {
       return (
         <div className="text-center py-20">
-          <h2 className="text-xl font-semibold">No Results Found</h2>
+          <h2 className="text-lg font-semibold">No Results Found</h2>
           <p className="mt-2 text-muted-foreground">Try adjusting your filters or search criteria.</p>
         </div>
       );
@@ -291,8 +291,8 @@ export default function DiscoverPage() {
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8">
       <div className="mb-12 text-center">
-        <h1 className="text-3xl font-bold tracking-tight font-headline">Discover Your Tribe</h1>
-        <p className="mt-3 text-lg text-muted-foreground">Find projects, connect with developers, or explore open posts.</p>
+        <h1>Discover Your Tribe</h1>
+        <p className="mt-3 text-sm text-muted-foreground">Find projects, connect with developers, or explore open posts.</p>
       </div>
 
       <div className="flex justify-center items-center gap-2 mb-8 rounded-full bg-muted p-1">

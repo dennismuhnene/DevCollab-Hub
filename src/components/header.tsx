@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { LogIn, UserPlus, User, LogOut, MessageSquare, Users, LayoutDashboard, Menu, Contact, PenSquare, FileText } from 'lucide-react';
+import { LogIn, UserPlus, User, LogOut, MessageSquare, Users, LayoutDashboard, Menu, Contact, PenSquare, FileText, Briefcase, ShieldCheck } from 'lucide-react';
 import Notifications from './notifications';
 import { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
@@ -63,6 +63,7 @@ export default function Header() {
 
   const navLinks = [
     { href: "/developers", label: "Discover", icon: Users },
+    { href: "/advisory", label: "Advisory", icon: Briefcase },
     { href: "/projects", label: "My Projects", icon: LayoutDashboard },
     { href: "/roles", label: "My Roles", icon: FileText },
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -157,6 +158,10 @@ export default function Header() {
                         </DropdownMenuItem>
                          {isAdmin && (
                           <>
+                            <DropdownMenuItem onSelect={() => router.push('/admin/applications')}>
+                                <ShieldCheck className="mr-2 h-4 w-4" />
+                                <span>Admin</span>
+                            </DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => router.push('/d_blog')}>
                                 <PenSquare className="mr-2 h-4 w-4" />
                                 <span>Blog Dashboard</span>

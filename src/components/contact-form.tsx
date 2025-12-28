@@ -87,10 +87,10 @@ export default function ContactForm() {
         <WavyDividerInverted className="fill-muted/20" />
       <div className="container mx-auto max-w-7xl px-4 pt-28 md:pt-40 pb-16 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">
+          <h1 className="text-2xl font-semibold leading-none tracking-tight">
             Contact Us
           </h1>
-          <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+          <p className="text-base text-muted-foreground max-w-3xl mx-auto mt-4">
             Have a question about the platform, a feature suggestion, or need support with your account? Fill out the form below and the DevCollab Hub team will get back to you.
           </p>
         </div>
@@ -99,7 +99,7 @@ export default function ContactForm() {
           <div>
             <Card className="border-border/50">
               <CardHeader>
-                <CardTitle className="flex items-center">
+                <CardTitle className="flex items-center text-base">
                   <Send className="h-5 w-5 mr-2" />
                   Send a Message
                 </CardTitle>

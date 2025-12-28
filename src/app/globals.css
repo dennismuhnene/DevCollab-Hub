@@ -75,19 +75,22 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
   h1 {
-    @apply text-xl font-semibold leading-tight tracking-tight;
+    @apply text-4xl font-bold leading-tight tracking-tight;
   }
   h2 {
-    @apply text-lg font-semibold leading-tight tracking-tight;
+    @apply text-3xl font-bold leading-tight tracking-tight;
   }
   h3 {
-    @apply text-base font-semibold leading-snug tracking-tight;
+    @apply text-2xl font-semibold leading-snug tracking-tight;
   }
   h4 {
-    @apply text-sm font-semibold leading-snug tracking-tight;
+    @apply text-xl font-semibold leading-snug tracking-tight;
   }
-  h5, h6 {
-    @apply text-sm font-semibold;
+  h5 {
+    @apply text-lg font-semibold;
+  }
+  h6 {
+    @apply text-base font-semibold;
   }
   .fill-background {
     fill: hsl(var(--background));

@@ -4,11 +4,12 @@ import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { collection, query, where, getDocs, limit, doc, documentId, getDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, doc, documentId, getDoc, serverTimestamp, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { Project, UserProfile, ExternalLink } from '@/types';
+import { Engagement } from '@/types/advisor';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import ProjectCard from '@/components/project-card';
@@ -46,6 +47,9 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [isAiInsightsLoading, startAiInsightsTransition] = useTransition();
   const [aiInsights, setAiInsights] = useState<GetProfileInsightsOutput | null>(null);
+  const [developerEngagements, setDeveloperEngagements] = useState<Engagement[]>([]);
+  const [advisorRequests, setAdvisorRequests] = useState<Engagement[]>([]);
+  const [advisorEngagements, setAdvisorEngagements] = useState<Engagement[]>([]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -125,7 +129,40 @@ export default function DashboardPage() {
     };
 
     fetchData();
-  }, [user, userProfile, toast]);
+
+    // Engagements
+    const devQuery = query(collection(db, 'engagements'), where('developerId', '==', user.uid));
+    const unsubscribeDev = onSnapshot(devQuery, (snapshot) => {
+        const engs: Engagement[] = [];
+        snapshot.forEach(doc => engs.push({ id: doc.id, ...doc.data() } as Engagement));
+        setDeveloperEngagements(engs);
+    });
+
+    if (userProfile?.roles?.advisor) {
+        const advisorQuery = query(collection(db, 'engagements'), where('advisorId', '==', user.uid));
+        const unsubscribeAdvisor = onSnapshot(advisorQuery, (snapshot) => {
+            const reqs: Engagement[] = [];
+            const activeEngs: Engagement[] = [];
+            snapshot.forEach(doc => {
+                const engagement = { id: doc.id, ...doc.data() } as Engagement;
+                if (engagement.status === 'requested') {
+                    reqs.push(engagement);
+                } else {
+                    activeEngs.push(engagement);
+                }
+            });
+            setAdvisorRequests(reqs);
+            setAdvisorEngagements(activeEngs);
+        });
+        return () => {
+            unsubscribeDev();
+            unsubscribeAdvisor();
+        }
+    }
+
+    return () => unsubscribeDev();
+
+  }, [user, userProfile, toast, router]);
 
   const handleGenerateInsights = () => {
     if (!user || !userProfile) return;
@@ -229,6 +266,15 @@ export default function DashboardPage() {
       toast({ variant: 'destructive', title: 'Matching Failed', description: error instanceof Error ? error.message : 'Could not create a match. Please try again.' });
     }
   };
+  
+    const handleAccept = async (engagementId: string) => {
+        const engagementRef = doc(db, 'engagements', engagementId);
+        await updateDoc(engagementRef, {
+            status: 'active',
+            activatedAt: serverTimestamp()
+        });
+        router.push(`/engagements/${engagementId}`);
+    };
 
   const getInitials = (name?: string) => {
     if (!name) return 'U';
@@ -261,28 +307,100 @@ export default function DashboardPage() {
         <div className="space-y-12">
           <Card>
             <CardHeader>
-              <CardTitle>Your Profile</CardTitle><CardDescription>A quick glance at your current profile information.</CardDescription>
+              <CardTitle className="text-base">Your Profile</CardTitle><CardDescription className="text-sm">A quick glance at your current profile information.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col sm:flex-row items-center gap-6">
               <Avatar className="w-24 h-24 border-4 border-background shadow-md"><AvatarImage src={userProfile.photoURL} alt={userProfile.name} /><AvatarFallback className="text-4xl">{getInitials(userProfile.name)}</AvatarFallback></Avatar>
-              <div className="flex-1 text-center sm:text-left"><p className="font-bold text-3xl">{userProfile.name}</p><p className="text-muted-foreground">{userProfile.email}</p><p className="text-sm text-foreground/80 mt-2 line-clamp-2">{userProfile.bio || "You haven't added a bio yet."}</p></div>
+              <div className="flex-1 text-center sm:text-left"><p className="font-bold text-lg">{userProfile.name}</p><p className="text-muted-foreground text-sm">{userProfile.email}</p><p className="text-sm text-foreground/80 mt-2 line-clamp-2">{userProfile.bio || "You haven't added a bio yet."}</p></div>
               <Button variant="outline" className="w-full sm:w-auto flex-shrink-0" asChild><Link href="/profile"><Edit className="mr-2 h-4 w-4" />Edit Profile</Link></Button>
             </CardContent>
           </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">My Engagements</CardTitle>
+                            <CardDescription className="text-sm">Engagements you have requested as a developer.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {developerEngagements.length > 0 ? developerEngagements.map(eng => (
+                                <div key={eng.id} className="flex items-center justify-between p-2 border rounded-lg">
+                                    <div>
+                                        <p className="font-semibold text-sm">{eng.advisorInfo.name} - <span className="font-normal text-muted-foreground">{eng.advisorInfo.headline}</span></p>
+                                        <p className="text-sm text-gray-500">Status: <span className={`font-medium ${eng.status === 'active' ? 'text-green-500' : 'text-yellow-500'}`}>{eng.status}</span></p>
+                                    </div>
+                                    <Button asChild><Link href={`/engagements/${eng.id}`}>View</Link></Button>
+                                </div>
+                            )) : (
+                                <p className="text-sm">You have not requested any engagements.</p>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {userProfile?.roles?.advisor && (
+                        <>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base">Advisory Requests</CardTitle>
+                                    <CardDescription className="text-sm">Requests from developers seeking your advice.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {advisorRequests.length > 0 ? advisorRequests.map(req => (
+                                        <div key={req.id} className="p-4 border rounded-lg">
+                                            <div className="flex items-start justify-between">
+                                                <div>
+                                                    <p className="font-semibold text-sm">{req.developerInfo.name}</p>
+                                                    <p className="text-sm text-muted-foreground mt-1">{req.requestMessage}</p>
+                                                </div>
+                                                <Avatar>
+                                                    <AvatarImage src={req.developerInfo.photoURL} />
+                                                    <AvatarFallback>{req.developerInfo.name?.[0]}</AvatarFallback>
+                                                </Avatar>
+                                            </div>
+                                            <CardFooter className="flex justify-end pt-4 px-0 pb-0">
+                                               <Button onClick={() => handleAccept(req.id)}>Accept & Open Room</Button>
+                                            </CardFooter>
+                                        </div>
+                                    )) : (
+                                        <p className="text-sm">You have no pending advisory requests.</p>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base">My Active Engagements</CardTitle>
+                                    <CardDescription className="text-sm">Your ongoing engagements as an advisor.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {advisorEngagements.length > 0 ? advisorEngagements.map(eng => (
+                                        <div key={eng.id} className="flex items-center justify-between p-2 border rounded-lg">
+                                            <div>
+                                               <p className="font-semibold text-sm">{eng.developerInfo.name}</p>
+                                               <p className="text-sm text-gray-500">Status: <span className={`font-medium ${eng.status === 'active' ? 'text-green-500' : 'text-gray-500'}`}>{eng.status}</span></p>
+                                            </div>
+                                            <Button asChild><Link href={`/engagements/${eng.id}`}>View</Link></Button>
+                                        </div>
+                                    )) : (
+                                        <p className="text-sm">You have no active engagements.</p>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </>
+                    )}
           
           <Card className="bg-gradient-to-br from-primary/5 to-transparent">
             <CardHeader>
-                <CardTitle className="flex items-center gap-3"><Lightbulb className="h-6 w-6 text-yellow-400" /><span>Insights</span></CardTitle>
-                <CardDescription>Uncover collaboration opportunities and profile optimization suggestions.</CardDescription>
+                <CardTitle className="flex items-center gap-3 text-base"><Lightbulb className="h-6 w-6 text-yellow-400" /><span>Insights</span></CardTitle>
+                <CardDescription className="text-sm">Uncover collaboration opportunities and profile optimization suggestions.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
                 {isAiInsightsLoading ? (
                     <div className="flex items-center justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
                 ) : aiInsights ? (
                     <>
-                        <div><h4 className="font-semibold mb-1">Audience Summary</h4><p className="text-muted-foreground">{aiInsights.audienceSummary}</p></div>
-                        <div><h4 className="font-semibold mb-1">Potential Opportunities</h4><p className="text-muted-foreground">{aiInsights.potentialGaps}</p></div>
-                        <div className="p-3 bg-primary/10 rounded-md"><h4 className="font-semibold mb-1">Actionable Advice</h4><p className="text-foreground/90 font-medium">{aiInsights.actionableAdvice}</p></div>
+                        <div><h4 className="font-semibold mb-1 text-sm">Audience Summary</h4><p className="text-muted-foreground">{aiInsights.audienceSummary}</p></div>
+                        <div><h4 className="font-semibold mb-1 text-sm">Potential Opportunities</h4><p className="text-muted-foreground">{aiInsights.potentialGaps}</p></div>
+                        <div className="p-3 bg-primary/10 rounded-md"><h4 className="font-semibold mb-1 text-sm">Actionable Advice</h4><p className="text-foreground/90 font-medium">{aiInsights.actionableAdvice}</p></div>
                         <Button variant="ghost" size="sm" onClick={() => setAiInsights(null)} className="w-full mt-4">Generate New Insight</Button>
                     </>
                 ) : (
@@ -297,18 +415,18 @@ export default function DashboardPage() {
           </Card>
 
           <section>
-            <div className="flex items-center justify-between mb-6"><div className="flex items-center"><Briefcase className="h-7 w-7 text-primary mr-3" /><h2 className="text-3xl font-bold tracking-tight">My Projects</h2></div><Button variant="outline" asChild><Link href="/projects">View All <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></div>
-            {myProjects.length > 0 ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">{myProjects.slice(0, 3).map(project => <ProjectCard key={project.id} project={project} />)}</div> : <div className="text-center py-16 border-2 border-dashed rounded-lg"><h3 className="text-xl font-semibold">You haven&apos;t created any projects yet.</h3><p className="text-muted-foreground mt-2 mb-4">Start your next big idea today!</p><Button asChild><Link href="/projects/new"><PlusCircle className="mr-2 h-4 w-4" />Create New Project</Link></Button></div>}
+            <div className="flex items-center justify-between mb-6"><div className="flex items-center"><Briefcase className="h-7 w-7 text-primary mr-3" /><h2 className="text-lg font-bold tracking-tight">My Projects</h2></div><Button variant="outline" asChild><Link href="/projects">View All <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></div>
+            {myProjects.length > 0 ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">{myProjects.slice(0, 3).map(project => <ProjectCard key={project.id} project={project} />)}</div> : <div className="text-center py-16 border-2 border-dashed rounded-lg"><h3 className="text-base font-semibold">You haven&apos;t created any projects yet.</h3><p className="text-muted-foreground mt-2 mb-4 text-sm">Start your next big idea today!</p><Button asChild><Link href="/projects/new"><PlusCircle className="mr-2 h-4 w-4" />Create New Project</Link></Button></div>}
           </section>
 
           {myProjects.some(p => interestedUsersByProject[p.id]?.length > 0) && (
             <section>
-              <h2 className="text-3xl font-bold tracking-tight mb-6 flex items-center"><UserCheck className="mr-3 h-7 w-7 text-primary"/>Collaboration Hub</h2>
+              <h2 className="text-lg font-bold tracking-tight mb-6 flex items-center"><UserCheck className="mr-3 h-7 w-7 text-primary"/>Collaboration Hub</h2>
               {myProjects.map(project => (
                 interestedUsersByProject[project.id]?.length > 0 && (
                     <Card className="mb-6" key={project.id}>
-                      <CardHeader><CardTitle className="flex items-center flex-wrap gap-3"><Hand className="h-5 w-5"/><span>Interested Developers for: <Link href={`/projects/${project.id}`} className="text-primary hover:underline">{project.title}</Link></span></CardTitle></CardHeader>
-                      <CardContent><ul className="space-y-4">{interestedUsersByProject[project.id]?.map(interestedUser => <li key={interestedUser.uid} className="flex flex-col sm:flex-row items-center justify-between gap-4"><div className="flex items-center space-x-3"><Avatar><AvatarImage src={interestedUser.photoURL} /><AvatarFallback>{getInitials(interestedUser.name)}</AvatarFallback></Avatar><span>{interestedUser.name}</span></div><div className="flex items-center gap-2"><Button variant="outline" size="sm" asChild><Link href={`/developers/${interestedUser.uid}`}>View Profile</Link></Button><Button size="sm" onClick={() => handleMatch(project, interestedUser)}>Match</Button></div></li>)}</ul></CardContent>
+                      <CardHeader><CardTitle className="flex items-center flex-wrap gap-3 text-base"><Hand className="h-5 w-5"/><span>Interested Developers for: <Link href={`/projects/${project.id}`} className="text-primary hover:underline">{project.title}</Link></span></CardTitle></CardHeader>
+                      <CardContent><ul className="space-y-4">{interestedUsersByProject[project.id]?.map(interestedUser => <li key={interestedUser.uid} className="flex flex-col sm:flex-row items-center justify-between gap-4"><div className="flex items-center space-x-3"><Avatar><AvatarImage src={interestedUser.photoURL} /><AvatarFallback>{getInitials(interestedUser.name)}</AvatarFallback></Avatar><span className="text-sm">{interestedUser.name}</span></div><div className="flex items-center gap-2"><Button variant="outline" size="sm" asChild><Link href={`/developers/${interestedUser.uid}`}>View Profile</Link></Button><Button size="sm" onClick={() => handleMatch(project, interestedUser)}>Match</Button></div></li>)}</ul></CardContent>
                     </Card>
                 )
               ))} 
@@ -320,21 +438,21 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2">
             <section>
-              <div className="flex items-center mb-6"><Eye className="h-7 w-7 text-primary mr-3" /><h2 className="text-3xl font-bold tracking-tight">Public Profile Preview</h2></div>
+              <div className="flex items-center mb-6"><Eye className="h-7 w-7 text-primary mr-3" /><h2 className="text-lg font-bold tracking-tight">Public Profile Preview</h2></div>
                 <Card className="overflow-hidden">
-                  <div className="bg-muted/40 p-8"><div className="flex flex-col md:flex-row items-start space-y-6 md:space-y-0 md:space-x-8"><Avatar className="h-32 w-32 border-4 border-background shadow-lg"><AvatarImage src={userProfile.photoURL} alt={userProfile.name} /><AvatarFallback className="text-5xl">{getInitials(userProfile.name)}</AvatarFallback></Avatar><div className="flex-1 pt-4"><h1 className="text-3xl font-bold">{userProfile.name}</h1><div className="flex items-center gap-4 mt-2 text-muted-foreground"><div className="flex items-center gap-2"><Clock className="h-4 w-4" /><span>{formatExperience(userProfile.yearsOfExperience)}</span></div></div></div><div>{userProfile.openForCollaboration ? <Badge variant="default" className="flex-shrink-0"><BadgeCheck className="mr-2 h-4 w-4"/>Open to Collab</Badge> : <Badge variant="secondary" className="flex-shrink-0"><BadgeX className="mr-2 h-4 w-4"/>Not seeking colabs</Badge>}</div></div></div>
+                  <div className="bg-muted/40 p-8"><div className="flex flex-col md:flex-row items-start space-y-6 md:space-y-0 md:space-x-8"><Avatar className="h-32 w-32 border-4 border-background shadow-lg"><AvatarImage src={userProfile.photoURL} alt={userProfile.name} /><AvatarFallback className="text-5xl">{getInitials(userProfile.name)}</AvatarFallback></Avatar><div className="flex-1 pt-4"><h1 className="text-lg font-bold">{userProfile.name}</h1><div className="flex items-center gap-4 mt-2 text-muted-foreground"><div className="flex items-center gap-2"><Clock className="h-4 w-4" /><span className="text-sm">{formatExperience(userProfile.yearsOfExperience)}</span></div></div></div><div>{userProfile.openForCollaboration ? <Badge variant="default" className="flex-shrink-0"><BadgeCheck className="mr-2 h-4 w-4"/>Open to Collab</Badge> : <Badge variant="secondary" className="flex-shrink-0"><BadgeX className="mr-2 h-4 w-4"/>Not seeking colabs</Badge>}</div></div></div>
                    <CardContent className="p-8 space-y-8">
-                        <div><h3 className="text-xl font-semibold mb-2">About</h3><p className="text-foreground/80 leading-relaxed text-base">{userProfile.bio || 'No bio provided yet. Add one to attract collaborators!'}</p></div>
+                        <div><h3 className="text-base font-semibold mb-2">About</h3><p className="text-foreground/80 leading-relaxed text-sm">{userProfile.bio || 'No bio provided yet. Add one to attract collaborators!'}</p></div>
                         
-                        {userProfile.openForCollaboration && ((userProfile.collaborationGoals && userProfile.collaborationGoals.length > 0) || userProfile.commitmentLevel) && <Card><CardHeader><CardTitle className="flex items-center"><Handshake className="mr-2 h-5 w-5 text-primary"/> Collaboration Preferences</CardTitle></CardHeader><CardContent className="space-y-4 pt-4">{userProfile.collaborationGoals && userProfile.collaborationGoals.length > 0 && <div><h3 className="font-semibold mb-2 flex items-center"><Target className="mr-2 h-4 w-4"/> Goals</h3><div className="flex flex-wrap gap-2">{userProfile.collaborationGoals.map((goal: string) => <Badge key={goal} variant="default">{goal}</Badge>)}</div></div>}{userProfile.commitmentLevel && <div><h3 className="font-semibold mb-2">Commitment</h3><p className="text-muted-foreground">{userProfile.commitmentLevel}</p></div>}</CardContent></Card>}
+                        {userProfile.openForCollaboration && ((userProfile.collaborationGoals && userProfile.collaborationGoals.length > 0) || userProfile.commitmentLevel) && <Card><CardHeader><CardTitle className="flex items-center text-base"><Handshake className="mr-2 h-5 w-5 text-primary"/> Collaboration Preferences</CardTitle></CardHeader><CardContent className="space-y-4 pt-4">{userProfile.collaborationGoals && userProfile.collaborationGoals.length > 0 && <div><h3 className="font-semibold mb-2 flex items-center text-sm"><Target className="mr-2 h-4 w-4"/> Goals</h3><div className="flex flex-wrap gap-2">{userProfile.collaborationGoals.map((goal: string) => <Badge key={goal} variant="default">{goal}</Badge>)}</div></div>}{userProfile.commitmentLevel && <div><h3 className="font-semibold mb-2 text-sm">Commitment</h3><p className="text-muted-foreground text-sm">{userProfile.commitmentLevel}</p></div>}</CardContent></Card>}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                           <div>
-                            <h3 className="flex items-center text-xl font-semibold mb-4"><BrainCircuit className="mr-2 h-5 w-5" /> Skills</h3>
+                            <h3 className="flex items-center text-base font-semibold mb-4"><BrainCircuit className="mr-2 h-5 w-5" /> Skills</h3>
                             {userProfile.skills && userProfile.skills.length > 0 ? <div className="flex flex-wrap gap-2">{userProfile.skills.map((skill) => <Badge key={skill} variant="secondary">{skill}</Badge>)}</div> : <p className="text-muted-foreground text-sm">No professional skills listed.</p>}
                           </div>
                           <div>
-                            <h3 className="flex items-center text-xl font-semibold mb-4"><Code className="mr-2 h-5 w-5" /> Tech Stack</h3>
+                            <h3 className="flex items-center text-base font-semibold mb-4"><Code className="mr-2 h-5 w-5" /> Tech Stack</h3>
                             {userProfile.techStack && userProfile.techStack.length > 0 ? <div className="flex flex-wrap gap-2">{userProfile.techStack.map((tech: string) => <Badge key={tech} variant="outline">{tech}</Badge>)}</div> : <p className="text-muted-foreground text-sm">No tech stack listed.</p>}
                           </div>
                         </div>
@@ -346,7 +464,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-      <AlertDialog open={showMatchModal} onOpenChange={setShowMatchModal}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle className="text-center text-2xl">It's a Match!</AlertDialogTitle><AlertDialogDescription className="text-center">You and <span className="font-bold">{matchedInfo?.devName}</span> have matched for the project: <span className="font-bold">{matchedInfo?.projectName}</span>.</AlertDialogDescription></AlertDialogHeader><div className="flex justify-center py-4"><UserCheck className="h-16 w-16 text-green-500" /></div><AlertDialogFooter><AlertDialogCancel>Close</AlertDialogCancel><AlertDialogAction onClick={() => router.push(`/messages/${matchedInfo?.matchId}`)}><MessageSquare className="mr-2 h-4 w-4" />Send a Message</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <AlertDialog open={showMatchModal} onOpenChange={setShowMatchModal}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle className="text-center text-lg">It's a Match!</AlertDialogTitle><AlertDialogDescription className="text-center text-sm">You and <span className="font-bold">{matchedInfo?.devName}</span> have matched for the project: <span className="font-bold">{matchedInfo?.projectName}</span>.</AlertDialogDescription></AlertDialogHeader><div className="flex justify-center py-4"><UserCheck className="h-16 w-16 text-green-500" /></div><AlertDialogFooter><AlertDialogCancel>Close</AlertDialogCancel><AlertDialogAction onClick={() => router.push(`/messages/${matchedInfo?.matchId}`)}><MessageSquare className="mr-2 h-4 w-4" />Send a Message</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </div>
   );
 }

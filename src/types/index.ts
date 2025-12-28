@@ -1,5 +1,6 @@
 'use client';
 import type { Timestamp, FieldValue } from 'firebase/firestore';
+import type { AdvisorProfile, PublicAdvisorProfile } from './advisor'; // Correctly import both types
 
 // Defines a structure for external links
 export interface ExternalLink {
@@ -39,6 +40,14 @@ export interface UserProfile {
     yearsOfExperience?: number; 
     timezone?: string;
     isProfileComplete?: boolean;
+    roles: { 
+        developer: boolean; 
+        advisor: boolean; 
+    };
+    advisorProfile?: AdvisorProfile;
+    activeAdvisorApplicationId?: string;
+    partnerFunctions?: string[];
+    locations?: string[];
 }
 
 // Defines the shape of a project created by a user
@@ -116,9 +125,18 @@ export interface Match {
 // Represents a notification within the system
 export interface Notification {
   id?: string;
-  type: 'interest' | 'match' | 'rejection' | 'message';
-  fromUserId: string;
-  fromUserName: string;
+  type: 'interest' | 'match' | 'rejection' | 'message' | 'system';
+  
+  // For user-generated notifications
+  fromUserId?: string;
+  fromUserName?: string;
+
+  // For system-generated notifications
+  title?: string;
+  message?: string;
+  link?: string;
+
+  // Context fields
   messageSnippet?: string; 
   contextTitle?: string; 
   projectId?: string;
@@ -127,8 +145,8 @@ export interface Notification {
   roleTitle?: string;
   matchId?: string;
   read: boolean;
-  rejectionCount?: number; // Added for the new rejection system
-  createdAt?: Timestamp | FieldValue;
+  rejectionCount?: number; 
+  createdAt: Timestamp;
 }
 
 // Represents a single message within a match conversation
@@ -139,3 +157,6 @@ export interface Message {
   timestamp: Timestamp | null | FieldValue;
   deletedFor?: string[];
 }
+
+// Make the new PublicAdvisorProfile type available for import elsewhere
+export type { PublicAdvisorProfile };

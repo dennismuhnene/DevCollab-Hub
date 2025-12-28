@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ExternalLink } from '@/types';
+import { AdvisorApplicationManager } from '@/components/advisor-application-manager';
 
 const socialIcons = {
   github: "/icons/github.svg",
@@ -71,7 +72,7 @@ export default function ProfilePage() {
     } else if (cachedProfile?.photoURL) {
       setImagePreview(cachedProfile.photoURL);
     }
-  }, [userProfile?.photoURL]);
+  }, [userProfile, cachedProfile]);
 
   const getInitials = (name?: string) => {
     if (!name) return 'U';
@@ -235,8 +236,8 @@ export default function ProfilePage() {
         </div>
 
         <div className="flex-1 pt-4">
-          <h1 className="text-3xl font-bold">{finalProfile.name}</h1>
-          <p className="text-muted-foreground text-lg">{finalProfile.email}</p>
+          <h1 className="text-lg font-bold">{finalProfile.name}</h1>
+          <p className="text-muted-foreground text-base">{finalProfile.email}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {finalProfile.skills?.map((skill: string) => (
               <Badge key={skill} variant="secondary">{skill}</Badge>
@@ -249,14 +250,14 @@ export default function ProfilePage() {
         {allLinks.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>External Links</CardTitle>
+              <CardTitle className="text-base">External Links</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-4">
               {allLinks.map((link, index) => (
                 <Button key={index} variant="outline" asChild>
                   <Link href={link.url} target="_blank">
                     <LinkIcon className="mr-2 h-4 w-4" />
-                    {link.type}
+                    {link.url}
                   </Link>
                 </Button>
               ))}
@@ -266,13 +267,15 @@ export default function ProfilePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Edit Profile</CardTitle>
-            <CardDescription>Update your personal information and skills.</CardDescription>
+            <CardTitle className="text-base">Edit Profile</CardTitle>
+            <CardDescription className="text-sm">Update your personal information and skills.</CardDescription>
           </CardHeader>
           <CardContent>
             <ProfileForm userProfile={finalProfile} />
           </CardContent>
         </Card>
+
+        <AdvisorApplicationManager />
       </div>
     </div>
   );

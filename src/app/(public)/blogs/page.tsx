@@ -90,8 +90,8 @@ export default function BlogsPage() {
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-12 text-center">
-        <h1 className="text-4xl font-bold tracking-tight">The DevCollab Blog</h1>
-        <p className="mt-3 text-lg text-muted-foreground">Insights, stories, and news from our community.</p>
+        <h1 className="text-2xl font-semibold leading-none tracking-tight">The DevCollab Blog</h1>
+        <p className="mt-3 text-base text-muted-foreground">Insights, stories, and news from our community.</p>
       </div>
 
       {posts.length > 0 ? (
@@ -112,8 +112,8 @@ export default function BlogsPage() {
         </>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 py-20 text-center">
-          <h2 className="text-xl font-semibold">No Posts Yet</h2>
-          <p className="mt-2 text-muted-foreground">Check back soon for the latest articles!</p>
+          <h2 className="text-base font-semibold">No Posts Yet</h2>
+          <p className="mt-2 text-muted-foreground text-sm">Check back soon for the latest articles!</p>
         </div>
       )}
     </div>

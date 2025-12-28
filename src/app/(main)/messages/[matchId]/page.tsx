@@ -244,6 +244,11 @@ export default function ChatPage() {
   };
 
   const handleGetAiInsights = () => {
+    const isOwner = project?.ownerId === user?.uid || role?.ownerId === user?.uid;
+    if (!isOwner) {
+      return; // Silently exit if not the owner.
+    }
+
     if (!user || !userProfile || !otherUser || (!project && !role)) {
         toast({ variant: 'destructive', title: 'Missing data for AI analysis.' });
         return;

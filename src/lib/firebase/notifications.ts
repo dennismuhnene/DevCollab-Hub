@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, writeBatch, deleteDoc } from 'firebase/firestore';
 
 export async function addNotification(userId: string, notification: any) {
     if (!userId) return;
@@ -56,5 +56,55 @@ export async function markInterestNotificationsAsRead(userId: string, projectId:
         await batch.commit();
     } catch (error) {
         console.error("Failed to mark interest notifications as read:", error);
+    }
+}
+
+// NEW: Mark all unread notifications as read
+export async function markAllNotificationsAsRead(userId: string) {
+    if (!userId) return;
+    try {
+        const notifsRef = collection(db, 'users', userId, 'notifications');
+        const q = query(notifsRef, where('read', '==', false));
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) return;
+
+        const batch = writeBatch(db);
+        snapshot.docs.forEach(docSnap => {
+            batch.update(doc(db, 'users', userId, 'notifications', docSnap.id), { read: true });
+        });
+        await batch.commit();
+    } catch (error) {
+        console.error("Failed to mark all notifications as read:", error);
+        throw error; // Re-throw to be handled by the calling UI
+    }
+}
+
+// NEW: Delete a single notification
+export async function deleteNotification(userId: string, notificationId: string) {
+    if (!userId || !notificationId) return;
+    try {
+        await deleteDoc(doc(db, 'users', userId, 'notifications', notificationId));
+    } catch (error) {
+        console.error("Failed to delete notification:", error);
+        throw error; // Re-throw to be handled by the calling UI
+    }
+}
+
+// NEW: Clear all notifications for a user
+export async function clearAllNotifications(userId: string) {
+    if (!userId) return;
+    try {
+        const notifsRef = collection(db, 'users', userId, 'notifications');
+        const snapshot = await getDocs(notifsRef);
+        if (snapshot.empty) return;
+
+        const batch = writeBatch(db);
+        snapshot.docs.forEach(docSnap => {
+            batch.delete(docSnap.ref);
+        });
+        await batch.commit();
+    } catch (error) {
+        console.error("Failed to clear all notifications:", error);
+        throw error; // Re-throw to be handled by the calling UI
     }
 }
