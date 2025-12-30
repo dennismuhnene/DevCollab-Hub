@@ -302,14 +302,14 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-12">
+      <div className="flex flex-col gap-4">
         
-        <div className="space-y-12">
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Your Profile</CardTitle><CardDescription className="text-sm">A quick glance at your current profile information.</CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col sm:flex-row items-center gap-6">
+            <CardContent className="flex flex-col sm:flex-row items-center gap-4">
               <Avatar className="w-24 h-24 border-4 border-background shadow-md"><AvatarImage src={userProfile.photoURL} alt={userProfile.name} /><AvatarFallback className="text-4xl">{getInitials(userProfile.name)}</AvatarFallback></Avatar>
               <div className="flex-1 text-center sm:text-left"><p className="font-bold text-lg">{userProfile.name}</p><p className="text-muted-foreground text-sm">{userProfile.email}</p><p className="text-sm text-foreground/80 mt-2 line-clamp-2">{userProfile.bio || "You haven't added a bio yet."}</p></div>
               <Button variant="outline" className="w-full sm:w-auto flex-shrink-0" asChild><Link href="/profile"><Edit className="mr-2 h-4 w-4" />Edit Profile</Link></Button>
@@ -416,7 +416,7 @@ export default function DashboardPage() {
 
           <section>
             <div className="flex items-center justify-between mb-6"><div className="flex items-center"><Briefcase className="h-7 w-7 text-primary mr-3" /><h2 className="text-lg font-bold tracking-tight">My Projects</h2></div><Button variant="outline" asChild><Link href="/projects">View All <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></div>
-            {myProjects.length > 0 ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">{myProjects.slice(0, 3).map(project => <ProjectCard key={project.id} project={project} />)}</div> : <div className="text-center py-16 border-2 border-dashed rounded-lg"><h3 className="text-base font-semibold">You haven&apos;t created any projects yet.</h3><p className="text-muted-foreground mt-2 mb-4 text-sm">Start your next big idea today!</p><Button asChild><Link href="/projects/new"><PlusCircle className="mr-2 h-4 w-4" />Create New Project</Link></Button></div>}
+            {myProjects.length > 0 ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{myProjects.slice(0, 3).map(project => <ProjectCard key={project.id} project={project} />)}</div> : <div className="text-center py-16 border-2 border-dashed rounded-lg"><h3 className="text-base font-semibold">You haven&apos;t created any projects yet.</h3><p className="text-muted-foreground mt-2 mb-4 text-sm">Start your next big idea today!</p><Button asChild><Link href="/projects/new"><PlusCircle className="mr-2 h-4 w-4" />Create New Project</Link></Button></div>}
           </section>
 
           {myProjects.some(p => interestedUsersByProject[p.id]?.length > 0) && (
@@ -435,7 +435,7 @@ export default function DashboardPage() {
 
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
             <section>
               <div className="flex items-center mb-6"><Eye className="h-7 w-7 text-primary mr-3" /><h2 className="text-lg font-bold tracking-tight">Public Profile Preview</h2></div>
@@ -446,7 +446,7 @@ export default function DashboardPage() {
                         
                         {userProfile.openForCollaboration && ((userProfile.collaborationGoals && userProfile.collaborationGoals.length > 0) || userProfile.commitmentLevel) && <Card><CardHeader><CardTitle className="flex items-center text-base"><Handshake className="mr-2 h-5 w-5 text-primary"/> Collaboration Preferences</CardTitle></CardHeader><CardContent className="space-y-4 pt-4">{userProfile.collaborationGoals && userProfile.collaborationGoals.length > 0 && <div><h3 className="font-semibold mb-2 flex items-center text-sm"><Target className="mr-2 h-4 w-4"/> Goals</h3><div className="flex flex-wrap gap-2">{userProfile.collaborationGoals.map((goal: string) => <Badge key={goal} variant="default">{goal}</Badge>)}</div></div>}{userProfile.commitmentLevel && <div><h3 className="font-semibold mb-2 text-sm">Commitment</h3><p className="text-muted-foreground text-sm">{userProfile.commitmentLevel}</p></div>}</CardContent></Card>}
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <h3 className="flex items-center text-base font-semibold mb-4"><BrainCircuit className="mr-2 h-5 w-5" /> Skills</h3>
                             {userProfile.skills && userProfile.skills.length > 0 ? <div className="flex flex-wrap gap-2">{userProfile.skills.map((skill) => <Badge key={skill} variant="secondary">{skill}</Badge>)}</div> : <p className="text-muted-foreground text-sm">No professional skills listed.</p>}

@@ -197,7 +197,7 @@ export default function ProfilePage() {
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="flex flex-col md:flex-row items-start space-y-6 md:space-y-0 md:space-x-8 mb-8">
+      <div className="flex flex-col md:flex-row items-start space-y-4 md:space-y-0 md:space-x-6 mb-6">
         <div className="relative group" onClick={handleAvatarClick}>
             <Avatar className="h-32 w-32 border-4 border-background shadow-md">
                 {imagePreview ? (
@@ -245,13 +245,13 @@ export default function ProfilePage() {
         </div>
       </div>
       
-      <div className="space-y-8">
+      <div className="space-y-4">
         {allLinks.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="text-base">External Links</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-wrap gap-4">
+            <CardContent className="flex flex-wrap gap-2">
               {allLinks.map((link, index) => (
                 <Button key={index} variant="outline" asChild>
                   <Link href={link.url} target="_blank" className="break-all">

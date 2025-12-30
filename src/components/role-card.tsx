@@ -16,7 +16,7 @@ export default function RoleCard({ role, isDiscoverMode = false }: RoleCardProps
     <Card className="flex flex-col h-full bg-card hover:bg-muted/40 transition-colors">
       <CardHeader>
         <CardTitle className='text-lg'>{role.title}</CardTitle>
-        <div className="flex flex-wrap gap-2 pt-2">
+        <div className="flex flex-wrap gap-1 pt-2">
             {role.incentives && <Badge variant="secondary"><DollarSign className="h-3 w-3 mr-1"/>{role.incentives}</Badge>}
             {role.commitmentLevel && <Badge variant="secondary"><Briefcase className="h-3 w-3 mr-1"/>{role.commitmentLevel}</Badge>}
             {role.locations && role.locations[0] && <Badge variant="secondary"><MapPin className="h-3 w-3 mr-1"/>{role.locations[0]}</Badge>}
