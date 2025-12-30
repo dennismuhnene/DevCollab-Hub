@@ -1,11 +1,10 @@
-
 [
   {
     "origin": [
+      "https://hub4devs.com",
+      "https://9003-firebase-devcollab-hubgit-1766190319522.cluster-64pjnskmlbaxowh5lzq6i7v4ra.cloudworkstations.dev",
       "http://localhost:9002",
-      "https://6000-firebase-studio-1762274740510.cluster-ikslh4rdsnbqsvu5nw3v4dqjj2.cloudworkstations.dev",
-      "https://9000-firebase-studio-1762274740510.cluster-ikslh4rdsnbqsvu5nw3v4dqjj2.cloudworkstations.dev",
-      "https://9003-firebase-studio-1762274740510.cluster-ikslh4rdsnbqsvu5nw3v4dqjj2.cloudworkstations.dev"
+      "http://localhost:3000"
     ],
     "method": [
       "GET",

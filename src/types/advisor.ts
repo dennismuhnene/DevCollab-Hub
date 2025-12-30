@@ -47,20 +47,25 @@ export interface Engagement {
     id: string;
     developerId: string;
     advisorId: string;
-    status: 'requested' | 'active' | 'closed' | 'archived';
-    requestMessage: string;
+    status: 'requested' | 'active' | 'closed' | 'archived' | 'rejected';
+    message: string;
     createdAt: Timestamp | FieldValue;
     activatedAt?: Timestamp | FieldValue;
     closedAt?: Timestamp | FieldValue;
-    developerInfo: {
-        name: string;
-        photoURL: string;
-    };
-    advisorInfo: {
-        name: string;
-        photoURL: string;
-        headline: string;
-    };
+    developerName: string;
+    developerPhotoURL: string;
+    advisorName: string;
+    advisorPhotoURL: string;
+    advisorHeadline: string;
+}
+
+export interface EngagementMessage {
+    id: string;
+    senderId: string;
+    text: string;
+    createdAt: Timestamp | FieldValue;
+    fileURL?: string;
+    fileName?: string;
 }
 
 export interface AdvisorReview {

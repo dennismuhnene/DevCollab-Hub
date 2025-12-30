@@ -7,7 +7,8 @@ import { db } from '@/lib/firebase/config';
 import { markAllNotificationsAsRead, deleteNotification, clearAllNotifications } from '@/lib/firebase/notifications';
 import type { Notification } from '@/types';
 import Link from 'next/link';
-import { Bell, Hand, UserPlus, UserX, MessageSquare, CheckCircle2, X, MailCheck, Trash2 } from 'lucide-react';
+import { usePathname } from 'next/navigation'; // Import usePathname
+import { Bell, Hand, UserPlus, UserX, MessageSquare, CheckCircle2, X, MailCheck, Trash2, Handshake } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -18,6 +19,7 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const { toast } = useToast();
+  const pathname = usePathname(); // Get the current path
 
   useEffect(() => {
     if (!user) return;
@@ -32,10 +34,17 @@ export default function Notifications() {
       setNotifications(notifs);
       const unread = notifs.filter(n => !n.read).length;
       setUnreadCount(unread);
+
+      // Auto-mark as read logic
+      notifs.forEach(notif => {
+        if (!notif.read && notif.link === pathname) {
+            markAsRead(notif.id!);
+        }
+      });
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, pathname]); // Add pathname to dependency array
 
   const markAsRead = async (notificationId: string) => {
     if (!user) return;
@@ -98,6 +107,7 @@ export default function Notifications() {
         case 'rejection': return <UserX className="h-5 w-5 text-red-500" />;
         case 'message': return <MessageSquare className="h-5 w-5 text-blue-500" />;
         case 'system': return <CheckCircle2 className="h-5 w-5 text-blue-500" />;
+        case 'engagement': return <Handshake className="h-5 w-5 text-purple-500" />;
         default: return <Bell className="h-5 w-5" />;
     }
   }
@@ -165,7 +175,7 @@ export default function Notifications() {
                   <div className="flex items-start gap-3">
                     <div className="pt-1">{getNotificationIcon(notif.type)}</div>
                     <div>
-                      {notif.type === 'system' ? (
+                      {notif.type === 'system' || notif.type === 'engagement' ? (
                           <>
                               <p className="text-sm font-semibold">{notif.title}</p>
                               {notif.message && <p className="text-sm text-muted-foreground">{notif.message}</p>}

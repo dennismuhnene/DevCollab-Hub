@@ -131,8 +131,12 @@ service cloud.firestore {
     // ENGAGEMENTS & REVIEWS
     match /engagements/{engagementId} {
       allow create: if isSignedIn() && request.resource.data.developerId == uid();
+      // Allow participants to read and list their own engagements.
       allow read: if isSignedIn() && (uid() == resource.data.developerId || uid() == resource.data.advisorId);
-      allow update: if isSignedIn() && ((resource.data.status == 'requested' && request.resource.data.status == 'active' && uid() == resource.data.advisorId) || (resource.data.status == 'active' && request.resource.data.status == 'closed' && (uid() == resource.data.developerId || uid() == resource.data.advisorId)));
+      // Also allow any signed-in user to GET (but not list) a document.
+      // This is required for the Storage security rule to look up the engagement.
+      allow get: if isSignedIn();
+      allow update: if isSignedIn() && ((resource.data.status == 'requested' && request.resource.data.status == 'active' && uid() == resource.data.advisorId) || (resource.data.status == 'requested' && request.resource.data.status == 'rejected' && uid() == resource.data.advisorId) || (resource.data.status == 'active' && request.resource.data.status == 'closed' && (uid() == resource.data.developerId || uid() == resource.data.advisorId)));
 
       match /messages/{messageId} {
           allow read, write: if isSignedIn() && (uid() == get(/databases/$(database)/documents/engagements/$(engagementId)).data.developerId || uid() == get(/databases/$(database)/documents/engagements/$(engagementId)).data.advisorId) && get(/databases/$(database)/documents/engagements/$(engagementId)).data.status == 'active';

@@ -76,14 +76,14 @@ const EngagementRequestPage = () => {
 
         try {
             const engagementData = {
-                clientId: user.uid,
-                clientName: user.displayName || 'Anonymous',
-                clientPhotoURL: user.photoURL,
+                developerId: user.uid,
+                developerName: user.displayName || 'Anonymous',
+                developerPhotoURL: user.photoURL,
                 advisorId: advisor.uid,
                 advisorName: advisor.name,
                 advisorPhotoURL: advisor.photoURL,
                 message,
-                status: 'pending',
+                status: 'requested',
                 createdAt: serverTimestamp(),
             };
 
