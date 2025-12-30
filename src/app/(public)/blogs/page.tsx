@@ -74,9 +74,9 @@ export default function BlogsPage() {
             <Skeleton className="h-12 w-1/2 mx-auto mb-4" />
             <Skeleton className="h-6 w-3/4 mx-auto" />
         </div>
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="space-y-4 rounded-lg border p-4">
+            <div key={i} className="space-y-2 rounded-lg border p-4">
               <Skeleton className="h-48 w-full rounded-lg" />
               <Skeleton className="h-6 w-3/4" />
               <Skeleton className="h-12 w-full" />
@@ -96,7 +96,7 @@ export default function BlogsPage() {
 
       {posts.length > 0 ? (
         <>
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {posts.map((post) => (
               <BlogCard key={post.id} post={post} />
             ))}
