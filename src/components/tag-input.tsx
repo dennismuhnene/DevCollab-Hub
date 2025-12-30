@@ -18,13 +18,23 @@ export function TagInput({ value, onChange, placeholder }: TagInputProps) {
     setInputValue(e.target.value);
   };
 
-  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if ((e.key === 'Enter' || e.key === 'Tab') && inputValue.trim() !== '') {
-      e.preventDefault();
+  const addTag = () => {
+    if (inputValue.trim() !== '') {
       const newValues = [...value, inputValue.trim()];
       onChange(newValues);
       setInputValue('');
     }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if ((e.key === 'Enter' || e.key === 'Tab')) {
+      e.preventDefault();
+      addTag();
+    }
+  };
+
+  const handleBlur = () => {
+    addTag();
   };
 
   const removeTag = (tagToRemove: string) => {
@@ -52,6 +62,7 @@ export function TagInput({ value, onChange, placeholder }: TagInputProps) {
         value={inputValue}
         onChange={handleInputChange}
         onKeyDown={handleInputKeyDown}
+        onBlur={handleBlur}
         placeholder={placeholder}
       />
     </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, addDoc, collection, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { db as firestore } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { PublicAdvisorProfile } from '@/types';
@@ -30,6 +30,7 @@ const EngagementRequestPage = () => {
     const [advisor, setAdvisor] = useState<PublicAdvisorProfile | null>(null);
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(true);
+    const [existingEngagement, setExistingEngagement] = useState(false);
 
     // Helper to safely get arrays from profile data
     const getAsArray = (data: string | string[] | undefined | null): string[] => {
@@ -40,10 +41,23 @@ const EngagementRequestPage = () => {
     };
 
     useEffect(() => {
-        const fetchAdvisor = async () => {
-            if (advisorId) {
+        const fetchAdvisorAndCheckEngagement = async () => {
+            if (advisorId && user) {
                 setLoading(true);
                 try {
+                    // Check for existing engagements
+                    const engagementsRef = collection(firestore, 'engagements');
+                    const q = query(
+                        engagementsRef,
+                        where('developerId', '==', user.uid),
+                        where('advisorId', '==', advisorId),
+                        where('status', 'in', ['requested', 'accepted'])
+                    );
+                    const querySnapshot = await getDocs(q);
+                    if (!querySnapshot.empty) {
+                        setExistingEngagement(true);
+                    }
+
                     const advisorDocRef = doc(firestore, 'publicAdvisorProfiles', advisorId);
                     const advisorDocSnap = await getDoc(advisorDocRef);
 
@@ -56,16 +70,16 @@ const EngagementRequestPage = () => {
                         router.back();
                     }
                 } catch (error) {
-                    console.error("Error fetching advisor profile:", error);
-                    toast({ variant: 'destructive', title: 'Error', description: 'Could not load advisor details.' });
+                    console.error("Error fetching data:", error);
+                    toast({ variant: 'destructive', title: 'Error', description: 'Could not load page.' });
                     router.back();
                 }
                 setLoading(false);
             }
         };
 
-        fetchAdvisor();
-    }, [advisorId, toast, router]);
+        fetchAdvisorAndCheckEngagement();
+    }, [advisorId, user, toast, router]);
 
     const handleRequest = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -99,6 +113,24 @@ const EngagementRequestPage = () => {
     if (loading || !advisor) {
         // Provide a minimal loading state that fits the modal-like feel
         return <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center h-screen w-screen">Loading...</div>;
+    }
+
+    if (existingEngagement) {
+        return (
+            <Dialog open={true} onOpenChange={(isOpen) => !isOpen && router.back()}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Existing Engagement</DialogTitle>
+                        <DialogDescription>
+                            You already have a pending or active engagement with this advisor. Please wait for the current engagement to be resolved before making a new request.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button onClick={() => router.back()}>Close</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        );
     }
     
     const modalSpecialties = getAsArray(advisor.specialties);

@@ -23,7 +23,8 @@ service cloud.firestore {
     // USERS
     match /users/{userId} {
       // This permissive rule is required by pages like /developers to list users.
-      allow get, list: if isSignedIn();
+      allow get: if isSignedIn() && uid() == userId;
+      allow list: if isSignedIn();
       
       // Allow user to create their own profile
       allow create: if isSignedIn() && uid() == userId;
@@ -139,7 +140,7 @@ service cloud.firestore {
       allow update: if isSignedIn() && ((resource.data.status == 'requested' && request.resource.data.status == 'active' && uid() == resource.data.advisorId) || (resource.data.status == 'requested' && request.resource.data.status == 'rejected' && uid() == resource.data.advisorId) || (resource.data.status == 'active' && request.resource.data.status == 'closed' && (uid() == resource.data.developerId || uid() == resource.data.advisorId)));
 
       match /messages/{messageId} {
-          allow read, write: if isSignedIn() && (uid() == get(/databases/$(database)/documents/engagements/$(engagementId)).data.developerId || uid() == get(/databases/$(database)/documents/engagements/$(engagementId)).data.advisorId) && get(/databases/$(database)/documents/engagements/$(engagementId)).data.status == 'active';
+          allow read, write: if isSignedIn() && (uid() == get(/databases/$(database)/documents/engagements/$(engagementId)).data.developerId || uid() == get(/databases/$(database)/documents/engagements/$(engagementId)).data.advisorId) && (get(/databases/$(database)/documents/engagements/$(engagementId)).data.status == 'active' || get(/databases/$(database)/documents/engagements/$(engagementId)).data.status == 'requested');
       }
     }
     match /advisor_reviews/{reviewId} {
