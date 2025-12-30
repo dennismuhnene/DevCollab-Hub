@@ -355,8 +355,8 @@ export const ProjectDetailsContent = ({ project: initialProject }: { project: Pr
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 space-y-4">
           {project.imageUrl && (
             <Card>
               <CardContent className="p-0">
@@ -376,7 +376,7 @@ export const ProjectDetailsContent = ({ project: initialProject }: { project: Pr
           </Card>
         </div>
 
-        <div className="lg:col-span-1 space-y-6">
+        <div className="lg:col-span-1 space-y-4">
           <Card><CardHeader><CardTitle className="text-lg font-semibold flex items-center gap-2"><Briefcase className="h-4 w-4" /> Project Stage</CardTitle></CardHeader><CardContent><p className="text-base">{project.projectStage}</p></CardContent></Card>
           <Card><CardHeader><CardTitle className="text-lg font-semibold flex items-center gap-2"><Handshake className="h-4 w-4" /> Incentives</CardTitle></CardHeader><CardContent><p className="text-base">{project.incentives}</p></CardContent></Card>
           <Card><CardHeader><CardTitle className="text-lg font-semibold flex items-center gap-2"><Clock className="h-4 w-4" /> Required Experience</CardTitle></CardHeader><CardContent><p className="text-base">{formatExperience(project.requiredYearsOfExperience)}</p></CardContent></Card>
@@ -421,7 +421,7 @@ export const ProjectDetailsContent = ({ project: initialProject }: { project: Pr
               <h3 className="text-lg font-semibold mb-2">Interested Developers ({interestedUsers.length})</h3>
               {loadingUsers ? <Skeleton className="h-24 w-full" /> : (
                 interestedUsers.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {interestedUsers.map(p => (
                       <div key={p.id} className="flex flex-col md:flex-row md:items-center md:justify-between p-2 rounded-md border">
                         <div className="flex items-center gap-3 mb-2 md:mb-0">
@@ -517,9 +517,9 @@ export default function ProjectDetailsPage() {
       <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <Skeleton className="h-10 w-3/4 mb-4" />
         <Skeleton className="h-6 w-1/2 mb-8" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6"><Skeleton className="h-64 w-full" /></div>
-          <div className="lg:col-span-1 space-y-6"><Skeleton className="h-48 w-full" /></div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 space-y-4"><Skeleton className="h-64 w-full" /></div>
+          <div className="lg:col-span-1 space-y-4"><Skeleton className="h-48 w-full" /></div>
         </div>
       </div>
     );

@@ -47,7 +47,7 @@ const ProjectDetailsInModal = ({ project, developer }: { project: Project; devel
     };
 
     return (
-        <div className="space-y-8 p-1">
+        <div className="space-y-4 p-1">
             <div className="aspect-[16/9] w-full relative overflow-hidden rounded-lg shadow-md">
                 <Image
                     src={project.imageUrl || defaultProjectImage}
@@ -57,8 +57,8 @@ const ProjectDetailsInModal = ({ project, developer }: { project: Project; devel
                 />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
-                <div className="md:col-span-2 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+                <div className="md:col-span-2 space-y-4">
                     <Card>
                         <CardHeader><CardTitle className="text-lg font-semibold">About this Project</CardTitle></CardHeader>
                         <CardContent><p className="text-sm text-muted-foreground font-normal">{project.description}</p></CardContent>
@@ -78,7 +78,7 @@ const ProjectDetailsInModal = ({ project, developer }: { project: Project; devel
                         </CardContent>
                     </Card>
                 </div>
-                <div className="space-y-6">
+                <div className="space-y-4">
                    {developer && (
                         <Card>
                             <CardHeader><CardTitle className="text-lg font-semibold">Project Owner</CardTitle></CardHeader>
@@ -187,7 +187,7 @@ export const DeveloperProfileContent = ({ developer }: { developer: UserProfile 
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="flex flex-col md:flex-row items-start space-y-6 md:space-y-0 md:space-x-8 mb-12">
+      <div className="flex flex-col md:flex-row items-start space-y-6 md:space-y-0 md:space-x-8 mb-6">
         <Avatar className="h-36 w-36 border-4 border-background shadow-lg">
           <AvatarImage src={developer.photoURL} alt={developer.name} />
           <AvatarFallback className="text-5xl">{getInitials(developer.name)}</AvatarFallback>
@@ -212,7 +212,7 @@ export const DeveloperProfileContent = ({ developer }: { developer: UserProfile 
         </div>
       </div>
       
-      <div className="space-y-12">
+      <div className="space-y-6">
         <Card>
           <CardHeader><CardTitle className="text-base">About</CardTitle></CardHeader>
           <CardContent><p className="text-foreground/80 leading-relaxed text-base">{developer.bio || 'No bio provided yet.'}</p></CardContent>
@@ -240,7 +240,7 @@ export const DeveloperProfileContent = ({ developer }: { developer: UserProfile 
             </Card>
         )}
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
                 <CardHeader><CardTitle className="flex items-center text-base"><BrainCircuit className="mr-2 h-5 w-5 text-primary" /> Skills</CardTitle></CardHeader>
                 <CardContent>
@@ -284,12 +284,12 @@ export const DeveloperProfileContent = ({ developer }: { developer: UserProfile 
               <h2 className="text-lg font-bold tracking-tight">Projects</h2>
           </div>
           {loading ? (
-             <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
+             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Skeleton className="h-64 w-full" />
               <Skeleton className="h-64 w-full" />
             </div>
           ) : projects.length > 0 ? (
-            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {projects.map((project) => <ProjectCard key={project.id} project={project} onClick={() => setSelectedProject(project)} />)}
             </div>
           ) : (
@@ -372,7 +372,7 @@ export default function DeveloperProfilePage() {
           </Card>
           <Card>
             <CardHeader><Skeleton className="h-8 w-48" /></CardHeader>
-            <CardContent className="grid grid-cols-1 gap-8 sm:grid-cols-2">
+            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Skeleton className="h-64 w-full" />
               <Skeleton className="h-64 w-full" />
             </CardContent>

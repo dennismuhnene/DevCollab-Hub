@@ -37,7 +37,7 @@ export default function MyRolesPage() {
   }, [user]);
 
   const ListSkeleton = () => (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {[...Array(3)].map((_, i) => (
         <div key={i} className="border rounded-lg p-4 space-y-4">
           <Skeleton className="h-6 w-3/4" />
@@ -62,7 +62,7 @@ export default function MyRolesPage() {
       {authLoading || loading ? (
         <ListSkeleton />
       ) : roles.length > 0 ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {roles.map(role => (
             <RoleCardEdit key={role.id} role={role} />
           ))}

@@ -1,4 +1,4 @@
-# DevCollab Hub
+# DevCollab Hub 
 
 <p align="center">
   <img src="/public/images/devcollab-hero.png" alt="DevCollab Hub Banner" />

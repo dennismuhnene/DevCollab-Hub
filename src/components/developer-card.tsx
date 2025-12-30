@@ -19,7 +19,7 @@ export default function DeveloperCard({ developer }: DeveloperCardProps) {
 
   return (
     <Card className="h-full flex flex-col transition-all duration-300 hover:shadow-xl dark:hover:shadow-primary/20">
-      <CardHeader className="flex-row items-center gap-4">
+      <CardHeader className="flex-row items-center gap-2">
         <Avatar className="h-16 w-16 border-2 border-primary">
           <AvatarImage src={developer.photoURL} alt={developer.name} />
           <AvatarFallback className="text-2xl">{getInitials(developer.name)}</AvatarFallback>
@@ -38,7 +38,7 @@ export default function DeveloperCard({ developer }: DeveloperCardProps) {
           </p>
           <div className="mb-4">
             <h4 className="font-semibold text-sm mb-2">Tech Stack</h4>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1">
               {developer.techStack?.slice(0, 4).map((tech) => (
                 <Badge key={tech} variant="secondary">{tech}</Badge>
               ))}

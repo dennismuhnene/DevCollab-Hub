@@ -54,10 +54,10 @@ export default function ProjectCard({ project, owner, onClick }: ProjectCardProp
         <CardDescription className="mb-4 line-clamp-2 flex-grow text-base text-muted-foreground">
           {project.description}
         </CardDescription>
-        <div className="space-y-4 pt-2">
+        <div className="space-y-2 pt-2">
           <div>
-            <h4 className="text-sm mb-2 flex items-center gap-1.5"><Code className="w-4 h-4" /> Tech Stack</h4>
-            <div className="flex flex-wrap gap-1.5 text-base">
+            <h4 className="text-sm mb-2 flex items-center gap-1"><Code className="w-4 h-4" /> Tech Stack</h4>
+            <div className="flex flex-wrap gap-1 text-base">
               {project.requiredTechStack?.slice(0, 4).map((tech, index) => (
                 <Badge key={`${tech}-${index}`} variant="secondary">{tech}</Badge>
               ))}
@@ -67,8 +67,8 @@ export default function ProjectCard({ project, owner, onClick }: ProjectCardProp
             </div>
           </div>
           <div>
-            <h4 className="text-sm mb-2 flex items-center gap-1.5"><BrainCircuit className="w-4 h-4" /> Skills</h4>
-            <div className="flex flex-wrap gap-1.5 text-base">
+            <h4 className="text-sm mb-2 flex items-center gap-1"><BrainCircuit className="w-4 h-4" /> Skills</h4>
+            <div className="flex flex-wrap gap-1 text-base">
               {project.requiredSkills?.slice(0, 3).map((skill, index) => (
                 <Badge key={`${skill}-${index}`} variant="outline">{skill}</Badge>
               ))}
