@@ -133,7 +133,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
   const collaborationGoals = watch('collaborationGoals') || [];
   const openForCollaboration = watch('openForCollaboration');
 
-  const commitmentLevel = watch('commitmentLevel') || '';
+  const commitmentLevel = watch('commitmentLevel');
   const versionControlType = watch('versionControl')?.type || '';
   const socialsType = watch('socials')?.type || '';
   
@@ -451,7 +451,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
 
                     <div className="space-y-2">
                         <Label htmlFor="commitment-level">Commitment Level</Label>
-                        <Select value={commitmentLevel || ''} onValueChange={(value) => setValue('commitmentLevel', value, { shouldValidate: true, shouldDirty: true })}>
+                        <Select onValueChange={(value) => setValue('commitmentLevel', value, { shouldValidate: true, shouldDirty: true })} value={commitmentLevel}>
                             <SelectTrigger><SelectValue placeholder="Select your commitment level" /></SelectTrigger>
                             <SelectContent>
                                 {commitmentLevelOptions.map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
