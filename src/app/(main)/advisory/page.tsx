@@ -118,7 +118,7 @@ const AdvisorHubPage = () => {
                 <p className="text-muted-foreground mt-2 text-sm">Connect with verified industry experts for structured, private consultations.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-8">
                 <Input 
                     placeholder="Search by name, headline, or bio..."
                     value={searchTerm}
@@ -141,7 +141,7 @@ const AdvisorHubPage = () => {
                 />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                 {filteredAdvisors.map((advisor) => {
                     const advisorSpecialties = getAsArray(advisor.specialties);
                     return (
@@ -211,7 +211,7 @@ const AdvisorHubPage = () => {
                                 </div>
                             </DialogHeader>
 
-                            <div className="grid gap-4 py-4 overflow-y-auto px-6">
+                            <div className="grid gap-2 py-4 overflow-y-auto px-6">
                                 <div>
                                     <h3 className="font-semibold text-base mb-2">About Me</h3>
                                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedAdvisor.bio}</p>
