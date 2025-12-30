@@ -450,13 +450,54 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="commitment-level">Commitment Level</Label>
-                        <Select onValueChange={(value) => setValue('commitmentLevel', value, { shouldValidate: true, shouldDirty: true })} value={commitmentLevel}>
-                            <SelectTrigger><SelectValue placeholder="Select your commitment level" /></SelectTrigger>
-                            <SelectContent>
-                                {commitmentLevelOptions.map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+                        <Label>Commitment Level</Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <Button variant="outline" role="combobox" className="w-full justify-between">
+                                <span className="truncate">
+                                {commitmentLevel ? commitmentLevel : 'Select your commitment...'}
+                                </span>
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                            <Command>
+                                <CommandInput placeholder="Search commitment levels..." />
+                                <CommandEmpty>No commitment level found.</CommandEmpty>
+                                <CommandList>
+                                <CommandGroup>
+                                    {commitmentLevelOptions.map((level) => (
+                                    <CommandItem
+                                        key={level}
+                                        value={level}
+                                        onSelect={() => {
+                                          const currentLevel = getValues('commitmentLevel');
+                                          if (currentLevel === level) {
+                                            setValue('commitmentLevel', '', { shouldDirty: true, shouldValidate: true });
+                                          } else {
+                                            setValue('commitmentLevel', level, { shouldDirty: true, shouldValidate: true });
+                                          }
+                                        }}
+                                    >
+                                        <Check className={cn('mr-2 h-4 w-4', commitmentLevel === level ? 'opacity-100' : 'opacity-0')} />
+                                        {level}
+                                    </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                                </CommandList>
+                            </Command>
+                            </PopoverContent>
+                        </Popover>
+                        <div className="flex flex-wrap gap-1 pt-2">
+                            {commitmentLevel && (
+                                <Badge variant="secondary" className="flex items-center gap-1">
+                                    {commitmentLevel}
+                                    <button type="button" onClick={() => setValue('commitmentLevel', '', { shouldDirty: true, shouldValidate: true })} className="rounded-full hover:bg-muted-foreground/20">
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </Badge>
+                            )}
+                        </div>
                     </div>
                 </CardContent>
             </Card>
