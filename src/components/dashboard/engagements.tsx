@@ -11,6 +11,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from '@/components/ui/dialog';
 
 export default function Engagements() {
     const { user, userProfile } = useAuth();
@@ -20,6 +28,9 @@ export default function Engagements() {
     const [developerEngagements, setDeveloperEngagements] = useState<Engagement[]>([]);
     const [advisorRequests, setAdvisorRequests] = useState<Engagement[]>([]);
     const [advisorEngagements, setAdvisorEngagements] = useState<Engagement[]>([]);
+    const [showMessageModal, setShowMessageModal] = useState(false);
+    const [modalMessage, setModalMessage] = useState('');
+    const [modalTitle, setModalTitle] = useState('');
 
     useEffect(() => {
         if (!user || !userProfile) return;
@@ -89,6 +100,12 @@ export default function Engagements() {
         }
     };
 
+    const handleViewMessage = (message: string, participantName: string, isAdvisorView: boolean) => {
+        setModalTitle(isAdvisorView ? `Original Request from ${participantName}` : `Your Original Request to ${participantName}`);
+        setModalMessage(message);
+        setShowMessageModal(true);
+    };
+
     const getStatusColor = (status: Engagement['status']) => {
         switch (status) {
             case 'active': return 'text-green-500';
@@ -117,7 +134,11 @@ export default function Engagements() {
                                 <p className="font-semibold text-sm">vs {eng.advisorName}</p>
                                 <p className="text-sm">Status: <span className={`font-medium ${getStatusColor(eng.status)}`}>{eng.status}</span></p>
                             </div>
-                            <Button asChild><Link href={`/engagements/${eng.id}`}>View</Link></Button>
+                            {eng.status === 'rejected' ? (
+                                <Button variant="outline" onClick={() => handleViewMessage(eng.message, eng.advisorName, false)}>View Message</Button>
+                            ) : (
+                                <Button asChild><Link href={`/engagements/${eng.id}`}>View</Link></Button>
+                            )}
                         </div>
                     )) : (
                         <p className="text-sm text-muted-foreground">You have not requested any engagements.</p>
@@ -168,7 +189,11 @@ export default function Engagements() {
                                        <p className="font-semibold text-sm">with {eng.developerName}</p>
                                        <p className="text-sm">Status: <span className={`font-medium ${getStatusColor(eng.status)}`}>{eng.status}</span></p>
                                     </div>
-                                    <Button asChild><Link href={`/engagements/${eng.id}`}>View</Link></Button>
+                                    {eng.status === 'rejected' ? (
+                                        <Button variant="outline" onClick={() => handleViewMessage(eng.message, eng.developerName, true)}>View Message</Button>
+                                    ) : (
+                                        <Button asChild><Link href={`/engagements/${eng.id}`}>View</Link></Button>
+                                    )}
                                 </div>
                             )) : (
                                 <p className="text-sm text-muted-foreground">You have no active or past engagements.</p>
@@ -177,6 +202,18 @@ export default function Engagements() {
                     </Card>
                 </>
             )}
+
+            <Dialog open={showMessageModal} onOpenChange={setShowMessageModal}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{modalTitle}</DialogTitle>
+                        <DialogDescription className="whitespace-pre-wrap pt-4">{modalMessage}</DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button onClick={() => setShowMessageModal(false)}>Close</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
