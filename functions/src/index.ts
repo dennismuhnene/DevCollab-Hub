@@ -1,4 +1,5 @@
 
+export * from './generate-upload-url';
 export * from './set-active-advisor-profile';
 import * as functions from "firebase-functions";
 import * as logger from "firebase-functions/logger";
@@ -126,3 +127,160 @@ export const setAdvisorVerificationStatus = functions.https.onCall(async (data, 
     message: `Application successfully ${status}.`,
   };
 });
+
+/**
+ * Sends a notification to the advisor when a new engagement is requested.
+ */
+export const onEngagementCreated = functions.firestore
+    .document('engagements/{engagementId}')
+    .onCreate(async (snapshot, context) => {
+        const engagement = snapshot.data();
+        if (!engagement) {
+            logger.error("No data associated with the engagement creation event.");
+            return;
+        }
+
+        const { advisorId, developerName } = engagement;
+        logger.info(`New engagement ${context.params.engagementId} created. Notifying advisor ${advisorId}.`);
+
+        const notificationRef = adminDb.collection(`users/${advisorId}/notifications`).doc();
+        await notificationRef.set({
+            type: 'engagement',
+            title: 'New Engagement Request',
+            message: `You have a new advisory request from ${developerName}.`,
+            link: '/dashboard',
+            read: false,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    });
+
+/**
+ * Sends notifications when an engagement's status changes.
+ */
+export const onEngagementUpdated = functions.firestore
+    .document('engagements/{engagementId}')
+    .onUpdate(async (change, context) => {
+        const before = change.before.data();
+        const after = change.after.data();
+
+        if (before.status === after.status) {
+            return null; // No status change
+        }
+
+        const { developerId, advisorId, developerName, advisorName } = after;
+        let recipientId: string | null = null;
+        let notification = {};
+
+        // Case 1: Request was accepted or rejected by advisor
+        if (before.status === 'requested') {
+            recipientId = developerId;
+            if (after.status === 'active') {
+                logger.info(`Engagement ${context.params.engagementId} accepted. Notifying developer ${developerId}.`);
+                notification = {
+                    type: 'engagement',
+                    title: 'Engagement Request Accepted!',
+                    message: `${advisorName} has accepted your request. The engagement room is now open.`,
+                    link: `/engagements/${context.params.engagementId}`,
+                };
+            } else if (after.status === 'rejected') {
+                logger.info(`Engagement ${context.params.engagementId} rejected. Notifying developer ${developerId}.`);
+                notification = {
+                    type: 'engagement',
+                    title: 'Engagement Request Denied',
+                    message: `Unfortunately, ${advisorName} has denied your recent engagement request.`,
+                    link: '/dashboard',
+                };
+            }
+        }
+
+        // Case 2: Engagement was closed
+        else if (after.status === 'closed' && before.status === 'active') {
+            // The closer is the one who is NOT the recipient of the notification.
+            // We need to determine who initiated the close. 
+            // We'll assume the 'lastMessageSenderId' at the time of closing is the closer.
+            // This is a proxy, a more robust solution might involve adding a 'closedBy' field.
+            const closerId = after.lastMessageSenderId; 
+            const closerName = closerId === developerId ? developerName : advisorName;
+            recipientId = closerId === developerId ? advisorId : developerId;
+
+            logger.info(`Engagement ${context.params.engagementId} closed by ${closerName}. Notifying ${recipientId}.`);
+
+            notification = {
+                type: 'engagement',
+                title: 'Engagement Closed',
+                message: `${closerName} has closed the engagement.`,
+                link: `/engagements/${context.params.engagementId}`,
+            };
+        }
+
+        if (recipientId) {
+            const notificationRef = adminDb.collection(`users/${recipientId}/notifications`).doc();
+            await notificationRef.set({
+                ...notification,
+                read: false,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+        }
+
+        return null;
+    });
+
+/**
+ * Sends a notification when a new message is sent in an engagement.
+ */
+export const onNewEngagementMessage = functions.firestore
+    .document('engagements/{engagementId}/messages/{messageId}')
+    .onCreate(async (snapshot, context) => {
+        const { engagementId } = context.params;
+        const message = snapshot.data();
+
+        if (!message) {
+            logger.error("No data associated with the message creation event.");
+            return;
+        }
+
+        const engagementRef = adminDb.doc(`engagements/${engagementId}`);
+        const engagementSnap = await engagementRef.get();
+        const engagement = engagementSnap.data();
+
+        if (!engagement) {
+            logger.error(`Engagement ${engagementId} not found.`);
+            return;
+        }
+
+        const { developerId, advisorId, developerName, advisorName } = engagement;
+        const senderId = message.senderId;
+
+        // Determine recipient and sender
+        const recipientId = senderId === developerId ? advisorId : developerId;
+        const senderName = senderId === developerId ? developerName : advisorName;
+
+        if (!recipientId) {
+            logger.error(`Recipient could not be determined for message in engagement ${engagementId}.`);
+            return;
+        }
+
+        logger.info(`New message in engagement ${engagementId}. Notifying ${recipientId}.`);
+
+        const batch = adminDb.batch();
+
+        // 1. Create notification for the recipient
+        const notificationRef = adminDb.collection(`users/${recipientId}/notifications`).doc();
+        batch.set(notificationRef, {
+            type: 'engagement',
+            title: `New Message from ${senderName}`,
+            message: `You have a new message: "${message.text.substring(0, 100)}${message.text.length > 100 ? '...' : ''}"`,
+            link: `/engagements/${engagementId}`,
+            read: false,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // 2. Update the parent engagement doc with last message info
+        batch.update(engagementRef, {
+            lastMessage: message.text,
+            lastMessageTimestamp: admin.firestore.FieldValue.serverTimestamp(),
+            lastMessageSenderId: senderId,
+        });
+
+        await batch.commit();
+    });

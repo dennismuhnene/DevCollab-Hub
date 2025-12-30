@@ -125,7 +125,7 @@ export interface Match {
 // Represents a notification within the system
 export interface Notification {
   id?: string;
-  type: 'interest' | 'match' | 'rejection' | 'message' | 'system';
+  type: 'interest' | 'match' | 'rejection' | 'message' | 'system' | 'engagement';
   
   // For user-generated notifications
   fromUserId?: string;

@@ -4,15 +4,15 @@ import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { collection, query, where, getDocs, limit, doc, documentId, getDoc, serverTimestamp, onSnapshot, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, doc, documentId, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { Project, UserProfile, ExternalLink } from '@/types';
-import { Engagement } from '@/types/advisor';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import ProjectCard from '@/components/project-card';
+import Engagements from '@/components/dashboard/engagements'; // Import the new component
 import { PlusCircle, ArrowRight, Briefcase, Users, Edit, Eye, BadgeCheck, BadgeX, BrainCircuit, Code, Clock, UserCheck, MessageSquare, Hand, Lightbulb, Link as LinkIcon, Target, Handshake, Sparkles, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -47,9 +47,6 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [isAiInsightsLoading, startAiInsightsTransition] = useTransition();
   const [aiInsights, setAiInsights] = useState<GetProfileInsightsOutput | null>(null);
-  const [developerEngagements, setDeveloperEngagements] = useState<Engagement[]>([]);
-  const [advisorRequests, setAdvisorRequests] = useState<Engagement[]>([]);
-  const [advisorEngagements, setAdvisorEngagements] = useState<Engagement[]>([]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -129,38 +126,6 @@ export default function DashboardPage() {
     };
 
     fetchData();
-
-    // Engagements
-    const devQuery = query(collection(db, 'engagements'), where('developerId', '==', user.uid));
-    const unsubscribeDev = onSnapshot(devQuery, (snapshot) => {
-        const engs: Engagement[] = [];
-        snapshot.forEach(doc => engs.push({ id: doc.id, ...doc.data() } as Engagement));
-        setDeveloperEngagements(engs);
-    });
-
-    if (userProfile?.roles?.advisor) {
-        const advisorQuery = query(collection(db, 'engagements'), where('advisorId', '==', user.uid));
-        const unsubscribeAdvisor = onSnapshot(advisorQuery, (snapshot) => {
-            const reqs: Engagement[] = [];
-            const activeEngs: Engagement[] = [];
-            snapshot.forEach(doc => {
-                const engagement = { id: doc.id, ...doc.data() } as Engagement;
-                if (engagement.status === 'requested') {
-                    reqs.push(engagement);
-                } else {
-                    activeEngs.push(engagement);
-                }
-            });
-            setAdvisorRequests(reqs);
-            setAdvisorEngagements(activeEngs);
-        });
-        return () => {
-            unsubscribeDev();
-            unsubscribeAdvisor();
-        }
-    }
-
-    return () => unsubscribeDev();
 
   }, [user, userProfile, toast, router]);
 
@@ -267,15 +232,6 @@ export default function DashboardPage() {
     }
   };
   
-    const handleAccept = async (engagementId: string) => {
-        const engagementRef = doc(db, 'engagements', engagementId);
-        await updateDoc(engagementRef, {
-            status: 'active',
-            activatedAt: serverTimestamp()
-        });
-        router.push(`/engagements/${engagementId}`);
-    };
-
   const getInitials = (name?: string) => {
     if (!name) return 'U';
     return name.split(' ').map((n) => n[0]).join('');
@@ -316,77 +272,8 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">My Engagements</CardTitle>
-                            <CardDescription className="text-sm">Engagements you have requested as a developer.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {developerEngagements.length > 0 ? developerEngagements.map(eng => (
-                                <div key={eng.id} className="flex items-center justify-between p-2 border rounded-lg">
-                                    <div>
-                                        <p className="font-semibold text-sm">{eng.advisorInfo.name} - <span className="font-normal text-muted-foreground">{eng.advisorInfo.headline}</span></p>
-                                        <p className="text-sm text-gray-500">Status: <span className={`font-medium ${eng.status === 'active' ? 'text-green-500' : 'text-yellow-500'}`}>{eng.status}</span></p>
-                                    </div>
-                                    <Button asChild><Link href={`/engagements/${eng.id}`}>View</Link></Button>
-                                </div>
-                            )) : (
-                                <p className="text-sm">You have not requested any engagements.</p>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {userProfile?.roles?.advisor && (
-                        <>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-base">Advisory Requests</CardTitle>
-                                    <CardDescription className="text-sm">Requests from developers seeking your advice.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    {advisorRequests.length > 0 ? advisorRequests.map(req => (
-                                        <div key={req.id} className="p-4 border rounded-lg">
-                                            <div className="flex items-start justify-between">
-                                                <div>
-                                                    <p className="font-semibold text-sm">{req.developerInfo.name}</p>
-                                                    <p className="text-sm text-muted-foreground mt-1">{req.requestMessage}</p>
-                                                </div>
-                                                <Avatar>
-                                                    <AvatarImage src={req.developerInfo.photoURL} />
-                                                    <AvatarFallback>{req.developerInfo.name?.[0]}</AvatarFallback>
-                                                </Avatar>
-                                            </div>
-                                            <CardFooter className="flex justify-end pt-4 px-0 pb-0">
-                                               <Button onClick={() => handleAccept(req.id)}>Accept & Open Room</Button>
-                                            </CardFooter>
-                                        </div>
-                                    )) : (
-                                        <p className="text-sm">You have no pending advisory requests.</p>
-                                    )}
-                                </CardContent>
-                            </Card>
-
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-base">My Active Engagements</CardTitle>
-                                    <CardDescription className="text-sm">Your ongoing engagements as an advisor.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    {advisorEngagements.length > 0 ? advisorEngagements.map(eng => (
-                                        <div key={eng.id} className="flex items-center justify-between p-2 border rounded-lg">
-                                            <div>
-                                               <p className="font-semibold text-sm">{eng.developerInfo.name}</p>
-                                               <p className="text-sm text-gray-500">Status: <span className={`font-medium ${eng.status === 'active' ? 'text-green-500' : 'text-gray-500'}`}>{eng.status}</span></p>
-                                            </div>
-                                            <Button asChild><Link href={`/engagements/${eng.id}`}>View</Link></Button>
-                                        </div>
-                                    )) : (
-                                        <p className="text-sm">You have no active engagements.</p>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </>
-                    )}
+          {/* Engagements Section */}
+          <Engagements />
           
           <Card className="bg-gradient-to-br from-primary/5 to-transparent">
             <CardHeader>
