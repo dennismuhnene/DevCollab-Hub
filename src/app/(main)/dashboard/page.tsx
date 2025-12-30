@@ -304,7 +304,7 @@ export default function DashboardPage() {
     <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-4">
         
-        <div className="space-y-6">
+        <div className="space-y-2 gap-2">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Your Profile</CardTitle><CardDescription className="text-sm">A quick glance at your current profile information.</CardDescription>
@@ -416,7 +416,7 @@ export default function DashboardPage() {
 
           <section>
             <div className="flex items-center justify-between mb-6"><div className="flex items-center"><Briefcase className="h-7 w-7 text-primary mr-3" /><h2 className="text-lg font-bold tracking-tight">My Projects</h2></div><Button variant="outline" asChild><Link href="/projects">View All <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></div>
-            {myProjects.length > 0 ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{myProjects.slice(0, 3).map(project => <ProjectCard key={project.id} project={project} />)}</div> : <div className="text-center py-16 border-2 border-dashed rounded-lg"><h3 className="text-base font-semibold">You haven&apos;t created any projects yet.</h3><p className="text-muted-foreground mt-2 mb-4 text-sm">Start your next big idea today!</p><Button asChild><Link href="/projects/new"><PlusCircle className="mr-2 h-4 w-4" />Create New Project</Link></Button></div>}
+            {myProjects.length > 0 ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">{myProjects.slice(0, 3).map(project => <ProjectCard key={project.id} project={project} />)}</div> : <div className="text-center py-16 border-2 border-dashed rounded-lg"><h3 className="text-base font-semibold">You haven&apos;t created any projects yet.</h3><p className="text-muted-foreground mt-2 mb-4 text-sm">Start your next big idea today!</p><Button asChild><Link href="/projects/new"><PlusCircle className="mr-2 h-4 w-4" />Create New Project</Link></Button></div>}
           </section>
 
           {myProjects.some(p => interestedUsersByProject[p.id]?.length > 0) && (
@@ -435,7 +435,7 @@ export default function DashboardPage() {
 
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
           <div className="lg:col-span-2">
             <section>
               <div className="flex items-center mb-6"><Eye className="h-7 w-7 text-primary mr-3" /><h2 className="text-lg font-bold tracking-tight">Public Profile Preview</h2></div>

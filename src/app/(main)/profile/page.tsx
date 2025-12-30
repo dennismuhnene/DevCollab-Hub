@@ -245,7 +245,7 @@ export default function ProfilePage() {
         </div>
       </div>
       
-      <div className="space-y-4">
+      <div className="space-y-2 gap-2">
         {allLinks.length > 0 && (
           <Card>
             <CardHeader>

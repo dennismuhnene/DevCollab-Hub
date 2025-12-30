@@ -355,8 +355,8 @@ export const RoleDetailsContent = ({ role: initialRole }: { role: Role }) => {
         {owner && <div className="flex items-center space-x-2 text-muted-foreground"><Avatar className="h-6 w-6"><AvatarImage src={owner.photoURL} /><AvatarFallback>{owner.name?.charAt(0) || 'U'}</AvatarFallback></Avatar><span>by <Link href={`/developers/${owner.uid}`} className="hover:underline">{owner.name || 'A user'}</Link></span></div>}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+        <div className="lg:col-span-2 space-y-2">
             <Card>
               <CardHeader><CardTitle className="text-2xl font-semibold">About this Role</CardTitle></CardHeader>
               <CardContent><p className="text-base text-foreground/80 whitespace-pre-wrap">{role.roleDescription}</p></CardContent>
@@ -372,7 +372,7 @@ export const RoleDetailsContent = ({ role: initialRole }: { role: Role }) => {
               </Card>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4"/> Commitment</CardTitle></CardHeader><CardContent><p className="text-sm">{role.commitmentLevel}</p></CardContent></Card>
               <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Handshake className="h-4 w-4"/> Incentives</CardTitle></CardHeader><CardContent><p className="text-sm">{role.incentives}</p></CardContent></Card>
               <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4"/> Collaboration Type</CardTitle></CardHeader><CardContent><p className="text-sm">{role.collaborationType}</p></CardContent></Card>
@@ -392,7 +392,7 @@ export const RoleDetailsContent = ({ role: initialRole }: { role: Role }) => {
                     <h3 className="font-semibold mb-2">Interested Developers ({interestedUsers.length})</h3>
                     {loadingUsers ? <Skeleton className="h-24 w-full"/> :
                     (interestedUsers.length > 0 ? (
-                        <div className="space-y-4">
+                        <div className="space-y-2">
                         {interestedUsers.map(p => (
                             <div key={p.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 rounded-md border">
                                 <div className="flex items-center gap-3">
@@ -436,7 +436,7 @@ export const RoleDetailsContent = ({ role: initialRole }: { role: Role }) => {
             )}
         </div>
         
-        <div className="lg:col-span-1 space-y-6">
+        <div className="lg:col-span-1 space-y-2">
           <div className="flex flex-col space-y-2">
             {isOwner ? (
                 <div className="flex flex-wrap gap-2 mt-2 sm:mt-0">
@@ -515,9 +515,9 @@ export default function RoleDetailsPage() {
         <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
             <Skeleton className="h-10 w-3/4 mb-4" />
             <Skeleton className="h-6 w-1/2 mb-8" />
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-6"><Skeleton className="h-64 w-full" /></div>
-                <div className="lg:col-span-1 space-y-6"><Skeleton className="h-48 w-full" /></div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+                <div className="lg:col-span-2 space-y-2"><Skeleton className="h-64 w-full" /></div>
+                <div className="lg:col-span-1 space-y-2"><Skeleton className="h-48 w-full" /></div>
             </div>
         </div>
     );

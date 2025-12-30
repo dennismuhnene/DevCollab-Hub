@@ -45,7 +45,7 @@ export default function ProjectsPage() {
           <Skeleton className="h-10 w-48" />
           <Skeleton className="h-10 w-36" />
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="space-y-4">
               <Skeleton className="h-48 w-full rounded-lg" />
@@ -71,7 +71,7 @@ export default function ProjectsPage() {
       </div>
 
       {projects.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
             <OwnedProjectCard key={project.id} project={project} />
           ))}
