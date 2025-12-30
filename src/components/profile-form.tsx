@@ -5,7 +5,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
-import { doc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
@@ -29,7 +29,6 @@ import {
 import { summarizeUserSkills } from '@/ai/flows/user-skills-summarizer';
 import { Sparkles, Loader2, X, Trash2, Check, ChevronsUpDown, PlusCircle } from 'lucide-react';
 import { Switch } from './ui/switch';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import {
   Command,
   CommandEmpty,
@@ -237,7 +236,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
     setLoading(true);
 
     const userRef = doc(db, 'users', user.uid);
-    updateDocumentNonBlocking(userRef, data);
+    await updateDoc(userRef, data);
     
     if (auth.currentUser) {
       await updateProfile(auth.currentUser, {
