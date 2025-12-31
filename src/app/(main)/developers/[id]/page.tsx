@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, usePathname } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
@@ -14,11 +14,12 @@ import ProjectCard from '@/components/project-card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Briefcase, BadgeCheck, BadgeX, Clock, BrainCircuit, Code, Target, Link as LinkIcon, Handshake, Users } from 'lucide-react';
+import { Briefcase, BadgeCheck, BadgeX, Clock, BrainCircuit, Code, Target, Link as LinkIcon, Handshake, Users, ShieldOff } from 'lucide-react';
 import { logAnalyticsEvent } from '@/firebase/analytics';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-
+import { useToast } from '@/hooks/use-toast';
+import { blockUser, unblockUser, checkBlockStatus } from '@/lib/firebase/users';
 
 // Helper component to display project details within the modal
 const ProjectDetailsInModal = ({ project, developer }: { project: Project; developer: UserProfile | null }) => {
@@ -107,10 +108,11 @@ const ProjectDetailsInModal = ({ project, developer }: { project: Project; devel
     );
 };
 
-export const DeveloperProfileContent = ({ developer }: { developer: UserProfile }) => {
+export const DeveloperProfileContent = ({ developer, isBlocked, onBlock, onUnblock, blockLoading }: { developer: UserProfile, isBlocked: boolean, onBlock?: () => void, onUnblock?: () => void, blockLoading?: boolean }) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!developer.uid) return;
@@ -153,24 +155,17 @@ export const DeveloperProfileContent = ({ developer }: { developer: UserProfile 
             }
         };
 
-        // 1. Portfolio URL
         addLink('Portfolio', developer.portfolioUrl);
-
-        // 2. Version Control (e.g., GitHub)
         if (developer.versionControl && (developer.versionControl as any).url) {
             const vc = developer.versionControl as any;
             const label = vc.type.charAt(0).toUpperCase() + vc.type.slice(1);
             addLink(label, vc.url);
         }
-
-        // 3. Socials (e.g., LinkedIn)
         if (developer.socials && (developer.socials as any).url) {
             const social = developer.socials as any;
             const label = social.type.charAt(0).toUpperCase() + social.type.slice(1);
             addLink(label, social.url);
         }
-
-        // 4. Extra Links
         if (Array.isArray(developer.extraLinks)) {
             developer.extraLinks.forEach((link: any) => {
                 if (link && link.type && link.url) {
@@ -178,8 +173,6 @@ export const DeveloperProfileContent = ({ developer }: { developer: UserProfile 
                 }
             });
         }
-        
-        // 5. Legacy fields for backward compatibility
         addLink('GitHub', developer.githubUrl);
         addLink('LinkedIn', developer.linkedinUrl);
         addLink('Twitter', developer.twitterUrl);
@@ -195,7 +188,13 @@ export const DeveloperProfileContent = ({ developer }: { developer: UserProfile 
         <div className="flex-1 pt-4">
           <div className="flex items-start justify-between">
             <div>
+            {pathname === `/developers/${developer.uid}` ? (
               <h1 className="text-xl font-bold">{developer.name}</h1>
+            ) : (
+                <Link href={`/developers/${developer.uid}`}>
+                    <h1 className="text-xl font-bold hover:underline">{developer.name}</h1>
+                </Link>
+            )}
               <div className="flex items-center gap-4 mt-2 text-muted-foreground">
                   <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4" />
@@ -203,11 +202,22 @@ export const DeveloperProfileContent = ({ developer }: { developer: UserProfile 
                   </div>
               </div>
             </div>
-            {developer.openForCollaboration ? (
-              <Badge variant="default"><BadgeCheck className="mr-2 h-4 w-4"/>Open to Collab</Badge>
-            ) : (
-              <Badge variant="secondary"><BadgeX className="mr-2 h-4 w-4"/>Not seeking colabs</Badge>
-            )}
+            <div className="flex flex-col items-end gap-2">
+                {isBlocked ? (
+                    <Button variant="destructive" onClick={() => onUnblock && onUnblock()} disabled={blockLoading || !onUnblock}>
+                        <ShieldOff className="mr-2 h-4 w-4" /> Unblock User
+                    </Button>
+                ) : (
+                    <Button variant="outline" onClick={() => onBlock && onBlock()} disabled={blockLoading || !onBlock}>
+                        <ShieldOff className="mr-2 h-4 w-4" /> Block User
+                    </Button>
+                )}
+                 {developer.openForCollaboration ? (
+                  <Badge variant="default"><BadgeCheck className="mr-2 h-4 w-4"/>Open to Collab</Badge>
+                ) : (
+                  <Badge variant="secondary"><BadgeX className="mr-2 h-4 w-4"/>Not seeking colabs</Badge>
+                )}
+            </div>
           </div>
         </div>
       </div>
@@ -316,15 +326,17 @@ export const DeveloperProfileContent = ({ developer }: { developer: UserProfile 
   );
 }
 
-// The page component now just fetches the main data and renders the content component.
 export default function DeveloperProfilePage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
   const developerId = params.id as string;
+  const { toast } = useToast();
 
   const [developer, setDeveloper] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -337,12 +349,21 @@ export default function DeveloperProfilePage() {
 
     const fetchDeveloperData = async () => {
       setLoading(true);
+
+      const hasBlock = await checkBlockStatus(user.uid, developerId);
+      if (hasBlock) {
+        router.push('/developers'); // Or a dedicated 'blocked' page
+        toast({ variant: 'destructive', title: 'Access Denied', description: 'You cannot view this profile.' });
+        return;
+      }
+
       const developerDocRef = doc(db, 'users', developerId);
       const developerDoc = await getDoc(developerDocRef);
 
       if (developerDoc.exists()) {
         const devData = { uid: developerDoc.id, ...developerDoc.data() } as UserProfile;
         setDeveloper(devData);
+        setIsBlocked(devData.blockedBy?.includes(user.uid) || false);
         logAnalyticsEvent('profile_view', { user_id: user.uid, viewed_user_id: developerId });
       } else {
         router.push('/developers');
@@ -352,7 +373,43 @@ export default function DeveloperProfilePage() {
     };
 
     fetchDeveloperData();
-  }, [developerId, user, router]);
+  }, [developerId, user, router, toast]);
+
+  const handleBlock = async () => {
+      console.log("Block button clicked. Firing handleBlock function.");
+      if (!user || !developer) {
+          console.log("handleBlock exiting early: user or developer is null.");
+          return;
+      }
+      setBlockLoading(true);
+      console.log(`Attempting to block user. Blocker: ${user.uid}, Blockee: ${developer.uid}`);
+      try {
+          await blockUser(user.uid, developer.uid);
+          console.log("blockUser function completed successfully.");
+          setIsBlocked(true);
+          toast({ title: 'User Blocked', description: `You have successfully blocked ${developer.name}.` });
+          logAnalyticsEvent('user_blocked', { blocked_user_id: developer.uid });
+      } catch (error) {
+          console.error("Error in handleBlock:", error);
+          toast({ variant: 'destructive', title: 'Error', description: 'Could not block the user. Please try again.' });
+      }
+      setBlockLoading(false);
+  };
+
+  const handleUnblock = async () => {
+      if (!user || !developer) return;
+      setBlockLoading(true);
+      try {
+          await unblockUser(user.uid, developer.uid);
+          setIsBlocked(false);
+          toast({ title: 'User Unblocked', description: `You have successfully unblocked ${developer.name}.` });
+          logAnalyticsEvent('user_unblocked', { unblocked_user_id: developer.uid });
+      } catch (error) {
+          console.error("Error unblocking user:", error);
+          toast({ variant: 'destructive', title: 'Error', description: 'Could not unblock the user. Please try again.' });
+      }
+      setBlockLoading(false);
+  };
 
   if (loading || authLoading) {
     return (
@@ -385,6 +442,10 @@ export default function DeveloperProfilePage() {
   if (!developer) {
     return <div className="text-center py-20">Developer not found.</div>;
   }
+  
+  if (developer.uid === user?.uid) {
+      return <div className="text-center py-20">You are viewing your own profile.</div>;
+  }
 
-  return <DeveloperProfileContent developer={developer} />;
+  return <DeveloperProfileContent developer={developer} isBlocked={isBlocked} onBlock={handleBlock} onUnblock={handleUnblock} blockLoading={blockLoading} />;
 }

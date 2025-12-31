@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Send, Users, Archive, ArrowLeft, Sparkles, Loader2, Trash2 } from 'lucide-react';
+import { Send, Users, Archive, ArrowLeft, Sparkles, Loader2, Trash2, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { addNotification } from '@/lib/firebase/notifications';
 import { useMemoFirebase } from '@/firebase';
@@ -34,6 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { checkBlockStatus } from '@/lib/firebase/users';
 
 // Helper to get initials
 const getInitials = (name?: string) => name ? name.split(' ').map((n) => n[0]).join('') : '?';
@@ -80,6 +81,7 @@ export default function ChatPage() {
   const [aiInsights, setAiInsights] = useState<GetChatInsightsOutput | null>(null);
   const [showAiModal, setShowAiModal] = useState(false);
   const { toast } = useToast();
+  const [isBlocked, setIsBlocked] = useState(false);
 
   const matchesQuery = useMemoFirebase(
     () => user?.uid ? query(collection(db, 'matches'), where('participants', 'array-contains', user.uid)) : null,
@@ -143,7 +145,17 @@ export default function ChatPage() {
             return router.push('/messages');
         }
 
-        // Handle new and legacy match structures
+        const otherUserId = matchData.participants.find(p => p !== user.uid);
+        if (otherUserId) {
+            const blockStatus = await checkBlockStatus(user.uid, otherUserId);
+            setIsBlocked(blockStatus);
+
+            const userDoc = await getDoc(doc(db, 'users', otherUserId));
+            if (userDoc.exists()) {
+                setOtherUser({ uid: userDoc.id, ...userDoc.data() } as UserProfile);
+            }
+        }
+
         if (matchData.type === 'project' && matchData.contextId) {
             const projectDoc = await getDoc(doc(db, 'projects', matchData.contextId));
             setProject(projectDoc.exists() ? { id: projectDoc.id, ...projectDoc.data() } as Project : null);
@@ -152,7 +164,7 @@ export default function ChatPage() {
             const roleDoc = await getDoc(doc(db, 'roles', matchData.contextId));
             setRole(roleDoc.exists() ? { id: roleDoc.id, ...roleDoc.data() } as Role : null);
             setProject(null);
-        } else if ((matchData as any).projectId) { // LEGACY FALLBACK for older project-based matches
+        } else if ((matchData as any).projectId) {
             const projectDoc = await getDoc(doc(db, 'projects', (matchData as any).projectId));
             setProject(projectDoc.exists() ? { id: projectDoc.id, ...projectDoc.data() } as Project : null);
             setRole(null);
@@ -161,15 +173,7 @@ export default function ChatPage() {
             setRole(null);
         }
         
-        const otherUserId = matchData.participants.find(p => p !== user.uid);
-        if (otherUserId) {
-            const userDoc = await getDoc(doc(db, 'users', otherUserId));
-            if (userDoc.exists()) {
-                setOtherUser({ uid: userDoc.id, ...userDoc.data() } as UserProfile);
-            }
-        }
-
-        if ((matchData.unreadCounts?.[user.uid] || 0) > 0) {
+        if ((matchData.unreadCounts?.[user.uid] || 0) > 0 && !isBlocked) {
             await updateDoc(matchDocRef, { [`unreadCounts.${user.uid}`]: 0 });
             markMatchNotificationsAsRead(user.uid, matchId);
         }
@@ -193,6 +197,7 @@ export default function ChatPage() {
   }, [messages]);
 
   const handleSendMessage = useCallback(async () => {
+    if (isBlocked) return;
     if (!newMessage.trim() || !user || !match || !otherUser?.uid) return;
 
     const trimmedMessage = newMessage.trim();
@@ -229,7 +234,7 @@ export default function ChatPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not send your message. Please try again.' });
       setNewMessage(trimmedMessage);
     }
-  }, [newMessage, user, match, otherUser, userProfile, matchId, toast]);
+  }, [newMessage, user, match, otherUser, userProfile, matchId, toast, isBlocked]);
 
   const handleDeleteMessage = async (messageId: string) => {
     if (!user) return;
@@ -244,9 +249,10 @@ export default function ChatPage() {
   };
 
   const handleGetAiInsights = () => {
+    if (isBlocked) return;
     const isOwner = project?.ownerId === user?.uid || role?.ownerId === user?.uid;
     if (!isOwner) {
-      return; // Silently exit if not the owner.
+      return;
     }
 
     if (!user || !userProfile || !otherUser || (!project && !role)) {
@@ -271,12 +277,12 @@ export default function ChatPage() {
         } else if (role) {
             insightContext = {
                 title: role.title,
-                description: role.roleDescription, // Corrected property
+                description: role.roleDescription,
                 requiredSkills: role.requiredSkills,
             };
         }
 
-        if (!insightContext) { // Guard against undefined context
+        if (!insightContext) { 
             toast({ variant: 'destructive', title: 'Could not determine context for AI insights.' });
             return;
         }
@@ -372,7 +378,7 @@ export default function ChatPage() {
                 <div><h3 className="font-semibold">{otherUser?.name || 'New Match'}</h3>{title && <p className="text-sm text-muted-foreground">{title}</p>}</div>
               </div>
                 {isOwner && (
-                 <Button variant="outline" size="sm" onClick={handleGetAiInsights} disabled={isAiInsightsLoading}>
+                 <Button variant="outline" size="sm" onClick={handleGetAiInsights} disabled={isAiInsightsLoading || isBlocked}>
                     {isAiInsightsLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />}
                     Insights
                  </Button>
@@ -427,19 +433,26 @@ export default function ChatPage() {
           </div>
 
            <div className="p-4 border-t bg-card mt-auto">
-              <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex items-center gap-2">
-                  <Textarea 
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Type a message... (Shift + Enter for new line)"
-                      autoComplete="off"
-                      className="flex-1 min-h-[40px] resize-none no-scrollbar"
-                      disabled={!otherUser}
-                      rows={1}
-                  />
-                  <Button type="submit" size="icon" disabled={!newMessage.trim() || !otherUser}><Send className="h-4 w-4" /></Button>
-              </form>
+              {isBlocked ? (
+                  <div className="flex items-center justify-center p-4 rounded-lg bg-destructive/10 text-destructive-foreground">
+                      <ShieldAlert className="mr-3 h-5 w-5" />
+                      <p className="text-sm font-medium">Messaging is disabled because a user has been blocked.</p>
+                  </div>
+              ) : (
+                  <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex items-center gap-2">
+                      <Textarea 
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          onKeyDown={handleKeyDown}
+                          placeholder="Type a message... (Shift + Enter for new line)"
+                          autoComplete="off"
+                          className="flex-1 min-h-[40px] resize-none no-scrollbar"
+                          disabled={!otherUser}
+                          rows={1}
+                      />
+                      <Button type="submit" size="icon" disabled={!newMessage.trim() || !otherUser}><Send className="h-4 w-4" /></Button>
+                  </form>
+              )}
            </div>
         </main>
       </div>

@@ -13,9 +13,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Paperclip, Send, XCircle, Loader2 } from 'lucide-react';
+import { Paperclip, Send, XCircle, Loader2, ShieldAlert } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { checkBlockStatus } from '@/lib/firebase/users';
 
 
 const EngagementRoomPage = () => {
@@ -30,6 +31,7 @@ const EngagementRoomPage = () => {
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [isBlocked, setIsBlocked] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -53,29 +55,36 @@ const EngagementRoomPage = () => {
         let unsubMessages: Unsubscribe | null = null;
 
         const unsubEngagement = onSnapshot(doc(db, 'engagements', engagementId), (engagementDoc) => {
-            if (engagementDoc.exists()) {
-                const engData = { id: engagementDoc.id, ...engagementDoc.data() } as Engagement;
-                if (user.uid !== engData.developerId && user.uid !== engData.advisorId) {
-                    toast({ variant: 'destructive', title: 'Access Denied', description: 'You are not a participant in this engagement.'});
-                    router.push('/dashboard');
-                    return;
-                }
-                setEngagement(engData);
+            const handleEngagementData = async () => {
+                if (engagementDoc.exists()) {
+                    const engData = { id: engagementDoc.id, ...engagementDoc.data() } as Engagement;
+                    if (user.uid !== engData.developerId && user.uid !== engData.advisorId) {
+                        toast({ variant: 'destructive', title: 'Access Denied', description: 'You are not a participant in this engagement.'});
+                        router.push('/dashboard');
+                        return;
+                    }
 
-                // Always fetch messages for a valid engagement
-                const messagesQuery = query(collection(db, `engagements/${engagementId}/messages`), orderBy('createdAt', 'asc'));
-                unsubMessages = onSnapshot(messagesQuery, (snapshot) => {
-                    const msgs: EngagementMessage[] = [];
-                    snapshot.forEach(doc => msgs.push({ id: doc.id, ...doc.data() } as EngagementMessage));
-                    setMessages(msgs);
-                });
-                
-                setLoading(false);
-            } else {
-                toast({ variant: 'destructive', title: 'Not Found', description: 'This engagement does not exist.'});
-                router.push('/dashboard');
-                setLoading(false);
+                    const otherUserId = user.uid === engData.developerId ? engData.advisorId : engData.developerId;
+                    const blockStatus = await checkBlockStatus(user.uid, otherUserId);
+                    setIsBlocked(blockStatus);
+                    
+                    setEngagement(engData);
+
+                    const messagesQuery = query(collection(db, `engagements/${engagementId}/messages`), orderBy('createdAt', 'asc'));
+                    unsubMessages = onSnapshot(messagesQuery, (snapshot) => {
+                        const msgs: EngagementMessage[] = [];
+                        snapshot.forEach(doc => msgs.push({ id: doc.id, ...doc.data() } as EngagementMessage));
+                        setMessages(msgs);
+                    });
+                    
+                    setLoading(false);
+                } else {
+                    toast({ variant: 'destructive', title: 'Not Found', description: 'This engagement does not exist.'});
+                    router.push('/dashboard');
+                    setLoading(false);
+                }
             }
+            handleEngagementData();
         });
 
         return () => {
@@ -108,7 +117,7 @@ const EngagementRoomPage = () => {
           return;
         }
       
-        if ((!newMessage.trim() && !file) || typeof engagementId !== 'string') return;
+        if ((!newMessage.trim() && !file) || typeof engagementId !== 'string' || isBlocked) return;
         if (engagement?.status !== 'active') {
           toast({ variant: 'destructive', title: 'Room not active' });
           return;
@@ -212,34 +221,43 @@ const EngagementRoomPage = () => {
                              <div ref={messagesEndRef} />
                         </CardContent>
                         <div className="p-4 space-y-2">
-                            {(file || uploading) && (
-                                <div className="bg-muted/50 p-2 rounded-md mb-2 text-sm">
-                                    <div className="flex items-center justify-between">
-                                        <span>{file?.name || 'Uploading...'}</span>
-                                        {!uploading && <Button size="icon" variant="ghost" onClick={() => setFile(null)}><XCircle className="h-4 w-4"/></Button>}
-                                    </div>
+                            {isBlocked ? (
+                                <div className="flex items-center justify-center p-4 rounded-lg bg-destructive/10 text-destructive-foreground">
+                                    <ShieldAlert className="mr-3 h-5 w-5" />
+                                    <p className="text-sm font-medium">Messaging is disabled because a user has been blocked.</p>
                                 </div>
+                            ) : (
+                                <>
+                                    {(file || uploading) && (
+                                        <div className="bg-muted/50 p-2 rounded-md mb-2 text-sm">
+                                            <div className="flex items-center justify-between">
+                                                <span>{file?.name || 'Uploading...'}</span>
+                                                {!uploading && <Button size="icon" variant="ghost" onClick={() => setFile(null)}><XCircle className="h-4 w-4"/></Button>}
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div className="flex items-start gap-2">
+                                        <Textarea 
+                                            value={newMessage} 
+                                            onChange={(e) => setNewMessage(e.target.value)}
+                                            placeholder={isRoomActive ? "Type a message... (Shift + Enter for new line)" : "This room is not active."}
+                                            disabled={!isRoomActive || uploading}
+                                            onKeyDown={handleKeyDown}
+                                            rows={1}
+                                            className="flex-1 min-h-[40px] resize-none no-scrollbar"
+                                        />
+                                        <Button asChild variant="outline" size="icon" disabled={!isRoomActive || uploading}>
+                                            <label htmlFor="file-upload" className="cursor-pointer">
+                                                <Paperclip className="h-4 w-4"/>
+                                            </label>
+                                        </Button>
+                                        <input id="file-upload" type="file" className="hidden" onChange={handleFileChange} disabled={!isRoomActive || uploading}/>
+                                        <Button onClick={handleSendMessage} disabled={!isRoomActive || uploading || (!newMessage.trim() && !file)}>
+                                            {uploading ? <Loader2 className="h-4 w-4 animate-spin"/> : <Send className="h-4 w-4"/>}
+                                        </Button>
+                                    </div>
+                                </>
                             )}
-                             <div className="flex items-start gap-2">
-                                <Textarea 
-                                    value={newMessage} 
-                                    onChange={(e) => setNewMessage(e.target.value)}
-                                    placeholder={isRoomActive ? "Type a message... (Shift + Enter for new line)" : "This room is not active."}
-                                    disabled={!isRoomActive || uploading}
-                                    onKeyDown={handleKeyDown}
-                                    rows={1}
-                                    className="flex-1 min-h-[40px] resize-none no-scrollbar"
-                                />
-                                <Button asChild variant="outline" size="icon" disabled={!isRoomActive || uploading}>
-                                    <label htmlFor="file-upload" className="cursor-pointer">
-                                        <Paperclip className="h-4 w-4"/>
-                                    </label>
-                                </Button>
-                                <input id="file-upload" type="file" className="hidden" onChange={handleFileChange} disabled={!isRoomActive || uploading}/>
-                                <Button onClick={handleSendMessage} disabled={!isRoomActive || uploading || (!newMessage.trim() && !file)}>
-                                    {uploading ? <Loader2 className="h-4 w-4 animate-spin"/> : <Send className="h-4 w-4"/>}
-                                </Button>
-                            </div>
                         </div>
                     </Card>
                 </div>

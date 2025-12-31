@@ -23,7 +23,7 @@ service cloud.firestore {
     // USERS
     match /users/{userId} {
       // This permissive rule is required by pages like /developers to list users.
-      allow get: if isSignedIn() && uid() == userId;
+      allow get: if isSignedIn();
       allow list: if isSignedIn();
       
       // Allow user to create their own profile
@@ -45,7 +45,12 @@ service cloud.firestore {
             resource.data.get('advisorProfile', {}).get('verificationStatus', '') != 'verified' &&
             request.resource.data.get('advisorProfile', {}).get('verificationStatus', '') == 'verified'
           )
+        ) ||
+        (uid() == userId &&
+          // Allow a user to ONLY update their own blocked list
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['blockedUsers']) 
         );
+
       allow delete: if false;
 
       // Advisor Applications Subcollection

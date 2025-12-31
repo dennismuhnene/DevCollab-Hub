@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import { PublicAdvisorProfile } from '@/types';
+import { PublicAdvisorProfile, UserProfile } from '@/types';
+import { useAuth } from '@/lib/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +23,7 @@ import { countries } from '@/lib/constants';
 import { MultiSelect, Option } from '@/components/ui/multi-select';
 
 const AdvisorHubPage = () => {
+    const { user } = useAuth();
     const [advisors, setAdvisors] = useState<PublicAdvisorProfile[]>([]);
     const [filteredAdvisors, setFilteredAdvisors] = useState<PublicAdvisorProfile[]>([]);
     const [specialties, setSpecialties] = useState<string[]>([]);
@@ -39,27 +41,44 @@ const AdvisorHubPage = () => {
     };
 
     useEffect(() => {
+        if (!user) return;
         setLoading(true);
-        const q = query(collection(db, 'publicAdvisorProfiles'));
 
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const fetchedAdvisors: PublicAdvisorProfile[] = [];
-            const allSpecialties = new Set<string>();
-            querySnapshot.forEach((doc) => {
-                const advisor = doc.data() as PublicAdvisorProfile;
-                fetchedAdvisors.push(advisor);
-                getAsArray(advisor.specialties).forEach(spec => allSpecialties.add(spec));
+        const fetchBlockedUsersAndAdvisors = async () => {
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
+            const currentUserData = userDoc.data() as UserProfile;
+            const blockedUsers = currentUserData?.blockedUsers || [];
+            const blockedBy = currentUserData?.blockedBy || [];
+            const allBlockedIds = [...blockedUsers, ...blockedBy];
+
+            const q = query(collection(db, 'publicAdvisorProfiles'));
+            const unsubscribe = onSnapshot(q, (querySnapshot) => {
+                const fetchedAdvisors: PublicAdvisorProfile[] = [];
+                const allSpecialties = new Set<string>();
+                querySnapshot.forEach((doc) => {
+                    const advisor = doc.data() as PublicAdvisorProfile;
+                    if (!allBlockedIds.includes(advisor.uid)) {
+                        fetchedAdvisors.push(advisor);
+                        getAsArray(advisor.specialties).forEach(spec => allSpecialties.add(spec));
+                    }
+                });
+                setAdvisors(fetchedAdvisors);
+                setSpecialties(Array.from(allSpecialties).sort());
+                setLoading(false);
+            }, (error) => {
+                console.error("Error listening for advisor profiles:", error);
+                setLoading(false);
             });
-            setAdvisors(fetchedAdvisors);
-            setSpecialties(Array.from(allSpecialties).sort());
-            setLoading(false);
-        }, (error) => {
-            console.error("Error listening for advisor profiles:", error);
-            setLoading(false);
-        });
+            return unsubscribe;
+        };
 
-        return () => unsubscribe();
-    }, []);
+        const unsubscribePromise = fetchBlockedUsersAndAdvisors();
+
+        return () => {
+            unsubscribePromise.then(unsub => unsub && unsub());
+        };
+    }, [user]);
 
     useEffect(() => {
         let filtered = advisors;
@@ -241,9 +260,11 @@ const AdvisorHubPage = () => {
                             </div>
                             
                             <DialogFooter className="mt-auto pt-4 border-t">
-                                <Button asChild className="w-full sm:w-auto" size="lg">
-                                    <Link href={`/advisory/${selectedAdvisor.uid}/request`}>Request Engagement</Link>
-                                </Button>
+                                {user?.uid !== selectedAdvisor.uid && (
+                                    <Button asChild className="w-full sm:w-auto" size="lg">
+                                        <Link href={`/advisory/${selectedAdvisor.uid}/request`}>Request Engagement</Link>
+                                    </Button>
+                                )}
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>

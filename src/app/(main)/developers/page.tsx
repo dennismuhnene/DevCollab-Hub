@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
 import type { UserProfile, Project, Role } from '@/types';
@@ -114,6 +114,7 @@ export default function DiscoverPage() {
   const [allDevelopers, setAllDevelopers] = useState<UserProfile[]>([]);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allPosts, setAllPosts] = useState<Role[]>([]);
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('projects');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -147,6 +148,17 @@ export default function DiscoverPage() {
 
   useEffect(() => {
     if (!user) return;
+    const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
+        const data = doc.data();
+        const blockedUsers = data?.blockedUsers || [];
+        const blockedBy = data?.blockedBy || [];
+        setBlockedUserIds([...blockedUsers, ...blockedBy]);
+    });
+    return () => unsub();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || authLoading) return;
 
     logAnalyticsEvent('screen_view', { screen_name: 'Discover' });
 
@@ -170,6 +182,7 @@ export default function DiscoverPage() {
           .map(doc => ({ ...doc.data(), id: doc.id } as Role))
           .filter(role => role.ownerId !== user.uid);
         setAllPosts(rolesData);
+
       } catch (error) {
         console.error('Error fetching discovery data:', error);
         toast({ variant: 'destructive', title: 'Error', description: 'Could not load discovery data.' });
@@ -178,7 +191,7 @@ export default function DiscoverPage() {
     };
 
     fetchData();
-  }, [user, toast]);
+  }, [user, authLoading, toast]);
 
   const sortedAndFilteredResults = useMemo(() => {
     if (loading || !userProfile) return [];
@@ -189,6 +202,11 @@ export default function DiscoverPage() {
     else results = [...allPosts];
 
     let filtered = results.filter(item => {
+      const ownerId = isProject(item) || isRole(item) ? item.ownerId : (item as UserProfile).uid;
+      if (blockedUserIds.includes(ownerId)) {
+          return false;
+      }
+
       const itemIsProject = isProject(item);
       const itemIsRole = isRole(item);
       const itemIsDeveloper = !itemIsProject && !itemIsRole;
@@ -228,7 +246,7 @@ export default function DiscoverPage() {
     });
 
     return sorted;
-  }, [viewMode, allDevelopers, allProjects, allPosts, loading, userProfile, searchTerm, selectedTechs, selectedSkills, experienceRange]);
+  }, [viewMode, allDevelopers, allProjects, allPosts, loading, userProfile, searchTerm, selectedTechs, selectedSkills, experienceRange, blockedUserIds]);
 
   useEffect(() => {
     setCurrentPage(1);
