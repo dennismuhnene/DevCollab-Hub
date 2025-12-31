@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -12,8 +11,8 @@ import { Button } from '@/components/ui/button';
 import { AdvisorApplicationForm } from './advisor-application-form';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Switch } from "@/components/ui/switch"; // <-- Import Switch
-import { Label } from "@/components/ui/label";   // <-- Import Label
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const MAX_APPLICATIONS = 3;
 
@@ -71,7 +70,7 @@ export function AdvisorApplicationManager() {
           const setActiveAdvisorProfile = httpsCallable(functions, 'setActiveAdvisorProfile');
           const result = await setActiveAdvisorProfile({ applicationId });
           toast({ title: "Success", description: (result.data as any).message });
-          reloadUserProfile(); // Reload profile to get the latest activeAdvisorApplicationId
+          reloadUserProfile();
       } catch (error: any) {
           console.error("Error toggling active profile: ", error);
           toast({ variant: "destructive", title: "Error", description: error.message || "Could not update profile status." });
@@ -87,7 +86,7 @@ export function AdvisorApplicationManager() {
   if (isCreatingNew || selectedApplication) {
     return (
         <div>
-            <Button onClick={handleBackToList} variant="outline" className="mb-4">{'< Back to Applications'}</Button>
+            <Button onClick={handleBackToList} variant="outline" className="mb-4">{'Back to Applications'}</Button>
             <AdvisorApplicationForm 
                 userProfile={userProfile!} 
                 application={selectedApplication} 
@@ -100,10 +99,13 @@ export function AdvisorApplicationManager() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Your Advisor Applications</CardTitle>
-        <CardDescription>Manage your applications. Toggle the switch on a verified application to make it your public profile.</CardDescription>
-      </CardHeader>
+        <CardHeader>
+            <CardTitle>Your Advisor Applications</CardTitle>
+            <CardDescription>
+                Apply for advisory roles if you are an expert or specialist in your field.
+                Manage your applications below. Toggle the switch on a verified application to make it your public-facing advisor profile.
+            </CardDescription>
+        </CardHeader>
       <CardContent className="space-y-4">
         {[...Array(MAX_APPLICATIONS)].map((_, index) => {
           const slot = index + 1;

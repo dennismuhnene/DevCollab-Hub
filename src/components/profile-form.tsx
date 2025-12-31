@@ -4,7 +4,7 @@ import { useState, useEffect, useTransition } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { doc, updateDoc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase/config';
@@ -14,20 +14,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import type { UserProfile } from '@/types';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+import type { UserProfile, ExternalLink } from '@/types';
 import { summarizeUserSkills } from '@/ai/flows/user-skills-summarizer';
-import { Sparkles, Loader2, X, Trash2, Check, ChevronsUpDown, PlusCircle } from 'lucide-react';
+import { Sparkles, Loader2, X, Trash2, Check, ChevronsUpDown, PlusCircle, Link as LinkIcon } from 'lucide-react';
 import { Switch } from './ui/switch';
 import {
   Command,
@@ -62,16 +51,16 @@ const profileSchema = z.object({
   collaborationGoals: z.array(z.string()).optional(),
   commitmentLevel: z.string().optional(),
   versionControl: z.object({
-      type: z.enum(['github', 'gitlab', 'bitbucket']),
+      label: z.enum(['github', 'gitlab', 'bitbucket']),
       url: urlSchema,
   }),
   portfolioUrl: urlSchema.optional().or(z.literal('')),
   socials: z.object({
-      type: z.enum(['linkedin', 'twitter', 'tiktok', 'discord']),
+      label: z.enum(['linkedin', 'twitter', 'tiktok', 'discord']),
       url: urlSchema,
   }).optional(),
   extraLinks: z.array(z.object({
-      type: z.string().min(1, { message: "Link type cannot be empty"}),
+      label: z.string().min(1, { message: "Link label cannot be empty"}),
       url: urlSchema,
   })).max(3, { message: 'You can add a maximum of 3 extra links.' }).optional(),
 });
@@ -82,14 +71,12 @@ type ProfileFormProps = {
   userProfile: UserProfile;
 };
 
-// Helper for safe error messages
 function getErrorMessage(err: any) {
   return err && typeof err === "object" && "message" in err ? err.message : null;
 }
 
 export default function ProfileForm({ userProfile }: ProfileFormProps) {
   const { user, reloadUserProfile } = useAuth();
-  const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [techStackInput, setTechStackInput] = useState('');
@@ -115,9 +102,9 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
       openForCollaboration: true,
       collaborationGoals: [],
       commitmentLevel: '',
-      versionControl: { type: 'github', url: '' },
+      versionControl: { label: 'github', url: '' },
       portfolioUrl: '',
-      socials: { type: 'linkedin', url: '' },
+      socials: { label: 'linkedin', url: '' },
       extraLinks: [],
     },
   });
@@ -132,28 +119,32 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
   const skills = watch('skills') || [];
   const collaborationGoals = watch('collaborationGoals') || [];
   const openForCollaboration = watch('openForCollaboration');
-
   const commitmentLevel = watch('commitmentLevel');
-  const versionControlType = watch('versionControl')?.type || '';
-  const socialsType = watch('socials')?.type || '';
-  
-  // Helper for safe error messages
-  function getErrorMessage(err: any) {
-    return err && typeof err === "object" && "message" in err ? (err.message as string) : null;
-  }
+  const versionControlLabel = watch('versionControl')?.label || '';
+  const socialsLabel = watch('socials')?.label || '';
+  const versionControl = watch('versionControl');
+  const portfolioUrl = watch('portfolioUrl');
+  const socials = watch('socials');
+  const extraLinks = watch('extraLinks');
+
+  const allLinks: ExternalLink[] = [
+    versionControl,
+    socials,
+    portfolioUrl ? { label: 'portfolio', url: portfolioUrl } : undefined,
+    ...(extraLinks || [])
+  ].filter((link): link is ExternalLink => !!link?.url);
 
   useEffect(() => {
     if (userProfile) {
-      // Normalize and narrow types from possibly looser external types (ExternalLink) to the strict unions
-      const normalizedVersionControl: { type: 'github' | 'gitlab' | 'bitbucket'; url: string } =
-        userProfile.versionControl && ['github','gitlab','bitbucket'].includes((userProfile.versionControl as any).type)
-          ? (userProfile.versionControl as unknown as { type: 'github' | 'gitlab' | 'bitbucket'; url: string })
-          : { type: 'github', url: '' };
+      const normalizedVersionControl: { label: 'github' | 'gitlab' | 'bitbucket'; url: string } =
+        userProfile.versionControl && ['github','gitlab','bitbucket'].includes((userProfile.versionControl as any).label)
+          ? (userProfile.versionControl as unknown as { label: 'github' | 'gitlab' | 'bitbucket'; url: string })
+          : { label: 'github', url: '' };
 
-      const normalizedSocials: { type: 'linkedin' | 'twitter' | 'tiktok' | 'discord'; url: string } =
-        userProfile.socials && ['linkedin','twitter','tiktok','discord'].includes((userProfile.socials as any).type)
-          ? (userProfile.socials as unknown as { type: 'linkedin' | 'twitter' | 'tiktok' | 'discord'; url: string })
-          : { type: 'linkedin', url: '' };
+      const normalizedSocials: { label: 'linkedin' | 'twitter' | 'tiktok' | 'discord'; url: string } =
+        userProfile.socials && ['linkedin','twitter','tiktok','discord'].includes((userProfile.socials as any).label)
+          ? (userProfile.socials as unknown as { label: 'linkedin' | 'twitter' | 'tiktok' | 'discord'; url: string })
+          : { label: 'linkedin', url: '' };
 
       reset({
         name: userProfile.name || '',
@@ -167,7 +158,7 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
         versionControl: normalizedVersionControl,
         portfolioUrl: userProfile.portfolioUrl || '',
         socials: normalizedSocials,
-        extraLinks: userProfile.extraLinks || [],
+        extraLinks: userProfile.extraLinks?.map(link => ({...link, label: link.label || 'custom'})) || [],
       });
     }
   }, [userProfile, reset]);
@@ -248,32 +239,6 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
     toast({ title: 'Profile updated successfully!' });
     reloadUserProfile();
     setLoading(false);
-  };
-
-  const handleDeleteAccount = async () => {
-    setLoading(true);
-    try {
-      const functions = getFunctions(auth.app);
-      const deleteUserCallable = httpsCallable(functions, 'deleteUserAccount');
-      
-      logAnalyticsEvent('delete_account', {});
-      await deleteUserCallable();
-      
-      toast({ title: 'Account deleted successfully' });
-      
-      await auth.signOut();
-      router.push('/');
-
-    } catch (error: any) {
-      console.error("Account deletion error:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Error deleting account',
-        description: error.message || 'An unknown error occurred.',
-      });
-    } finally {
-        setLoading(false);
-    }
   };
 
   return (
@@ -502,107 +467,91 @@ export default function ProfileForm({ userProfile }: ProfileFormProps) {
                 </CardContent>
             </Card>
 
-             <div className="space-y-4 rounded-md border p-4">
-                <h3 className="text-lg font-medium">External Links</h3>
-                
-                <div className="space-y-2">
-                    <Label htmlFor="version-control-url">Version Control (Required)</Label>
-                    <div className="flex gap-2">
-                        <Select value={versionControlType || 'github'} onValueChange={(value) => setValue('versionControl.type', value as any, { shouldValidate: true, shouldDirty: true })}>
-                            <SelectTrigger className="w-[120px]"><SelectValue placeholder="Select type" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="github">GitHub</SelectItem>
-                                <SelectItem value="gitlab">GitLab</SelectItem>
-                                <SelectItem value="bitbucket">Bitbucket</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Input id="version-control-url" placeholder="https://github.com/username" {...register('versionControl.url')} />
-                    </div>
-                    {errors.versionControl?.url && <p className="text-sm text-destructive">{errors.versionControl.url.message}</p>}
-                </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle>External Links</CardTitle>
+                    <CardDescription>Add links to your portfolio, socials, and more.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {allLinks.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-4">
+                            {allLinks.map((link, index) => (
+                                <Button key={index} variant="outline" asChild>
+                                    <Link href={link.url} target="_blank" className="break-all">
+                                        <LinkIcon className="mr-2 h-4 w-4" />
+                                        {link.url}
+                                    </Link>
+                                </Button>
+                            ))}
+                        </div>
+                    )}
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="version-control-url">Version Control (Required)</Label>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                                <Select value={versionControlLabel || 'github'} onValueChange={(value) => setValue('versionControl.label', value as any, { shouldValidate: true, shouldDirty: true })}>
+                                    <SelectTrigger className="w-full sm:w-[120px]"><SelectValue placeholder="Select type" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="github">GitHub</SelectItem>
+                                        <SelectItem value="gitlab">GitLab</SelectItem>
+                                        <SelectItem value="bitbucket">Bitbucket</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Input id="version-control-url" placeholder="https://github.com/username" {...register('versionControl.url')} className="flex-1" />
+                            </div>
+                            {errors.versionControl?.url && <p className="text-sm text-destructive">{errors.versionControl.url.message}</p>}
+                        </div>
 
-                <div className="space-y-2">
-                    <Label htmlFor="portfolio-url">Portfolio Website</Label>
-                    <Input id="portfolio-url" placeholder="https://your-portfolio.com" {...register('portfolioUrl')} />
-                    {errors.portfolioUrl && <p className="text-sm text-destructive">{errors.portfolioUrl.message}</p>}
-                </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="portfolio-url">Portfolio Website</Label>
+                            <Input id="portfolio-url" placeholder="https://your-portfolio.com" {...register('portfolioUrl')} />
+                            {errors.portfolioUrl && <p className="text-sm text-destructive">{errors.portfolioUrl.message}</p>}
+                        </div>
 
-                <div className="space-y-2">
-                    <Label htmlFor="socials-url">Socials</Label>
-                    <div className="flex gap-2">
-                        <Select value={socialsType || 'linkedin'} onValueChange={(value) => setValue('socials.type', value as any, { shouldValidate: true, shouldDirty: true })}>
-                             <SelectTrigger className="w-[120px]"><SelectValue placeholder="Select type" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="linkedin">LinkedIn</SelectItem>
-                                <SelectItem value="twitter">Twitter</SelectItem>
-                                <SelectItem value="tiktok">TikTok</SelectItem>
-                                <SelectItem value="discord">Discord</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Input id="socials-url" placeholder="https://linkedin.com/in/username" {...register('socials.url')} />
+                        <div className="space-y-2">
+                            <Label htmlFor="socials-url">Socials</Label>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                                <Select value={socialsLabel || 'linkedin'} onValueChange={(value) => setValue('socials.label', value as any, { shouldValidate: true, shouldDirty: true })}>
+                                    <SelectTrigger className="w-full sm:w-[120px]"><SelectValue placeholder="Select type" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="linkedin">LinkedIn</SelectItem>
+                                        <SelectItem value="twitter">Twitter</SelectItem>
+                                        <SelectItem value="tiktok">TikTok</SelectItem>
+                                        <SelectItem value="discord">Discord</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Input id="socials-url" placeholder="https://linkedin.com/in/username" {...register('socials.url')} className="flex-1" />
+                            </div>
+                            {errors.socials?.url && <p className="text-sm text-destructive">{errors.socials.url.message}</p>}
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Extra Links</Label>
+                          <div className="space-y-2">
+                          {fields.map((field, index) => (
+                            <div key={field.id} className="flex flex-col sm:flex-row gap-2 items-start">
+                                <Input placeholder="Link Title (e.g. My Blog)" {...register(`extraLinks.${index}.label`)} className="flex-1" />
+                                <Input placeholder="https://..." {...register(`extraLinks.${index}.url`)} className="flex-1" />
+                                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4"/></Button>
+                            </div>
+                          ))}
+                          </div>
+                           {errors.extraLinks?.[fields.length -1] && <p className="text-sm text-destructive">{getErrorMessage(errors.extraLinks[fields.length - 1]?.url) || getErrorMessage(errors.extraLinks[fields.length - 1]?.label) || getErrorMessage(errors.extraLinks[fields.length - 1])}</p>}
+                          {fields.length < 3 && (
+                            <Button type="button" variant="outline" size="sm" onClick={() => append({ label: '', url: '' })}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Add Link
+                            </Button>
+                          )}
+                        </div>
                     </div>
-                    {errors.socials?.url && <p className="text-sm text-destructive">{errors.socials.url.message}</p>}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Extra Links</Label>
-                  <div className="space-y-2">
-                  {fields.map((field, index) => (
-                    <div key={field.id} className="flex gap-2 items-start">
-                        <Input placeholder="Link Title (e.g. My Blog)" {...register(`extraLinks.${index}.type`)} />
-                        <Input placeholder="https://..." {...register(`extraLinks.${index}.url`)} />
-                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4"/></Button>
-                    </div>
-                  ))}
-                  </div>
-                   {errors.extraLinks?.[fields.length -1] && <p className="text-sm text-destructive">{getErrorMessage(errors.extraLinks[fields.length - 1]?.url) || getErrorMessage(errors.extraLinks[fields.length - 1]?.type) || getErrorMessage(errors.extraLinks[fields.length - 1])}</p>}
-                  {fields.length < 3 && (
-                    <Button type="button" variant="outline" size="sm" onClick={() => append({ type: '', url: '' })}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Link
-                    </Button>
-                  )}
-                </div>
-            </div>
+                </CardContent>
+            </Card>
         </div>
         <Button type="submit" disabled={loading} className="w-full md:w-auto">
           {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : 'Save All Changes'}
         </Button>
       </form>
-
-      <div className="mt-12 border-t border-destructive/20 pt-6">
-        <h3 className="text-lg font-semibold text-destructive">Danger Zone</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Deleting your account is a permanent action and cannot be undone.
-        </p>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" disabled={loading}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete My Account
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete your authentication record and all of your associated data, including projects and chats.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteAccount}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                disabled={loading}
-              >
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Continue
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
     </>
   );
 }

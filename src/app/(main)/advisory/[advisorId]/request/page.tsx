@@ -19,6 +19,8 @@ import {
     DialogDescription,
     DialogFooter,
 } from '@/components/ui/dialog';
+import { checkBlockStatus } from '@/lib/firebase/users';
+import Link from 'next/link';
 
 const EngagementRequestPage = () => {
     const params = useParams();
@@ -30,9 +32,8 @@ const EngagementRequestPage = () => {
     const [advisor, setAdvisor] = useState<PublicAdvisorProfile | null>(null);
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(true);
-    const [existingEngagement, setExistingEngagement] = useState(false);
+    const [existingEngagementId, setExistingEngagementId] = useState<string | null>(null);
 
-    // Helper to safely get arrays from profile data
     const getAsArray = (data: string | string[] | undefined | null): string[] => {
         if (!data) return [];
         if (Array.isArray(data)) return data;
@@ -45,17 +46,23 @@ const EngagementRequestPage = () => {
             if (advisorId && user) {
                 setLoading(true);
                 try {
-                    // Check for existing engagements
+                    const isBlocked = await checkBlockStatus(user.uid, advisorId);
+                    if (isBlocked) {
+                        toast({ variant: 'destructive', title: 'Action Not Allowed', description: 'You cannot request an engagement with this advisor.' });
+                        router.push('/advisory');
+                        return;
+                    }
+
                     const engagementsRef = collection(firestore, 'engagements');
                     const q = query(
                         engagementsRef,
                         where('developerId', '==', user.uid),
                         where('advisorId', '==', advisorId),
-                        where('status', 'in', ['requested', 'accepted'])
+                        where('status', 'in', ['requested', 'active'])
                     );
                     const querySnapshot = await getDocs(q);
                     if (!querySnapshot.empty) {
-                        setExistingEngagement(true);
+                        setExistingEngagementId(querySnapshot.docs[0].id);
                     }
 
                     const advisorDocRef = doc(firestore, 'publicAdvisorProfiles', advisorId);
@@ -64,14 +71,12 @@ const EngagementRequestPage = () => {
                     if (advisorDocSnap.exists()) {
                         setAdvisor({ uid: advisorDocSnap.id, ...advisorDocSnap.data() } as PublicAdvisorProfile);
                     } else {
-                        console.log('No such advisor profile!');
-                        setAdvisor(null);
                         toast({ variant: 'destructive', title: 'Error', description: 'Advisor not found.' });
                         router.back();
                     }
                 } catch (error) {
                     console.error("Error fetching data:", error);
-                    toast({ variant: 'destructive', title: 'Error', description: 'Could not load page.' });
+                    toast({ variant: 'destructive', title: 'Error', description: 'Could not load page details.' });
                     router.back();
                 }
                 setLoading(false);
@@ -111,22 +116,24 @@ const EngagementRequestPage = () => {
     };
 
     if (loading || !advisor) {
-        // Provide a minimal loading state that fits the modal-like feel
         return <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center h-screen w-screen">Loading...</div>;
     }
 
-    if (existingEngagement) {
+    if (existingEngagementId) {
         return (
             <Dialog open={true} onOpenChange={(isOpen) => !isOpen && router.back()}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Existing Engagement</DialogTitle>
                         <DialogDescription>
-                            You already have a pending or active engagement with this advisor. Please wait for the current engagement to be resolved before making a new request.
+                            You already have a pending or active engagement with this advisor. You can view the engagement or close this window.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button onClick={() => router.back()}>Close</Button>
+                        <Button variant="ghost" onClick={() => router.back()}>Close</Button>
+                        <Button asChild>
+                             <Link href={`/engagements/${existingEngagementId}`}>View Engagement</Link>
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

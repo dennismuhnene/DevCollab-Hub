@@ -48,6 +48,8 @@ export interface UserProfile {
     activeAdvisorApplicationId?: string;
     partnerFunctions?: string[];
     locations?: string[];
+    blockedUsers?: string[];
+    blockedBy?: string[];
 }
 
 // Defines the shape of a project created by a user

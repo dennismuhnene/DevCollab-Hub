@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
 import { db as firestore } from '@/lib/firebase/config';
 import { UserProfile } from '@/types';
@@ -12,27 +12,50 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Star } from 'lucide-react';
+import { useAuth } from '@/lib/hooks/use-auth';
+import { checkBlockStatus } from '@/lib/firebase/users';
+import { useToast } from '@/hooks/use-toast';
 
 const AdvisorProfilePage = () => {
     const { advisorId } = useParams();
+    const router = useRouter();
+    const { toast } = useToast();
+    const { user, loading: authLoading } = useAuth();
     const [advisor, setAdvisor] = useState<UserProfile | null>(null);
     const [reviews, setReviews] = useState<AdvisorReview[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (typeof advisorId !== 'string') return;
+        if (typeof advisorId !== 'string' || !user) {
+            if (!authLoading) setLoading(false);
+            return;
+        };
 
         const fetchAdvisorAndReviews = async () => {
             setLoading(true);
-            // Fetch advisor profile
-            const advisorDoc = await getDoc(doc(firestore, 'users', advisorId));
-            if (advisorDoc.exists()) {
-                setAdvisor({ uid: advisorDoc.id, ...advisorDoc.data() } as UserProfile);
-            } else {
-                // Handle advisor not found
+
+            const isBlocked = await checkBlockStatus(user.uid, advisorId);
+            if (isBlocked) {
+                toast({ variant: 'destructive', title: 'Access Denied', description: "You cannot view this advisor's profile." });
+                router.push('/advisory');
+                return;
             }
 
-            // Fetch advisor reviews
+            const advisorDoc = await getDoc(doc(firestore, 'users', advisorId));
+            if (advisorDoc.exists()) {
+                const advisorData = { uid: advisorDoc.id, ...advisorDoc.data() } as UserProfile;
+                if (!advisorData.roles?.advisor) {
+                    toast({ variant: 'destructive', title: 'Not an Advisor', description: 'This user is not registered as an advisor.' });
+                    router.push('/developers'); // Redirect to a more general page
+                    return;
+                }
+                setAdvisor(advisorData);
+            } else {
+                toast({ variant: 'destructive', title: 'Not Found', description: 'This advisor profile could not be found.' });
+                router.push('/advisory');
+                return;
+            }
+
             const reviewsQuery = query(
                 collection(firestore, 'advisor_reviews'), 
                 where('advisorId', '==', advisorId),
@@ -47,7 +70,7 @@ const AdvisorProfilePage = () => {
         };
 
         fetchAdvisorAndReviews();
-    }, [advisorId]);
+    }, [advisorId, user, authLoading, router, toast]);
 
     const renderStars = (rating: number) => {
         return Array(5).fill(0).map((_, i) => (
@@ -55,17 +78,21 @@ const AdvisorProfilePage = () => {
         ));
     }
 
-    if (loading) {
-        return <div>Loading advisor profile...</div>;
+    if (loading || authLoading) {
+        return <div className="container mx-auto p-4"><p>Loading advisor profile...</p></div>;
+    }
+
+    if (!user) {
+        return <div className="container mx-auto p-4"><p>Please log in to view advisor profiles.</p></div>;
     }
 
     if (!advisor) {
-        return <div>Advisor not found.</div>;
+        // This case is mostly handled by the redirects in useEffect, but it's a good fallback.
+        return <div className="container mx-auto p-4"><p>Advisor not found.</p></div>;
     }
 
     return (
         <div className="container mx-auto p-4 space-y-8">
-            {/* Advisor Profile Section */}
             <Card>
                  <CardHeader className="flex-row items-start gap-4">
                     <Avatar className="w-24 h-24 border">
@@ -97,7 +124,6 @@ const AdvisorProfilePage = () => {
                 </CardContent>
             </Card>
 
-            {/* Reviews Section */}
             <Card>
                 <CardHeader>
                     <CardTitle>Feedback & Reviews</CardTitle>
