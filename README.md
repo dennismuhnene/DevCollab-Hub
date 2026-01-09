@@ -94,6 +94,14 @@ Follow these instructions to get a copy of the project up and running on your lo
 - `npm run lint`: Lints the codebase using Next.js's built-in ESLint configuration.
 - `npm run genkit:dev`: Starts the Genkit development server for AI flows.
 
+## 🚀 Deployment
+
+This project is deployed using [Firebase App Hosting](https://firebase.google.com/docs/app-hosting). The deployment process is automated via GitHub Actions. A new version is deployed on every push to the `main` branch.
+
+### Secret Management
+
+The application uses secrets for various services like Firebase, Upstash, and Google AI. These secrets are stored in Google Secret Manager. For App Hosting to access these secrets during the build and runtime, you must grant the App Hosting service account the "Secret Manager Secret Accessor" role for each secret.
+
 ---
 
 <p align="center">
