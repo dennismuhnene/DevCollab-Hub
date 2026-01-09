@@ -22,6 +22,7 @@ import { AdvisorApplicationManager } from '@/components/advisor-application-mana
 import ProfileSidebar from '@/components/profile-sidebar';
 import BlockedUsers from '@/components/blocked-users';
 import DeleteAccount from '@/components/delete-account';
+import UserRoleSettings from '@/components/user-role-settings';
 
 export default function ProfilePage() {
   const { user, userProfile, loading, reloadUserProfile } = useAuth();
@@ -29,6 +30,7 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeView, setActiveView] = useState('profile');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -152,11 +154,16 @@ export default function ProfilePage() {
 
   return (
     <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <aside className="md:col-span-1">
-                <ProfileSidebar activeView={activeView} setActiveView={setActiveView} />
+        <div className={`grid grid-cols-1 gap-8 transition-all duration-300 ${isSidebarCollapsed ? 'md:grid-cols-[auto,1fr]' : 'md:grid-cols-4'}`}>
+            <aside className={isSidebarCollapsed ? '' : 'md:col-span-1'}>
+                <ProfileSidebar 
+                    activeView={activeView} 
+                    setActiveView={setActiveView} 
+                    isCollapsed={isSidebarCollapsed}
+                    setIsCollapsed={setIsSidebarCollapsed}
+                />
             </aside>
-            <main className="md:col-span-3 space-y-4">
+            <main className={isSidebarCollapsed ? '' : 'md:col-span-3 space-y-4'}>
             {activeView === 'profile' && (
                 <>
                     <div className="flex flex-col md:flex-row items-start space-y-4 md:space-y-0 md:space-x-6 mb-8">
@@ -202,13 +209,13 @@ export default function ProfilePage() {
                             <CardDescription>Update your personal information and skills.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <ProfileForm userProfile={finalProfile} />
+                            <ProfileForm userProfile={finalProfile} isAdvisor={finalProfile.isAdvisorOnly} />
                         </CardContent>
                     </Card>
                 </>
             )}
             {activeView === 'advisory-applications' && <AdvisorApplicationManager />}
-            {activeView === 'settings' && <><BlockedUsers /><DeleteAccount /></>}
+            {activeView === 'settings' && <><UserRoleSettings /><BlockedUsers /><DeleteAccount /></>}
             </main>
         </div>
     </div>

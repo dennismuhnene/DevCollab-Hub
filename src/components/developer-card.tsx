@@ -9,16 +9,22 @@ import { ArrowRight } from 'lucide-react';
 
 type DeveloperCardProps = {
   developer: UserProfile;
+  isAdvisor?: boolean;
 };
 
-export default function DeveloperCard({ developer }: DeveloperCardProps) {
+export default function DeveloperCard({ developer, isAdvisor }: DeveloperCardProps) {
   const getInitials = (name?: string) => {
     if (!name) return 'U';
     return name.split(' ').map((n) => n[0]).join('');
   };
 
   return (
-    <Card className="h-full flex flex-col transition-all duration-300 hover:shadow-xl dark:hover:shadow-primary/20">
+    <Card className="h-full flex flex-col transition-all duration-300 hover:shadow-xl dark:hover:shadow-primary/20 relative">
+        {isAdvisor && (
+            <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-sm font-bold z-10">
+                A
+            </div>
+        )}
       <CardHeader className="flex-row items-center gap-2">
         <Avatar className="h-16 w-16 border-2 border-primary">
           <AvatarImage src={developer.photoURL} alt={developer.name} />
@@ -26,6 +32,9 @@ export default function DeveloperCard({ developer }: DeveloperCardProps) {
         </Avatar>
         <div className="flex-1">
           <CardTitle className="text-xl font-bold leading-tight">{developer.name}</CardTitle>
+          {developer.location && (
+            <p className="text-sm text-muted-foreground">{developer.location}</p>
+          )}
           {developer.openForCollaboration && (
             <CardDescription className="text-primary font-semibold">Open to Collab</CardDescription>
           )}

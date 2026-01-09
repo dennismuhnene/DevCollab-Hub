@@ -65,14 +65,16 @@ export const collaborationGoalsOptions = [
   'Finding learning partners',
   'Creating hobby/fun projects',
   'Finding co-founders for a startup',
+  'Advisory',
 ];
 
 export const commitmentLevelOptions = [
   'Part-time',
   'Full-time',
   'Hobbyist',
-  'Formal student',
+  'Formal student (University/ College)',
   'Self-taught at own pace and schedule',
+  'Contract'
 ];
 
 export const projectStages = [

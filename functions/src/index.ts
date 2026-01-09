@@ -1,16 +1,132 @@
 
 export * from './generate-upload-url';
 export * from './set-active-advisor-profile';
+export * from './manage-meeting';
+export * from './google-auth'; // Exports getGoogleAuthUrl and handleGoogleRedirect
+
 import * as functions from "firebase-functions";
 import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth, UserRecord } from "firebase-admin/auth";
+import axios from 'axios';
 
 if (admin.apps.length === 0) {
     admin.initializeApp();
 }
 const adminDb = getFirestore();
+
+/**
+ * Creates or retrieves a private Daily.co video room for an engagement and generates a meeting token.
+ * This function is now idempotent and resilient to partial failures.
+ */
+export const createVideoRoom = functions.https.onCall(async (data, context) => {
+  logger.info("createVideoRoom function invoked - v2");
+
+  // 1. Authentication Check
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'The function must be called while authenticated.');
+  }
+
+  const { engagementId } = data;
+  if (!engagementId) {
+    throw new functions.https.HttpsError('invalid-argument', 'The function must be called with an "engagementId".');
+  }
+
+  const uid = context.auth.uid;
+  const engagementRef = adminDb.doc(`engagements/${engagementId}`);
+
+  try {
+    const engagementSnap = await engagementRef.get();
+    if (!engagementSnap.exists) {
+      throw new functions.https.HttpsError('not-found', 'Engagement not found.');
+    }
+
+    const engagement = engagementSnap.data();
+    if (!engagement) {
+        throw new functions.https.HttpsError('internal', 'Failed to retrieve engagement data.');
+    }
+
+    // 2. Authorization Check
+    const isParticipant = engagement.advisorId === uid || engagement.developerId === uid;
+    if (!isParticipant) {
+        throw new functions.https.HttpsError('permission-denied', 'You are not a participant in this engagement.');
+    }
+    
+    const dailyApiKey = process.env.DAILY_API_KEY;
+    if (!dailyApiKey) {
+        logger.error("Daily API key is not configured.");
+        throw new functions.https.HttpsError('internal', 'The video conferencing service is not configured on the server.');
+    }
+
+    let roomUrl = engagement.videoRoomUrl;
+
+    // 3. Ensure Room Exists and URL is in Firestore
+    if (!roomUrl) {
+        logger.info(`No room URL found for engagement ${engagementId}. Attempting to create or retrieve from Daily.co.`);
+        try {
+            const roomResponse = await axios.post(
+              'https://api.daily.co/v1/rooms',
+              { name: engagementId, privacy: 'private', properties: { exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 30) } },
+              { headers: { 'Authorization': `Bearer ${dailyApiKey}`, 'Content-Type': 'application/json' } }
+            );
+            roomUrl = roomResponse.data.url;
+            logger.info(`New room created successfully for engagement: ${engagementId}`);
+
+        } catch(creationError: any) {
+            if (axios.isAxiosError(creationError) && creationError.response?.data?.info?.includes('already exists')) {
+                logger.warn(`Room creation failed because it already exists. Fetching existing room details for engagement: ${engagementId}`);
+                const roomGetResponse = await axios.get(
+                    `https://api.daily.co/v1/rooms/${engagementId}`,
+                    { headers: { 'Authorization': `Bearer ${dailyApiKey}` } }
+                );
+                roomUrl = roomGetResponse.data.url;
+            } else {
+                throw creationError; // Re-throw other errors
+            }
+        }
+
+        if (!roomUrl) {
+            throw new functions.https.HttpsError('internal', 'Failed to create or retrieve the video room URL.');
+        }
+
+        await engagementRef.update({ videoRoomUrl: roomUrl });
+        logger.info(`Successfully saved videoRoomUrl for engagement: ${engagementId}`);
+    }
+
+    // 4. Create a Meeting Token
+    const isOwner = engagement.advisorId === uid;
+    logger.info(`Creating meeting token for user: ${uid} (isOwner: ${isOwner}) in room: ${engagementId}`);
+    const tokenResponse = await axios.post(
+        'https://api.daily.co/v1/meeting-tokens',
+        {
+            properties: {
+                room_name: engagementId,
+                is_owner: isOwner,
+                user_name: isOwner ? engagement.advisorName : engagement.developerName,
+                exp: Math.floor(Date.now() / 1000) + (60 * 60 * 2), // Token expires in 2 hours
+            },
+        },
+        { headers: { 'Authorization': `Bearer ${dailyApiKey}`, 'Content-Type': 'application/json' } }
+    );
+
+    const token = tokenResponse.data.token;
+    if (!token) {
+        throw new functions.https.HttpsError('internal', 'Could not retrieve meeting token.');
+    }
+
+    // 5. Return URL and Token
+    return { success: true, url: roomUrl, token: token };
+
+  } catch (error: any) {
+    logger.error("Fatal error in createVideoRoom function:", error);
+    if (axios.isAxiosError(error) && error.response) {
+        logger.error('Daily API Error Details:', error.response.data);
+    }
+    throw new functions.https.HttpsError('internal', 'An unexpected error occurred while preparing the video room.', error.message);
+  }
+});
+
 
 /**
  * A secure HTTP-callable function to initiate the user deletion process.
@@ -155,35 +271,32 @@ export const onEngagementCreated = functions.firestore
     });
 
 /**
- * Sends notifications when an engagement's status changes.
+ * Sends notifications when an engagement's status or meetings change.
  */
 export const onEngagementUpdated = functions.firestore
     .document('engagements/{engagementId}')
     .onUpdate(async (change, context) => {
         const before = change.before.data();
         const after = change.after.data();
-
-        if (before.status === after.status) {
-            return null; // No status change
-        }
+        const engagementId = context.params.engagementId;
 
         const { developerId, advisorId, developerName, advisorName } = after;
         let recipientId: string | null = null;
-        let notification = {};
+        let notification: { type: string, title: string, message: string, link: string } | null = null;
 
-        // Case 1: Request was accepted or rejected by advisor
-        if (before.status === 'requested') {
+        // Case 1: Status changed from 'requested'
+        if (before.status === 'requested' && before.status !== after.status) {
             recipientId = developerId;
             if (after.status === 'active') {
-                logger.info(`Engagement ${context.params.engagementId} accepted. Notifying developer ${developerId}.`);
+                logger.info(`Engagement ${engagementId} accepted. Notifying developer ${developerId}.`);
                 notification = {
                     type: 'engagement',
                     title: 'Engagement Request Accepted!',
                     message: `${advisorName} has accepted your request. The engagement room is now open.`,
-                    link: `/engagements/${context.params.engagementId}`,
+                    link: `/engagements/${engagementId}`,
                 };
             } else if (after.status === 'rejected') {
-                logger.info(`Engagement ${context.params.engagementId} rejected. Notifying developer ${developerId}.`);
+                logger.info(`Engagement ${engagementId} rejected. Notifying developer ${developerId}.`);
                 notification = {
                     type: 'engagement',
                     title: 'Engagement Request Denied',
@@ -195,25 +308,69 @@ export const onEngagementUpdated = functions.firestore
 
         // Case 2: Engagement was closed
         else if (after.status === 'closed' && before.status === 'active') {
-            // The closer is the one who is NOT the recipient of the notification.
-            // We need to determine who initiated the close. 
-            // We'll assume the 'lastMessageSenderId' at the time of closing is the closer.
-            // This is a proxy, a more robust solution might involve adding a 'closedBy' field.
-            const closerId = after.lastMessageSenderId; 
+            const closerId = after.lastMessageSenderId;
             const closerName = closerId === developerId ? developerName : advisorName;
             recipientId = closerId === developerId ? advisorId : developerId;
 
-            logger.info(`Engagement ${context.params.engagementId} closed by ${closerName}. Notifying ${recipientId}.`);
+            logger.info(`Engagement ${engagementId} closed by ${closerName}. Notifying ${recipientId}.`);
 
             notification = {
                 type: 'engagement',
                 title: 'Engagement Closed',
                 message: `${closerName} has closed the engagement.`,
-                link: `/engagements/${context.params.engagementId}`,
+                link: `/engagements/${engagementId}`,
             };
         }
 
-        if (recipientId) {
+        // **NEW**: Case 3: Meeting has been updated
+        const beforeMeetings = before.meetings || {};
+        const afterMeetings = after.meetings || {};
+        const beforeMeetingIds = Object.keys(beforeMeetings);
+        const afterMeetingIds = Object.keys(afterMeetings);
+        recipientId = developerId; // The developer is always the recipient of meeting notifications
+
+        if (afterMeetingIds.length > beforeMeetingIds.length) {
+            const newMeetingId = afterMeetingIds.find(id => !beforeMeetingIds.includes(id));
+            if (newMeetingId) {
+                const newMeeting = afterMeetings[newMeetingId];
+                logger.info(`Meeting scheduled in engagement ${engagementId}. Notifying developer ${developerId}.`);
+                notification = {
+                    type: 'engagement',
+                    title: 'New Meeting Scheduled',
+                    message: `${advisorName} has scheduled a new meeting for ${new Date(newMeeting.startTime).toLocaleString()}.`,
+                    link: `/engagements/${engagementId}`,
+                };
+            }
+        } else if (afterMeetingIds.length < beforeMeetingIds.length) {
+            const cancelledMeetingId = beforeMeetingIds.find(id => !afterMeetingIds.includes(id));
+            if (cancelledMeetingId) {
+                const cancelledMeeting = beforeMeetings[cancelledMeetingId];
+                logger.info(`Meeting cancelled in engagement ${engagementId}. Notifying developer ${developerId}.`);
+                notification = {
+                    type: 'engagement',
+                    title: 'Meeting Canceled',
+                    message: `${advisorName} has canceled your meeting that was scheduled for ${new Date(cancelledMeeting.startTime).toLocaleString()}.`,
+                    link: `/engagements/${engagementId}`,
+                };
+            }
+        } else {
+            for (const id of afterMeetingIds) {
+                if (beforeMeetings[id] && beforeMeetings[id].startTime !== afterMeetings[id].startTime) {
+                    const rescheduledMeeting = afterMeetings[id];
+                    logger.info(`Meeting rescheduled in engagement ${engagementId}. Notifying developer ${developerId}.`);
+                    notification = {
+                        type: 'engagement',
+                        title: 'Meeting Rescheduled',
+                        message: `${advisorName} has rescheduled your meeting to ${new Date(rescheduledMeeting.startTime).toLocaleString()}.`,
+                        link: `/engagements/${engagementId}`,
+                    };
+                    break; // Found the rescheduled meeting, no need to check others
+                }
+            }
+        }
+
+
+        if (recipientId && notification) {
             const notificationRef = adminDb.collection(`users/${recipientId}/notifications`).doc();
             await notificationRef.set({
                 ...notification,
@@ -270,7 +427,7 @@ export const onNewEngagementMessage = functions.firestore
             type: 'engagement',
             title: `New Message from ${senderName}`,
             message: `You have a new message: "${message.text.substring(0, 100)}${message.text.length > 100 ? '...' : ''}"`,
-            link: `/engagements/${engagementId}`,
+            link: `/engagements/${context.params.engagementId}`,
             read: false,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });

@@ -1,3 +1,4 @@
+
 # Settings to manage and configure a Firebase App Hosting backend.
 # https://firebase.google.com/docs/app-hosting/configure
 
@@ -73,4 +74,20 @@ env:
     secret: FIREBASE_SERVICE_ACCOUNT_KEY
     availability:
       - BUILD
+      - RUNTIME
+  - variable: DAILY_API_KEY
+    secret: daily_api_key
+    availability:
+      - RUNTIME
+  - variable: GOOGLE_CLIENT_ID
+    secret: GOOGLE_CLIENT_ID
+    availability:
+      - RUNTIME
+  - variable: GOOGLE_CLIENT_SECRET
+    secret: GOOGLE_CLIENT_SECRET
+    availability:
+      - RUNTIME
+  - variable: GOOGLE_REDIRECT_URI
+    secret: GOOGLE_REDIRECT_URI
+    availability:
       - RUNTIME

@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { collection, getDocs, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
-import type { UserProfile, Project, Role } from '@/types';
+import type { UserProfile, Project, Role, PublicAdvisorProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Search, Filter } from 'lucide-react';
@@ -73,9 +73,9 @@ const calculateMatchScore = (item: Item, currentUserProfile: UserProfile): numbe
       const roleFunctions = item.partnerFunctions || [];
       score += userFunctions.filter(f => roleFunctions.includes(f)).length * 2;
 
-      const userLocations = currentUserProfile.locations || [];
+      const userLocation = currentUserProfile.location || '';
       const roleLocations = item.locations || [];
-      score += userLocations.filter(l => roleLocations.includes(l)).length * 2;
+      score += roleLocations.includes(userLocation) ? 2 : 0;
     }
   } else {
     const developer = item as UserProfile;
@@ -114,8 +114,9 @@ export default function DiscoverPage() {
   const [allDevelopers, setAllDevelopers] = useState<UserProfile[]>([]);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allPosts, setAllPosts] = useState<Role[]>([]);
+  const [advisorProfiles, setAdvisorProfiles] = useState<PublicAdvisorProfile[]>([]);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>('projects');
+  const [viewMode, setViewMode] = useState<ViewMode>('posts');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtersVisible, setFiltersVisible] = useState(true);
@@ -168,7 +169,7 @@ export default function DiscoverPage() {
         const usersSnapshot = await getDocs(collection(db, 'users'));
         const developersData = usersSnapshot.docs
           .map(doc => ({ ...doc.data(), uid: doc.id } as UserProfile))
-          .filter(developer => developer.uid !== user.uid);
+          .filter(developer => developer.uid !== user.uid && !developer.isAdvisorOnly);
         setAllDevelopers(developersData);
 
         const projectsSnapshot = await getDocs(collection(db, 'projects'));
@@ -182,6 +183,10 @@ export default function DiscoverPage() {
           .map(doc => ({ ...doc.data(), id: doc.id } as Role))
           .filter(role => role.ownerId !== user.uid);
         setAllPosts(rolesData);
+
+        const advisorProfilesSnapshot = await getDocs(collection(db, 'publicAdvisorProfiles'));
+        const advisorProfilesData = advisorProfilesSnapshot.docs.map(doc => doc.data() as PublicAdvisorProfile);
+        setAdvisorProfiles(advisorProfilesData);
 
       } catch (error) {
         console.error('Error fetching discovery data:', error);
@@ -296,7 +301,8 @@ export default function DiscoverPage() {
             const itemIndex = ((currentPage - 1) * ITEMS_PER_PAGE) + index;
             if (isProject(item)) return <div key={`proj-${item.id}`} onClick={() => handleCardClick(item, itemIndex)}><ProjectCard project={item} /></div>;
             if (isRole(item)) return <div key={`role-${item.id}`} onClick={() => handleCardClick(item, itemIndex)}><RoleCard role={item} isDiscoverMode={true} /></div>;
-            return <div key={`dev-${(item as UserProfile).uid}`} onClick={() => handleCardClick(item, itemIndex)}><DeveloperCard developer={item as UserProfile} /></div>;
+            const isAdvisor = advisorProfiles.some(p => p.uid === (item as UserProfile).uid);
+            return <div key={`dev-${(item as UserProfile).uid}`} onClick={() => handleCardClick(item, itemIndex)}><DeveloperCard developer={item as UserProfile} isAdvisor={isAdvisor} /></div>;
           })}
         </div>
         {totalPages > 1 && (
@@ -327,11 +333,11 @@ export default function DiscoverPage() {
         <Button variant={viewMode === 'developers' ? 'default' : 'ghost'} onClick={() => setViewMode('developers')} className="rounded-full">
           Developers
         </Button>
-        <Button variant={viewMode === 'projects' ? 'default' : 'ghost'} onClick={() => setViewMode('projects')} className="rounded-full">
-          Projects
-        </Button>
         <Button variant={viewMode === 'posts' ? 'default' : 'ghost'} onClick={() => setViewMode('posts')} className="rounded-full">
           Posts
+        </Button>
+        <Button variant={viewMode === 'projects' ? 'default' : 'ghost'} onClick={() => setViewMode('projects')} className="rounded-full">
+          Projects
         </Button>
       </div>
 
