@@ -43,6 +43,18 @@ export interface AdvisorApplication {
     updatedAt: Timestamp | FieldValue;
 }
 
+// The new Meeting type
+export interface Meeting {
+    id: string;
+    eventId: string;
+    startTime: string; // ISO Date String
+    endTime: string;   // ISO Date String
+    title: string;
+    meetLink: string;
+    status: 'scheduled' | 'canceled';
+    rescheduleCount?: number;
+}
+
 export interface Engagement {
     id: string;
     developerId: string;
@@ -57,6 +69,9 @@ export interface Engagement {
     advisorName: string;
     advisorPhotoURL: string;
     advisorHeadline: string;
+    videoRoomUrl?: string; // Field for Daily.co video call URL
+    meetLink?: string; // Preserved for compatibility and primary link display
+    meetings?: { [key: string]: Meeting }; // New map for multiple meetings
 }
 
 export interface EngagementMessage {

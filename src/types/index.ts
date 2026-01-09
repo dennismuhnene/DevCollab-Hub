@@ -47,9 +47,11 @@ export interface UserProfile {
     advisorProfile?: AdvisorProfile;
     activeAdvisorApplicationId?: string;
     partnerFunctions?: string[];
-    locations?: string[];
+    location?: string;
     blockedUsers?: string[];
     blockedBy?: string[];
+    calDotComUrl?: string; // For Cal.com integration
+    isAdvisorOnly?: boolean;
 }
 
 // Defines the shape of a project created by a user

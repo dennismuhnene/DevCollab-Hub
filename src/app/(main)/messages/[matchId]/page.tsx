@@ -11,7 +11,7 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 import MatchList from '@/components/match-list';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Send, Users, Archive, ArrowLeft, Sparkles, Loader2, Trash2, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -311,13 +311,6 @@ export default function ChatPage() {
         }
     });
   };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  }
   
   const isOwner = project?.ownerId === user?.uid || role?.ownerId === user?.uid;
   const title = match?.contextTitle;
@@ -440,15 +433,13 @@ export default function ChatPage() {
                   </div>
               ) : (
                   <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex items-center gap-2">
-                      <Textarea 
+                      <Input 
                           value={newMessage}
                           onChange={(e) => setNewMessage(e.target.value)}
-                          onKeyDown={handleKeyDown}
-                          placeholder="Type a message... (Shift + Enter for new line)"
+                          placeholder="Type a message..."
                           autoComplete="off"
-                          className="flex-1 min-h-[40px] resize-none no-scrollbar"
+                          className="flex-1"
                           disabled={!otherUser}
-                          rows={1}
                       />
                       <Button type="submit" size="icon" disabled={!newMessage.trim() || !otherUser}><Send className="h-4 w-4" /></Button>
                   </form>

@@ -14,7 +14,7 @@ import ProjectCard from '@/components/project-card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Briefcase, BadgeCheck, BadgeX, Clock, BrainCircuit, Code, Target, Link as LinkIcon, Handshake, Users, ShieldOff } from 'lucide-react';
+import { Briefcase, BadgeCheck, BadgeX, Clock, BrainCircuit, Code, Target, Link as LinkIcon, Handshake, Users, ShieldOff, MapPin } from 'lucide-react';
 import { logAnalyticsEvent } from '@/firebase/analytics';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -200,6 +200,12 @@ export const DeveloperProfileContent = ({ developer, isBlocked, onBlock, onUnblo
                       <Clock className="h-4 w-4" />
                       <span className="text-sm">{formatExperience(developer.yearsOfExperience)}</span>
                   </div>
+                  {developer.location && (
+                    <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        <span className="text-sm">{developer.location}</span>
+                    </div>
+                  )}
               </div>
             </div>
             <div className="flex flex-col items-end gap-2">

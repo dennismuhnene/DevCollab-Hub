@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot, updateDoc, collection, addDoc, serverTimestamp, query, orderBy, Unsubscribe } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db, storage } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { Engagement, EngagementMessage } from '@/types/advisor';
@@ -17,9 +16,9 @@ import { Paperclip, Send, XCircle, Loader2, ShieldAlert } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { checkBlockStatus } from '@/lib/firebase/users';
+import EngagementVideo from '@/components/engagement-video';
 
-
-const EngagementRoomPage = () => {
+const EngagementRoomPage = (): JSX.Element => {
     const { engagementId } = useParams();
     const { user } = useAuth();
     const router = useRouter();
@@ -32,6 +31,7 @@ const EngagementRoomPage = () => {
     const [uploading, setUploading] = useState(false);
     const [loading, setLoading] = useState(true);
     const [isBlocked, setIsBlocked] = useState(false);
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
     
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -108,7 +108,7 @@ const EngagementRoomPage = () => {
         }
 
         setFile(selectedFile);
-        e.target.value = ''; // Reset input to allow re-selecting the same file
+        e.target.value = ''; 
     };
 
     const handleSendMessage = async () => {
@@ -159,24 +159,6 @@ const EngagementRoomPage = () => {
         }
       };          
 
-    const sendMessageWithAttachment = async (fileURL: string, fileName: string) => {
-        if (!user || typeof engagementId !== 'string') return;
-        const messageData: Omit<EngagementMessage, 'id'> = {
-            senderId: user.uid,
-            text: newMessage.trim(),
-            createdAt: serverTimestamp(),
-            fileURL: fileURL,
-            fileName: fileName,
-        };
-        await addDoc(collection(db, `engagements/${engagementId}/messages`), messageData);
-        setNewMessage('');
-    };
-
-    const resetUploadState = () => {
-        setFile(null);
-        setUploading(false);
-    }
-
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -194,10 +176,10 @@ const EngagementRoomPage = () => {
     const isRoomActive = engagement?.status === 'active';
 
     if (loading) return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-    if (!engagement || !isParticipant) return <div>Engagement not found or access denied.</div>
+    if (!engagement || !isParticipant || !user) return <div>Engagement not found or access denied.</div>
 
     return (
-        <div className="container mx-auto p-4">
+        <div className="container mx-auto p-4 space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2">
                     <Card>
@@ -256,7 +238,7 @@ const EngagementRoomPage = () => {
                                             {uploading ? <Loader2 className="h-4 w-4 animate-spin"/> : <Send className="h-4 w-4"/>}
                                         </Button>
                                     </div>
-                                </>
+                                </> 
                             )}
                         </div>
                     </Card>
@@ -288,29 +270,50 @@ const EngagementRoomPage = () => {
                             </div>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardHeader><CardTitle>Actions</CardTitle></CardHeader>
-                        <CardContent className="flex flex-col gap-4">
-                             {isRoomActive && (
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild><Button variant="destructive">Close Engagement</Button></AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will close the engagement. This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleCloseEngagement}>Confirm & Close</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            )}
-                            {engagement.status === 'closed' && user?.uid === engagement.developerId && (
-                                <Button asChild><Link href={`/engagements/${engagementId}/review`}>Leave a Review</Link></Button>
-                            )}
-                            {engagement.status === 'requested' && (<p className='text-sm text-muted-foreground'>Waiting for advisor to accept.</p>)}
-                            {engagement.status === 'closed' && (<p className='text-sm text-muted-foreground'>This engagement is closed.</p>)}
+                </div>
+            </div>
+
+            <div className="space-y-6">
+                <Card>
+                    <CardHeader><CardTitle>Video Sessions</CardTitle></CardHeader>
+                    <CardContent>
+                        {isRoomActive ? (
+                            <EngagementVideo engagement={engagement} />
+                        ) : (
+                            <p className='text-sm text-muted-foreground'>Video sessions can only be managed in an active engagement.</p>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {isRoomActive && (
+                    <Card className="border-destructive">
+                        <CardHeader>
+                            <CardTitle>Danger Zone</CardTitle>
+                            <CardDescription>Closing the engagement is a final action and cannot be undone.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild><Button variant="destructive">Close Engagement</Button></AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently close the engagement. This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleCloseEngagement}>Confirm & Close</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         </CardContent>
                     </Card>
-                </div>
+                )}
+                 {engagement.status === 'closed' && user?.uid === engagement.developerId && (
+                     <Card>
+                        <CardHeader><CardTitle>Engagement Closed</CardTitle></CardHeader>
+                        <CardContent className="flex flex-col gap-4">
+                            <p className='text-sm text-muted-foreground'>This engagement is closed. You can now leave a review for your advisor.</p>
+                            <Button asChild><Link href={`/engagements/${engagementId}/review`}>Leave a Review</Link></Button>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
         </div>
     );
