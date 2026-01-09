@@ -78,6 +78,7 @@ env:
   - variable: DAILY_API_KEY
     secret: daily_api_key
     availability:
+      - BUILD
       - RUNTIME
   - variable: GOOGLE_CLIENT_ID
     secret: GOOGLE_CLIENT_ID
