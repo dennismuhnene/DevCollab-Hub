@@ -261,7 +261,7 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className={`grid grid-cols-1 gap-8 transition-all duration-300 ${isSidebarCollapsed ? 'md:grid-cols-[auto,1fr]' : 'md:grid-cols-[240px,1fr]'}`}>
+        <div className={`grid grid-cols-1 gap-4 transition-all duration-300 ${isSidebarCollapsed ? 'md:grid-cols-[auto,1fr]' : 'md:grid-cols-[240px,1fr]'}`}>
             <aside>
                 <DashboardSidebar 
                     activeView={activeView} 
@@ -272,7 +272,7 @@ export default function DashboardPage() {
             </aside>
             <main>
             {activeView === 'insights' && (
-                <div className="flex flex-col gap-8">
+                <div className="flex flex-col gap-2">
                     <Card>
                         <CardHeader>
                         <CardTitle className="text-base">Your Profile</CardTitle><CardDescription className="text-sm">A quick glance at your current profile information.</CardDescription>

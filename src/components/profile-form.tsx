@@ -470,7 +470,7 @@ export default function ProfileForm({ userProfile, isAdvisor }: ProfileFormProps
 
           <Card>
             <CardHeader>
-              <CardTitle>Collaboration Settings</CardTitle>
+              <CardTitle><h3 className="text-lg font-medium">Collaboration Settings</h3></CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center space-x-3 rounded-md border p-4">
@@ -630,7 +630,7 @@ export default function ProfileForm({ userProfile, isAdvisor }: ProfileFormProps
 
           <Card>
             <CardHeader>
-              <CardTitle>External Links</CardTitle>
+              <CardTitle><h3 className="text-lg font-medium">External Links</h3></CardTitle>
               <CardDescription>Add links to your portfolio, socials, and more.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

@@ -205,7 +205,7 @@ export default function ProfilePage() {
                     </div>
                     <Card>
                         <CardHeader>
-                            <CardTitle>Edit Profile</CardTitle>
+                            <CardTitle><h3 className="text-lg font-medium">Edit Profile</h3></CardTitle>
                             <CardDescription>Update your personal information and skills.</CardDescription>
                         </CardHeader>
                         <CardContent>
