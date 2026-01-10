@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import SocialIcons from '@/components/ui/social-icons';
 import ContactForm from '@/components/contact-form';
+import { useEffect } from 'react';
 
 const WavyDivider = ({ className }: { className?: string }) => (
     <div className={cn("absolute bottom-0 left-0 w-full overflow-hidden leading-none", className)} >
@@ -78,6 +79,20 @@ export default function HomePage() {
   const project1 = PlaceHolderImages.find(p => p.id === 'project-1');
   const project2 = PlaceHolderImages.find(p => p.id === 'project-2');
   const project3 = PlaceHolderImages.find(p => p.id === 'project-3');
+
+  useEffect(() => {
+    const handleHashNavigation = () => {
+      if (window.location.hash) {
+        const id = window.location.hash.substring(1);
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    };
+    const timeoutId = setTimeout(handleHashNavigation, 100);
+    return () => clearTimeout(timeoutId);
+  }, []);
   
   if (loading) {
     return (
