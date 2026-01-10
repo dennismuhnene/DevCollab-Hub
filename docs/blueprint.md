@@ -1,52 +1,62 @@
-# DevCollab-Hub Blueprint
+# DevCollab Hub Blueprint
 
-This document outlines the core features, technology stack, and data models for DevCollab-Hub, a platform designed to connect developers with projects and collaborators.
+This document outlines the core features, technology stack, and data models for DevCollab Hub, a platform designed to connect developers with projects and collaborators.
 
 ## 1. Core Features
 
 - **User Authentication:** Secure sign-up and login using Firebase Authentication (email/password and Google OAuth).
 
-- **Comprehensive User Profiles:** Developers can create and manage their profiles, showcasing:
-    - Name, Bio, Years of Experience
-    - Photo URL
-    - Tech Stack & Professional Skills
-    - Collaboration Preferences (goals, commitment level, preferred collaboration types, locations)
-    - Links to external portfolios and social media.
+- **Comprehensive User Profiles:** Users create and manage a detailed profile.
+    - **Required Fields:**
+        - `name`: Required for all users (min. 2 characters).
+        - `versionControl.url`: Required for "Developer" profiles.
+    - **Optional Fields:** A rich set of optional fields includes:
+        - `location`, `bio`, `yearsOfExperience`
+        - `skills` (up to 5), `techStack`
+        - Collaboration settings: `openForCollaboration` status, `collaborationGoals`, `commitmentLevel`
+        - External links: `portfolioUrl`, `socials`, and up to 3 custom links.
 
-- **Project & Role Creation:** Users can create and manage:
-    - **Projects:** Detailed listings for an entire product or idea.
-    - **Roles:** Specific, targeted posts for a single position or need within a project, including required skills, commitment level, and collaboration type.
+- **Dual-Entity Creation (Projects vs. Roles):** Users can create:
+    - **Projects:** Public-facing listings for an entire idea, seeking a team.
+    - **Roles:** Confidential, specific posts for a single need, allowing for discreet talent acquisition.
 
-- **User Dashboard:** A personalized central hub for each user, providing:
-    - A snapshot of their public profile.
-    - A summary of their created projects.
-    - **Collaboration Hub:** A dedicated section to review developers who have expressed interest in their projects.
-    - **AI-Powered Insights:** Users can generate on-demand analysis of interested developers, receiving an "Audience Summary," identification of "Potential Gaps," and "Actionable Advice" to improve their project listings or profile.
+- **Intelligent Discovery Hub:** A central marketplace (`/developers`) to find projects, developers, and roles with advanced filtering.
 
-- **Intelligent Discovery Page:** A central hub for users to find projects, developers, and open roles (posts).
-    - **Tri-View Toggle:** Seamlessly switch between viewing developers, projects, and roles.
-    - **Advanced Filtering:** Filter results by tech stack, skills, years of experience, and more.
-    - **Algorithmic Sorting:** Automatically prioritizes and sorts results based on a "match score," which calculates relevance based on the current user's profile, skills, and preferences.
-    - **Search:** Full-text search across all discoverable items.
+- **Personalized User Dashboard:** A multi-faceted command center (`/dashboard`) with a collapsible sidebar to switch between views:
+    - **Insights View:** The main dashboard containing several widgets:
+        - **Your Profile Card:** A quick summary of the user's profile with an edit link.
+        - **AI Insights Card:** An on-demand feature for users to generate a strategic analysis of developers who have engaged with their projects. It provides an "Audience Summary," identifies "Potential Gaps," and offers "Actionable Advice."
+        - **My Projects Section:** A preview of the user's created projects with a link to create more.
+        - **Collaboration Hub:** A dynamic section that appears when developers show interest in a project. It lists the interested users and provides direct actions to "View Profile" or "Match."
+        - **Public Profile Preview:** A detailed preview of how the user's own profile appears to others on the platform, showing their bio, skills, preferences, and status.
+    - **Engagements View:** A dedicated section to manage all formal advisory engagements.
 
-- **Collaboration Flow:** A structured process to foster meaningful connections:
-    1.  **Express Interest:** A user finds a project and shows their interest.
-    2.  **Review & Match:** The project owner is notified and can review the interested user's profile on their dashboard. They can then choose to "Match."
-    3.  **Connect:** Upon matching, a notification is sent to both users, a chat is created, and they can begin communicating directly.
+- **Structured Connection & Matching Flow:**
+    1.  **Express Interest:** A user shows interest in a project or role.
+    2.  **Review & Match:** The creator reviews the interested user in their dashboard's Collaboration Hub and can initiate a "Match."
+    3.  **Connect:** Upon matching, a notification is sent, and a private chat channel (`/messages`) is created.
 
-- **Real-time Notifications:** A system to alert users of important events, such as new matches.
+- **Integrated Communication:** A real-time chat system for matched users.
 
-- **Direct Messaging:** A real-time chat system, built with Firebase Firestore, for matched users to communicate and collaborate.
+- **Expert Advisory Marketplace:** A structured, four-phase system for expert consultations:
+    - **Phase 1: Application & Vetting:** A formal application and admin review process for advisors.
+    - **Phase 2: Discovery & Request:** A filterable marketplace (`/advisory`) for users to find and formally request sessions with approved advisors.
+    - **Phase 3: The Engagement:** A central hub (`/engagements/[id]`) for active engagements, featuring integrated video calls (Google Meet) and scheduling.
+    - **Phase 4: Review & Completion:** A two-way feedback system to build advisor reputation.
+
+- **Administrative Oversight:** Systems for vetting advisor applications (`/admin/applications`) and managing user feedback.
+
+- **Public-Facing Content:** A `/blogs` section for articles and community building.
 
 ## 2. Technology Stack
 
-- **Framework:** Next.js (with App Router)
+- **Framework:** Next.js (App Router)
 - **Language:** TypeScript
 - **Backend & Database:** Firebase (Authentication, Firestore, Storage)
 - **Styling:** Tailwind CSS with shadcn/ui components
-- **State Management:** React Hooks and Context API
-- **AI Integration:** Google AI (Genkit) for providing advanced insights on the user dashboard.
-- **Analytics:** Firebase Analytics to track user engagement and feature usage.
+- **State Management:** React Hooks, Context API
+- **AI Integration:** Google AI (Genkit) for dashboard insights.
+- **Analytics:** Firebase Analytics.
 
 ## 3. Data Models
 
@@ -54,20 +64,21 @@ This document outlines the core features, technology stack, and data models for 
 ```typescript
 {
   uid: string; // Firebase Auth UID
-  name: string;
+  name: string; // REQUIRED (min 2 chars)
   email: string;
   photoURL?: string;
   bio?: string;
+  location?: string;
   techStack?: string[];
-  skills?: string[];
+  skills?: string[]; // Max 5
   yearsOfExperience?: number;
   openForCollaboration?: boolean;
   collaborationGoals?: string[];
   commitmentLevel?: string;
-  collaborationPreferences?: string[]; // e.g., 'Remote', 'On-site'
-  locations?: string[];
-  partnerFunctions?: string[];
-  // Links, Timestamps, etc.
+  versionControl?: { type: string, url: string }; // URL is REQUIRED for developers
+  portfolioUrl?: string;
+  socials?: { type: string, url: string };
+  extraLinks?: { type: string, url: string }[]; // Max 3
 }
 ```
 
@@ -80,56 +91,63 @@ This document outlines the core features, technology stack, and data models for 
   description: string;
   requiredTechStack?: string[];
   requiredSkills?: string[];
-  requiredYearsOfExperience?: number;
   interestedUsers?: string[]; // Array of UIDs
   matchedUsers?: string[]; // Array of UIDs
-  collaborationOpen?: boolean;
-  // Timestamps, etc.
 }
 ```
 
-### Role (Post)
+### Role
 ```typescript
 {
   id: string; // Firestore Document ID
   ownerId: string;
   title: string;
   roleDescription: string;
-  requiredTechStack?: string[];
   requiredSkills?: string[];
-  requiredYearsOfExperience?: number;
   commitmentLevel?: string;
-  collaborationType?: string; // 'Full-time', 'Part-time'
-  partnerFunctions?: string[];
-  locations?: string[];
-  incentives?: 'Paid Contract' | 'Equity Share' | 'Revenue Share';
-  // Timestamps, etc.
+}
+```
+
+### AdvisorApplication (Sub-collection under User)
+```typescript
+{
+  id: string;
+  headline: string;
+  bio: string;
+  specialties: string[];
+  credentials: string[];
+  verificationStatus: 'pending' | 'verified' | 'rejected';
+}
+```
+
+### Engagement
+```typescript
+{
+  id: string; // Firestore Document ID
+  developerId: string;
+  advisorId: string;
+  message: string;
+  status: 'requested' | 'active' | 'completed' | 'declined';
+  googleMeetLink?: string;
+  calendarEventId?: string;
 }
 ```
 
 ### Match
-A `matches` collection where each document represents a connection.
 ```typescript
 {
   id: string; // Firestore Document ID
-  projectId: string;
-  projectTitle: string;
-  users: [string, string]; // [projectOwnerUID, collaboratorUID]
+  users: [string, string]; // [user1_UID, user2_UID]
   createdAt: Timestamp;
 }
 ```
 
-### Notification
-A sub-collection under each user's document.
+### Notification (Sub-collection under User)
 ```typescript
 {
   id: string;
-  type: 'match' | 'message';
-  fromUserId: string;
-  fromUserName: string;
-  projectId?: string;
-  projectTitle?: string;
-  matchId?: string;
+  type: 'match' | 'message' | 'system';
+  link: string; // URL to the relevant page
   read: boolean;
   createdAt: Timestamp;
 }
@@ -143,7 +161,6 @@ A sub-collection under each user's document.
 - `/profile` - View/Edit your own profile
 - `/developers` - Main discovery page for developers, projects, and roles
 - `/developers/[id]` - View a specific user's public profile
-- `/projects` - View the user's own projects
 - `/projects/new` - Create a new project form
 - `/projects/[id]` - View a specific project's details
 - `/projects/[id]/edit` - Edit an existing project
@@ -151,3 +168,11 @@ A sub-collection under each user's document.
 - `/roles/[roleId]` - View a specific role's details
 - `/messages` - Main messages view
 - `/messages/[matchId]` - A direct chat with a specific match
+- `/advisory` - The main discovery hub for finding advisors.
+- `/advisory/[advisorId]/request` - Form to submit a formal engagement request.
+- `/engagements/[engagementId]` - The central hub for a specific, active engagement.
+- `/engagements/[engagementId]/review` - Page for submitting a review after completion.
+- `/admin/applications` - Admin page for reviewing advisor applications.
+- `/admin/applications/[userId]/[applicationId]` - Admin page for viewing a specific application.
+- `/blogs` - Public-facing content and articles.
+- `/d_blog` - Dashboard for blog administrators.

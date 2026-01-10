@@ -3,6 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ShieldCheck } from 'lucide-react';
+import Link from 'next/link';
 
 export default function TermsOfServicePage() {
   const sections: {
@@ -20,183 +21,127 @@ export default function TermsOfServicePage() {
       title: "1. About the Service",
       content: [
         {
-          points: ["DevCollab Hub is owned and operated by NeuralAxis Labs. The platform helps software developers and tech professionals create profiles discover projects find collaborators and communicate with matched users."]
+          points: ["DevCollab Hub is owned and operated by NeuralAxis Labs. The platform is designed to help software developers, tech professionals, and experts connect. Its features include user profiles, a discovery hub for projects and roles, a matching system, direct messaging, and a marketplace for expert advisory services."]
         }
       ]
     },
     {
       id: 2,
-      title: "2. Eligibility",
+      title: "2. Eligibility and Accounts",
       content: [
         {
-          description: "To use the platform you must:",
+          description: "To use the platform, you must be at least 16 years old and agree to provide accurate information. You are responsible for all activities under your account and must not share your login credentials.",
           points: [
-            "Be at least 16 years old",
-            "Provide accurate and truthful information when registering",
-            "Agree to comply with these Terms",
+            "Accounts can be created via email/password or Google OAuth.",
+            "You must not create misleading profiles, impersonate others, or use automated tools to access the service.",
           ]
         }
       ]
     },
     {
       id: 3,
-      title: "3. User Accounts",
+      title: "3. User Content and Conduct",
       content: [
         {
-          subtitle: "3.1 Responsibility for Your Account",
-          description: "You are responsible for:",
-          points: [
-            "Maintaining the confidentiality of your login details",
-            "All activities carried out through your account",
-            "Ensuring your profile information is accurate and lawful",
-          ]
+          subtitle: "3.1 Content Ownership",
+          points: ["You retain ownership of all content you post, including your profile details, project descriptions, role postings, and messages. By posting, you grant NeuralAxis Labs a license to display and process this content to operate the platform."]
         },
         {
-          subtitle: "3.2 Prohibited Account Activities",
-          description: "You must not:",
-          points: [
-            "Create fake or misleading profiles",
-            "Impersonate any person or organization",
-            "Share your account with others",
-            "Use automated tools or bots to interact with the platform",
-          ]
+          subtitle: "3.2 Prohibited Content and Actions",
+          description: "You agree not to upload content or engage in behavior that is harassing, defamatory, illegal, or infringing on intellectual property. You must not interfere with the platform’s operation, attempt to access data you don’t own, or misuse the messaging or advisory features.",
+          footer: "Violations can result in content removal, account suspension, or permanent termination."
         }
       ]
     },
     {
       id: 4,
-      title: "4. User Content",
+      title: "4. Platform Features",
       content: [
         {
-          subtitle: "4.1 Ownership",
-          points: ["You retain ownership of any content you upload including profile details project descriptions and messages."]
+          subtitle: "4.1 Projects vs. Roles",
+          points: ["The platform allows you to create public-facing Projects to build a team around an idea, and more discreet Roles for specific, targeted needs. You are responsible for the accuracy and legality of the content in your listings."]
         },
         {
-          subtitle: "4.2 License to Use",
-          points: ["By posting content you grant NeuralAxis Labs a non-exclusive royalty-free worldwide license to display store process and transmit your content to operate and improve the service."]
+          subtitle: "4.2 AI Insights",
+          points: ["The AI-powered insights are for informational purposes only. They are generated from aggregated data and are not a guarantee of success. NeuralAxis Labs is not liable for any decisions you make based on these AI suggestions."]
         },
         {
-          subtitle: "4.3 Prohibited Content",
-          description: "You may not upload or transmit:",
-          points: [
-            "Harassing defamatory abusive or discriminatory content",
-            "Spam or unauthorized promotional material",
-            "Malicious code or harmful files",
-            "Content that infringes intellectual property rights",
-          ],
-          footer: "NeuralAxis Labs may remove content that violates these rules."
-        }
+            subtitle: "4.3 Collaboration and Matching",
+            points: ["The platform facilitates connections but does not guarantee the success or quality of any collaboration. NeuralAxis Labs is not a party to any agreement between users and is not responsible for disputes. We encourage you to perform your own due diligence before collaborating."]
+        },
       ]
     },
     {
         id: 5,
-        title: "5. Collaboration and Matching",
-        content: [{
-            description: "The platform enables users to:",
-            points: [
-                "Express interest in projects",
-                "Match with project owners",
-                "Communicate through private messaging",
-            ],
-            footer: "NeuralAxis Labs is not responsible for:\nThe outcome of collaborations\nDisputes between users\nThe accuracy of user-provided information\nUsers are encouraged to conduct due diligence before entering collaborations."
-        }]
+        title: "5. Expert Advisory Marketplace",
+        content: [
+            {
+                subtitle: "5.1 For Advisors",
+                points: [
+                    "If you apply to be an advisor, you agree to provide accurate information about your skills and credentials.",
+                    "Approved advisors are part of the marketplace but are not employees or agents of NeuralAxis Labs.",
+                    "You agree to engage with users professionally and ethically.",
+                ]
+            },
+            {
+                subtitle: "5.2 For Users Seeking Advice",
+                points: [
+                    "The advisors on our platform are independent experts. NeuralAxis Labs vets applications but does not endorse any specific advisor or guarantee the quality or accuracy of their advice.",
+                    "You are responsible for any fees or agreements made with an advisor.",
+                    "Engagements are governed by the terms agreed upon between you and the advisor."
+                ]
+            },
+            {
+                subtitle: "5.3 Scheduling and Google Calendar Integration",
+                points: [
+                    "To schedule advisory sessions, our application will request permission to create an event on your Google Calendar.",
+                    "This feature is solely for scheduling confirmed engagements. By authorizing access, you allow the app to add an event with the session details and a Google Meet link to your calendar. The app will not read, modify, or delete other events.",
+                    "Use of this feature is subject to Google’s terms and privacy policies."
+                ]
+            }
+        ]
     },
     {
         id: 6,
-        title: "6. AI Insights",
+        title: "6. Intellectual Property",
         content: [{
-            description: "DevCollab Hub includes AI-powered recommendations for project owners. You acknowledge that:",
-            points: [
-                "Insights are generated from anonymized and aggregated data",
-                "AI suggestions are informational and not guarantees",
-                "NeuralAxis Labs is not responsible for decisions based on AI recommendations",
-            ]
+            points: ["All platform code, designs, logos, and content created by NeuralAxis Labs are its exclusive property. You may not copy, modify, or reproduce any part of our platform without explicit permission."]
         }]
     },
     {
         id: 7,
-        title: "7. Acceptable Use Policy",
+        title: "7. Disclaimers and Limitation of Liability",
         content: [{
-            description: "You agree not to:",
+            description: "The DevCollab Hub service is provided 'as is.' NeuralAxis Labs is not liable for any damages arising from your use of the platform, including but not limited to:",
             points: [
-                "Interfere with platform functionality",
-                "Attempt to access data that does not belong to you",
-                "Use the service for illegal or harmful activities",
-                "Reverse engineer the platform or its software",
-                "Misuse messaging features or engage in harassment",
+                "Loss of data or profits.",
+                "Disputes or damages resulting from interactions with other users or advisors.",
+                "Inaccuracies in user-generated content or AI-generated insights.",
             ],
-            footer: "Violations may lead to suspension or permanent account termination."
         }]
     },
     {
         id: 8,
-        title: "8. Intellectual Property",
+        title: "8. Termination",
         content: [{
-            points: ["All trademarks logos designs code and content created by NeuralAxis Labs remain its exclusive property. Users may not copy modify distribute or reproduce any platform elements without permission."]
+            points: [
+                "NeuralAxis Labs reserves the right to suspend or terminate your account for violations of these Terms.",
+                "You may delete your account at any time by contacting us."
+            ]
         }]
     },
     {
         id: 9,
-        title: "9. Termination",
+        title: "9. Governing Law",
         content: [{
-            description: "NeuralAxis Labs may suspend or terminate your access if:",
-            points: [
-                "You violate these Terms",
-                "You engage in fraudulent harmful or abusive behavior",
-                "Required by law or security considerations",
-            ],
-            footer: "You may delete your account at any time."
+            points: ["These Terms shall be governed by and construed in accordance with applicable laws, without regard to conflict of law principles."]
         }]
     },
     {
         id: 10,
-        title: "10. Disclaimers",
+        title: "10. Contact Information",
         content: [{
-            description: "DevCollab Hub is provided “as is” without warranties of any kind including:",
-            points: [
-                "Availability",
-                "Accuracy of content provided by users",
-                "Fitness for a particular purpose",
-            ],
-            footer: "NeuralAxis Labs does not guarantee successful collaborations or matches."
-        }]
-    },
-    {
-        id: 11,
-        title: "11. Limitation of Liability",
-        content: [{
-            description: "To the maximum extent permitted by law NeuralAxis Labs is not liable for:",
-            points: [
-                "Loss of data or content",
-                "Damages resulting from interactions with other users",
-                "Indirect incidental or consequential damages",
-                "Losses arising from reliance on AI insights",
-            ]
-        }]
-    },
-    {
-        id: 12,
-        title: "12. Changes to the Terms",
-        content: [{
-            points: ["We may update these Terms from time to time. Continued use of the service after updates means you agree to the revised terms."]
-        }]
-    },
-    {
-        id: 13,
-        title: "13. Governing Law",
-        content: [{
-            points: ["These Terms are governed by the laws of [Insert Jurisdiction]. Any disputes will be resolved under this jurisdiction’s courts."]
-        }]
-    },
-    {
-        id: 14,
-        title: "14. Contact Information",
-        content: [{
-            description: "For questions about these Terms contact:",
-            points: [
-                "NeuralAxis Labs",
-                "Email: [Insert Email]",
-            ]
+            description: "For questions about these Terms, please visit the "
         }]
     }
   ];
@@ -204,43 +149,46 @@ export default function TermsOfServicePage() {
   return (
     <div className="bg-background text-foreground">
       <div className="container mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
-        <header className="mb-12 text-center">
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Terms of Service</h1>
-          <p className="mt-4 text-lg text-muted-foreground">
-            Your agreement for using DevCollab Hub.
-          </p>
-          <div className="mt-6 flex justify-center gap-4">
-            <Badge variant="secondary">Last Updated: [Insert Date]</Badge>
-          </div>
-        </header>
+        <div className="space-y-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-center">Terms of Service</CardTitle>
+              <CardDescription className="text-sm text-center">Your agreement for using DevCollab Hub.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <p>Welcome to DevCollab Hub. These Terms of Service ('Terms') govern your access to and use of the platform and its services. By creating an account or using DevCollab Hub, you agree to be bound by these Terms.</p>
+              <Badge variant="secondary">Last Updated: January 9, 2026</Badge>
+            </CardContent>
+          </Card>
 
-        <div className="space-y-4 rounded-lg border bg-card p-6 shadow-sm">
-            <p className="text-card-foreground">Welcome to DevCollab Hub. These Terms of Service govern your use of the platform. By creating an account or using the service you agree to these terms.</p>
-        </div>
-
-
-        <div className="mt-12 space-y-8">
           {sections.map((section) => (
             <Card key={section.id} className="overflow-hidden">
               <CardHeader>
-                <CardTitle className="text-2xl">{section.title}</CardTitle>
+                <CardTitle className="text-base font-semibold">{section.title}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-4">
                 {section.content.map((item, index) => (
                   <div key={index}>
-                    {item.subtitle && <h4 className="font-semibold text-lg mb-3">{item.subtitle}</h4>}
-                    {item.description && <p className="text-muted-foreground mb-4">{item.description}</p>}
+                    {item.subtitle && <h4 className="font-semibold text-sm mb-2">{item.subtitle}</h4>}
+                    {item.description && (
+                        <p className="text-sm text-muted-foreground mb-3">
+                            {item.description}
+                            {section.id === 10 && (
+                                <Link href="/#contact" scroll={false} className="text-primary hover:underline">contact form</Link>
+                            )}
+                        </p>
+                    )}
                     {item.points && (
-                      <ul className="space-y-3">
+                      <ul className="space-y-2">
                         {item.points.map((point, pIndex) => (
                           <li key={pIndex} className="flex items-start gap-3">
-                            <ShieldCheck className="h-5 w-5 mt-1 flex-shrink-0 text-primary" />
-                            <span>{point}</span>
+                            <ShieldCheck className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary" />
+                            <span className="text-sm">{point}</span>
                           </li>
                         ))}
                       </ul>
                     )}
-                    {item.footer && <p className="text-muted-foreground mt-4 whitespace-pre-line">{item.footer}</p>}
+                    {item.footer && <p className="text-sm text-muted-foreground mt-3 whitespace-pre-line">{item.footer}</p>}
                   </div>
                 ))}
               </CardContent>
