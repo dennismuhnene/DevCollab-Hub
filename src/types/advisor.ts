@@ -31,6 +31,7 @@ export interface AdvisorProfile {
 // New type for individual application submissions
 export interface AdvisorApplication {
     id: string; // The document ID of the application
+    uid: string; // The advisor's user ID
     slot: number; // The application slot number (1, 2, or 3)
     headline: string;
     bio: string;
@@ -72,6 +73,7 @@ export interface Engagement {
     videoRoomUrl?: string; // Field for Daily.co video call URL
     meetLink?: string; // Preserved for compatibility and primary link display
     meetings?: { [key: string]: Meeting }; // New map for multiple meetings
+    advisorApplicationId?: string; // The ID of the specific advisor application
 }
 
 export interface EngagementMessage {
@@ -93,4 +95,5 @@ export interface AdvisorReview {
     createdAt: Timestamp | FieldValue;
     advisorResponse?: string;
     advisorResponseAt?: Timestamp | FieldValue;
+    advisorApplicationId?: string; // The ID of the specific advisor application being reviewed
 }

@@ -22,16 +22,21 @@ import {
 import { countries } from '@/lib/constants';
 import { MultiSelect, Option } from '@/components/ui/multi-select';
 
+// Add the advisorApplicationId to the type
+interface DisplayAdvisorProfile extends PublicAdvisorProfile {
+    advisorApplicationId: string;
+}
+
 const AdvisorHubPage = () => {
     const { user } = useAuth();
-    const [advisors, setAdvisors] = useState<PublicAdvisorProfile[]>([]);
-    const [filteredAdvisors, setFilteredAdvisors] = useState<PublicAdvisorProfile[]>([]);
+    const [advisors, setAdvisors] = useState<DisplayAdvisorProfile[]>([]);
+    const [filteredAdvisors, setFilteredAdvisors] = useState<DisplayAdvisorProfile[]>([]);
     const [specialties, setSpecialties] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
     const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
-    const [selectedAdvisor, setSelectedAdvisor] = useState<PublicAdvisorProfile | null>(null);
+    const [selectedAdvisor, setSelectedAdvisor] = useState<DisplayAdvisorProfile | null>(null);
 
     const getAsArray = (data: string | string[] | undefined | null): string[] => {
         if (!data) return [];
@@ -54,12 +59,13 @@ const AdvisorHubPage = () => {
 
             const q = query(collection(db, 'publicAdvisorProfiles'));
             const unsubscribe = onSnapshot(q, (querySnapshot) => {
-                const fetchedAdvisors: PublicAdvisorProfile[] = [];
+                const fetchedAdvisors: DisplayAdvisorProfile[] = [];
                 const allSpecialties = new Set<string>();
                 querySnapshot.forEach((doc) => {
                     const advisor = doc.data() as PublicAdvisorProfile;
                     if (!allBlockedIds.includes(advisor.uid)) {
-                        fetchedAdvisors.push(advisor);
+                        // Manually add the document ID here
+                        fetchedAdvisors.push({ ...advisor, advisorApplicationId: doc.id });
                         getAsArray(advisor.specialties).forEach(spec => allSpecialties.add(spec));
                     }
                 });
@@ -262,7 +268,7 @@ const AdvisorHubPage = () => {
                             <DialogFooter className="mt-auto pt-4 border-t">
                                 {user?.uid !== selectedAdvisor.uid && (
                                     <Button asChild className="w-full sm:w-auto" size="lg">
-                                        <Link href={`/advisory/${selectedAdvisor.uid}/request`}>Request Engagement</Link>
+                                        <Link href={`/advisory/${selectedAdvisor.uid}/request?applicationId=${selectedAdvisor.advisorApplicationId}`}>Request Engagement</Link>
                                     </Button>
                                 )}
                             </DialogFooter>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { doc, getDoc, addDoc, collection, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { db as firestore } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
@@ -25,7 +25,9 @@ import Link from 'next/link';
 const EngagementRequestPage = () => {
     const params = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const advisorId = params.advisorId as string;
+    const applicationId = searchParams.get('applicationId');
     const { user } = useAuth();
     const { toast } = useToast();
 
@@ -46,6 +48,12 @@ const EngagementRequestPage = () => {
             if (advisorId && user) {
                 setLoading(true);
                 try {
+                    if (!applicationId) {
+                        toast({ variant: 'destructive', title: 'Error', description: 'Advisor application not specified.' });
+                        router.back();
+                        return;
+                    }
+
                     const isBlocked = await checkBlockStatus(user.uid, advisorId);
                     if (isBlocked) {
                         toast({ variant: 'destructive', title: 'Action Not Allowed', description: 'You cannot request an engagement with this advisor.' });
@@ -84,12 +92,12 @@ const EngagementRequestPage = () => {
         };
 
         fetchAdvisorAndCheckEngagement();
-    }, [advisorId, user, toast, router]);
+    }, [advisorId, user, applicationId, toast, router]);
 
     const handleRequest = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user || !advisor) {
-            toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to send a request.' });
+        if (!user || !advisor || !applicationId) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Missing required information to send a request.' });
             return;
         }
 
@@ -101,8 +109,9 @@ const EngagementRequestPage = () => {
                 advisorId: advisor.uid,
                 advisorName: advisor.name,
                 advisorPhotoURL: advisor.photoURL,
+                advisorApplicationId: applicationId,
                 message,
-                status: 'requested',
+                status: 'requested', 
                 createdAt: serverTimestamp(),
             };
 
