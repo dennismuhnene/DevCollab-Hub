@@ -100,7 +100,7 @@ export function AdvisorApplicationManager() {
   return (
     <Card>
         <CardHeader>
-            <CardTitle>Your Advisor Applications</CardTitle>
+            <CardTitle><h3 className="text-lg font-medium">Your Advisor Applications</h3></CardTitle>
             <CardDescription>
                 Apply for advisory roles if you are an expert or specialist in your field.
                 Manage your applications below. Toggle the switch on a verified application to make it your public-facing advisor profile.

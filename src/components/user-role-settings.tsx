@@ -53,7 +53,7 @@ export default function UserRoleSettings() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>User Role Settings</CardTitle>
+        <CardTitle><h3 className="text-lg font-medium">User Role Settings</h3></CardTitle> 
         <CardDescription>Define your primary role on the platform.</CardDescription>
       </CardHeader>
       <CardContent>
