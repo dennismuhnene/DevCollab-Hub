@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, onSnapshot, updateDoc, collection, addDoc, serverTimestamp, query, orderBy, Unsubscribe } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, collection, addDoc, serverTimestamp, query, orderBy, Unsubscribe, where, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/hooks/use-auth';
@@ -31,6 +31,7 @@ const EngagementRoomPage = (): JSX.Element => {
     const [uploading, setUploading] = useState(false);
     const [loading, setLoading] = useState(true);
     const [isBlocked, setIsBlocked] = useState(false);
+    const [hasReviewed, setHasReviewed] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     
@@ -69,6 +70,18 @@ const EngagementRoomPage = (): JSX.Element => {
                     setIsBlocked(blockStatus);
                     
                     setEngagement(engData);
+
+                    if (user.uid === engData.developerId) {
+                        const reviewsQuery = query(
+                            collection(db, 'advisor_reviews'),
+                            where('engagementId', '==', engagementId),
+                            where('developerId', '==', user.uid)
+                        );
+                        const reviewSnapshot = await getDocs(reviewsQuery);
+                        if (!reviewSnapshot.empty) {
+                            setHasReviewed(true);
+                        }
+                    }
 
                     const messagesQuery = query(collection(db, `engagements/${engagementId}/messages`), orderBy('createdAt', 'asc'));
                     unsubMessages = onSnapshot(messagesQuery, (snapshot) => {
@@ -179,15 +192,15 @@ const EngagementRoomPage = (): JSX.Element => {
     if (!engagement || !isParticipant || !user) return <div>Engagement not found or access denied.</div>
 
     return (
-        <div className="container mx-auto p-4 space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="container mx-auto p-4 space-y-2">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
                 <div className="lg:col-span-2">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Engagement Room</CardTitle>
+                            <CardTitle className="text-lg">Engagement Room</CardTitle>
                             <CardDescription>Status: <span className={`font-bold ${isRoomActive ? 'text-green-500' : 'text-red-500'}`}>{engagement.status}</span></CardDescription>
                         </CardHeader>
-                        <CardContent className="h-[500px] overflow-y-auto border-y p-4 space-y-4">
+                        <CardContent className="h-[500px] overflow-y-auto border-y p-4 space-y-2">
                             {messages.map(msg => (
                                 <div key={msg.id} className={`flex ${msg.senderId === user?.uid ? 'justify-end' : 'justify-start'}`}>
                                     <div className={`p-3 rounded-lg max-w-md ${msg.senderId === user?.uid ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
@@ -243,12 +256,12 @@ const EngagementRoomPage = (): JSX.Element => {
                         </div>
                     </Card>
                 </div>
-                <div className="space-y-6">
+                <div className="space-y-2">
                     <Card>
-                        <CardHeader><CardTitle>Engagement Details</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardHeader><CardTitle className="text-base">Engagement Details</CardTitle></CardHeader>
+                        <CardContent className="space-y-2">
                             <div>
-                                <h4 className="font-semibold">Advisor</h4>
+                                <h4 className="font-semibold text-sm">Advisor</h4>
                                 <div className="flex items-center gap-2 mt-1">
                                     <Avatar className="h-10 w-10"><AvatarImage src={engagement.advisorPhotoURL}/><AvatarFallback>{engagement.advisorName[0]}</AvatarFallback></Avatar>
                                     <div>
@@ -258,14 +271,14 @@ const EngagementRoomPage = (): JSX.Element => {
                                 </div>
                             </div>
                              <div>
-                                <h4 className="font-semibold">Developer</h4>
+                                <h4 className="font-semibold text-sm">Developer</h4>
                                 <div className="flex items-center gap-2 mt-1">
                                     <Avatar className="h-10 w-10"><AvatarImage src={engagement.developerPhotoURL}/><AvatarFallback>{engagement.developerName[0]}</AvatarFallback></Avatar>
                                     <p>{engagement.developerName}</p>
                                 </div>
                             </div>
                             <div>
-                                <h4 className="font-semibold">Request Message</h4>
+                                <h4 className="font-semibold text-sm">Request Message</h4>
                                 <p className="text-sm text-muted-foreground mt-1 bg-gray-50 p-3 rounded-md">{engagement.message}</p>
                             </div>
                         </CardContent>
@@ -273,9 +286,9 @@ const EngagementRoomPage = (): JSX.Element => {
                 </div>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-2">
                 <Card>
-                    <CardHeader><CardTitle>Video Sessions</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="text-base">Video Sessions</CardTitle></CardHeader>
                     <CardContent>
                         {isRoomActive ? (
                             <EngagementVideo engagement={engagement} />
@@ -288,7 +301,7 @@ const EngagementRoomPage = (): JSX.Element => {
                 {isRoomActive && (
                     <Card className="border-destructive">
                         <CardHeader>
-                            <CardTitle>Danger Zone</CardTitle>
+                            <CardTitle className="text-base">Danger Zone</CardTitle>
                             <CardDescription>Closing the engagement is a final action and cannot be undone.</CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -305,15 +318,26 @@ const EngagementRoomPage = (): JSX.Element => {
                         </CardContent>
                     </Card>
                 )}
-                 {engagement.status === 'closed' && user?.uid === engagement.developerId && (
-                     <Card>
-                        <CardHeader><CardTitle>Engagement Closed</CardTitle></CardHeader>
-                        <CardContent className="flex flex-col gap-4">
-                            <p className='text-sm text-muted-foreground'>This engagement is closed. You can now leave a review for your advisor.</p>
-                            <Button asChild><Link href={`/engagements/${engagementId}/review`}>Leave a Review</Link></Button>
-                        </CardContent>
-                    </Card>
-                )}
+                {engagement.status === 'closed' && user?.uid === engagement.developerId && (
+                    <Card>
+                       <CardHeader><CardTitle className="text-base">Engagement Closed</CardTitle></CardHeader>
+                       <CardContent className="flex flex-col gap-4">
+                           {hasReviewed ? (
+                               <>
+                                   <p className='text-sm text-muted-foreground'>You&apos;ve already reviewed this engagement.</p>
+                                   <Button asChild>
+                                       <Link href={`/advisory/${engagement.advisorId}`}>View Advisor&apos;s Profile</Link>
+                                   </Button>
+                               </>
+                           ) : (
+                               <>
+                                   <p className='text-sm text-muted-foreground'>This engagement is closed. You can now leave a review for your advisor.</p>
+                                   <Button asChild><Link href={`/engagements/${engagementId}/review`}>Leave a Review</Link></Button>
+                               </>
+                           )}
+                       </CardContent>
+                   </Card>
+               )}
             </div>
         </div>
     );

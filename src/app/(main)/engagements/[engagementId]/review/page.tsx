@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Star } from 'lucide-react';
+import { Star, Loader2 } from 'lucide-react';
 
 const ReviewPage = () => {
     const { engagementId } = useParams();
@@ -27,37 +27,48 @@ const ReviewPage = () => {
     useEffect(() => {
         if (typeof engagementId !== 'string' || !user) return;
 
-        const checkExistingReview = async () => {
-            const reviewQuery = query(
-                collection(firestore, 'advisor_reviews'), 
-                where('engagementId', '==', engagementId),
-                where('developerId', '==', user.uid)
-            );
-            const reviewSnapshot = await getDocs(reviewQuery);
-            if (!reviewSnapshot.empty) {
-                setAlreadyReviewed(true);
-            }
-        };
-
-        const fetchEngagement = async () => {
-            const engagementDoc = await getDoc(doc(firestore, 'engagements', engagementId));
-            if (engagementDoc.exists()) {
-                const engData = { id: engagementDoc.id, ...engagementDoc.data() } as Engagement;
-                setEngagement(engData);
-
-                if (engData.status !== 'closed' || engData.developerId !== user.uid) {
-                     toast({ variant: 'destructive', title: 'Invalid Action', description: 'You can only review closed engagements you were a part of.'});
-                     router.push('/dashboard');
-                }
-            } else {
-                router.push('/dashboard');
-            }
-        };
-        
         const loadData = async () => {
             setLoading(true);
-            await Promise.all([checkExistingReview(), fetchEngagement()]);
-            setLoading(false);
+            try {
+                // Check for existing review first
+                const reviewQuery = query(
+                    collection(firestore, 'advisor_reviews'), 
+                    where('engagementId', '==', engagementId),
+                    where('developerId', '==', user.uid)
+                );
+                const reviewSnapshot = await getDocs(reviewQuery);
+                if (!reviewSnapshot.empty) {
+                    setAlreadyReviewed(true);
+                    // Fetch engagement just to redirect user at the end
+                    const engagementDoc = await getDoc(doc(firestore, 'engagements', engagementId));
+                    if(engagementDoc.exists()) setEngagement({ id: engagementDoc.id, ...engagementDoc.data() } as Engagement)
+                    setLoading(false);
+                    return;
+                }
+
+                // If no review, fetch engagement and check permissions
+                const engagementDoc = await getDoc(doc(firestore, 'engagements', engagementId));
+                if (engagementDoc.exists()) {
+                    const engData = { id: engagementDoc.id, ...engagementDoc.data() } as Engagement;
+                    
+                    if (engData.status !== 'closed' || engData.developerId !== user.uid) {
+                         toast({ variant: 'destructive', title: 'Invalid Action', description: 'You can only review closed engagements you were a part of.'});
+                         router.push('/dashboard');
+                         return;
+                    }
+                    setEngagement(engData);
+                } else {
+                    toast({ variant: 'destructive', title: 'Not Found', description: 'This engagement does not exist.' });
+                    router.push('/dashboard');
+                    return;
+                }
+            } catch (error) {
+                console.error("Error loading review page:", error);
+                toast({ variant: 'destructive', title: 'Error', description: 'Could not load page details.' });
+                router.push('/dashboard');
+            } finally {
+                setLoading(false);
+            }
         }
 
         loadData();
@@ -78,6 +89,7 @@ const ReviewPage = () => {
             rating: rating as 1 | 2 | 3 | 4 | 5,
             comment,
             createdAt: serverTimestamp(),
+            advisorApplicationId: engagement.advisorApplicationId, // Carry over the application ID
         };
 
         try {
@@ -90,7 +102,7 @@ const ReviewPage = () => {
         }
     };
     
-    if (loading) return <div>Loading...</div>
+    if (loading) return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>
 
     if (alreadyReviewed) {
         return (
@@ -112,7 +124,7 @@ const ReviewPage = () => {
         <div className="container mx-auto p-4">
             <Card className="max-w-2xl mx-auto">
                 <CardHeader>
-                    <CardTitle>Leave a Review for {engagement?.advisorInfo.name}</CardTitle>
+                    <CardTitle>Leave a Review for {engagement?.advisorName}</CardTitle>
                     <CardDescription>Your feedback helps other developers make informed decisions.</CardDescription>
                 </CardHeader>
                 <CardContent>

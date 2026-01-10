@@ -162,5 +162,16 @@ export interface Message {
   deletedFor?: string[];
 }
 
+export interface Question {
+  id: string;
+  question: string;
+  type: 'slider' | 'multiple-choice' | 'textarea' | 'checkbox' | 'nps' | 'text';
+  min?: number;
+  max?: number;
+  labels?: string[];
+  options?: string[];
+}
+
+
 // Make the new PublicAdvisorProfile type available for import elsewhere
 export type { PublicAdvisorProfile };

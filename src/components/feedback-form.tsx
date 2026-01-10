@@ -173,7 +173,7 @@ export function FeedbackForm() {
             value={(answers[currentQuestion.id] as string) || ''}
             onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
           >
-            {currentQuestion.options.map((option: string) => (
+            {currentQuestion.options?.map((option: string) => (
               <div key={option} className="flex items-center space-x-2">
                 <RadioGroupItem value={option} id={`${currentQuestion.id}-${option}`} />
                 <Label htmlFor={`${currentQuestion.id}-${option}`}>{option}</Label>
@@ -184,7 +184,7 @@ export function FeedbackForm() {
       case 'checkbox':
         return (
           <div className="space-y-2">
-            {currentQuestion.options.map((option: string) => (
+            {currentQuestion.options?.map((option: string) => (
               <div key={option} className="flex items-center space-x-2">
                 <Checkbox
                   id={`${currentQuestion.id}-${option}`}
@@ -200,7 +200,7 @@ export function FeedbackForm() {
         return (
           <div className="flex flex-col gap-4 pt-2">
             <Slider
-              value={[(answers[currentQuestion.id] as number) || currentQuestion.min]}
+              value={[(answers[currentQuestion.id] as number) || currentQuestion.min || 0]}
               onValueChange={(value) => handleAnswerChange(currentQuestion.id, value[0])}
               min={currentQuestion.min}
               max={currentQuestion.max}
@@ -285,9 +285,9 @@ export function FeedbackForm() {
     if (!formStarted) {
       return (
         <div className="p-4 sm:p-8 text-center flex flex-col items-center justify-center h-full">
-            <DialogTitle className="text-2xl font-bold mb-2">We Value Your Feedback!</DialogTitle>
+            <DialogTitle className="text-m font-bold mb-2">We Value Your Feedback!</DialogTitle>
             <DialogDescription className="mb-6">
-                Thank you for helping us improve DevCollab Hub. This should only take about 5-7 minutes.
+                Thank you for helping us improve DevCollab Hub. This should only take about 3-4 minutes.
             </DialogDescription>
             <Button onClick={() => setFormStarted(true)}>Start Feedback</Button>
         </div>
@@ -339,8 +339,8 @@ export function FeedbackForm() {
             width={140}
             height={140}
           />
-          <h1 className="text-4xl font-bold mt-4">DevCollab</h1>
-          <p className="text-lg text-gray-600">Find your Crew, build your vision.</p>
+          <h3 className="text-2xl font-bold">DevCollab</h3>
+          <p className="text-sm text-gray-600">Find your Crew, build your vision.</p>
         </div>
         <div className='min-h-[500px]'>
             {renderContent()}
