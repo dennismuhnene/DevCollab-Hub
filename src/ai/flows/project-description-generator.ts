@@ -10,6 +10,8 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {createHash} from 'crypto';
+import {getRedisClient} from '@/lib/redis';
 
 const GenerateProjectDescriptionInputSchema = z.object({
   title: z.string().describe('The title of the project.'),
@@ -23,7 +25,31 @@ const GenerateProjectDescriptionOutputSchema = z.object({
 export type GenerateProjectDescriptionOutput = z.infer<typeof GenerateProjectDescriptionOutputSchema>;
 
 export async function generateProjectDescription(input: GenerateProjectDescriptionInput): Promise<GenerateProjectDescriptionOutput> {
-  return generateProjectDescriptionFlow(input);
+  const redis = getRedisClient();
+  const inputJson = JSON.stringify(input);
+  const hash = createHash('sha256').update(inputJson).digest('hex');
+  const cacheKey = `project-description:${hash}`;
+
+  try {
+    const cachedResult = await redis.get<GenerateProjectDescriptionOutput>(cacheKey);
+    if (cachedResult) {
+      console.log('Cache hit for project description.');
+      return cachedResult;
+    }
+  } catch (error) {
+    console.error('Redis cache lookup failed:', error);
+  }
+
+  console.log('Cache miss for project description. Generating new description.');
+  const result = await generateProjectDescriptionFlow(input);
+
+  try {
+    await redis.set(cacheKey, result, { ex: 3600 }); // Expires in 1 hour
+  } catch (error) {
+    console.error('Redis cache set failed:', error);
+  }
+
+  return result;
 }
 
 const prompt = ai.definePrompt({
