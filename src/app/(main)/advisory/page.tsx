@@ -19,8 +19,8 @@ import {
     DialogDescription,
     DialogFooter,
 } from '@/components/ui/dialog';
-import { countries } from '@/lib/constants';
-import { MultiSelect, Option } from '@/components/ui/multi-select';
+import { TagInput } from '@/components/ui/tag-input';
+import { SlidersHorizontal, X } from 'lucide-react';
 
 // Add the advisorApplicationId to the type
 interface DisplayAdvisorProfile extends PublicAdvisorProfile {
@@ -31,18 +31,24 @@ const AdvisorHubPage = () => {
     const { user } = useAuth();
     const [advisors, setAdvisors] = useState<DisplayAdvisorProfile[]>([]);
     const [filteredAdvisors, setFilteredAdvisors] = useState<DisplayAdvisorProfile[]>([]);
-    const [specialties, setSpecialties] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
-    const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+    const [selectedCredentials, setSelectedCredentials] = useState<string[]>([]);
     const [selectedAdvisor, setSelectedAdvisor] = useState<DisplayAdvisorProfile | null>(null);
+    const [showFilters, setShowFilters] = useState(false);
 
     const getAsArray = (data: string | string[] | undefined | null): string[] => {
         if (!data) return [];
         if (Array.isArray(data)) return data;
         if (typeof data === 'string') return data.split(',').map(s => s.trim()).filter(Boolean);
         return [];
+    };
+
+    const resetFilters = () => {
+        setSearchTerm('');
+        setSelectedSpecialties([]);
+        setSelectedCredentials([]);
     };
 
     useEffect(() => {
@@ -60,17 +66,13 @@ const AdvisorHubPage = () => {
             const q = query(collection(db, 'publicAdvisorProfiles'));
             const unsubscribe = onSnapshot(q, (querySnapshot) => {
                 const fetchedAdvisors: DisplayAdvisorProfile[] = [];
-                const allSpecialties = new Set<string>();
                 querySnapshot.forEach((doc) => {
                     const advisor = doc.data() as PublicAdvisorProfile;
                     if (!allBlockedIds.includes(advisor.uid)) {
-                        // Manually add the document ID here
                         fetchedAdvisors.push({ ...advisor, advisorApplicationId: doc.id });
-                        getAsArray(advisor.specialties).forEach(spec => allSpecialties.add(spec));
                     }
                 });
                 setAdvisors(fetchedAdvisors);
-                setSpecialties(Array.from(allSpecialties).sort());
                 setLoading(false);
             }, (error) => {
                 console.error("Error listening for advisor profiles:", error);
@@ -104,37 +106,21 @@ const AdvisorHubPage = () => {
             });
         }
 
-        if (selectedCountries.length > 0) {
-            const lowerSelectedCountries = selectedCountries.map(c => c.toLowerCase());
-            const naCountries = ['canada', 'united states of america', 'mexico'];
-
+        if (selectedCredentials.length > 0) {
             filtered = filtered.filter(adv => {
-                if (!adv.country) return false;
-                const advisorCountry = adv.country.toLowerCase();
-
-                if (lowerSelectedCountries.includes(advisorCountry)) {
-                    return true;
-                }
-
-                if (lowerSelectedCountries.includes('na (north america)') && naCountries.includes(advisorCountry)) {
-                    return true;
-                }
-                
-                return false;
+                const advisorCredentials = getAsArray(adv.credentials).map(c => c.toLowerCase());
+                return selectedCredentials.some(selCred => advisorCredentials.includes(selCred.toLowerCase()));
             });
         }
 
         setFilteredAdvisors(filtered);
 
-    }, [searchTerm, selectedSpecialties, selectedCountries, advisors]);
+    }, [searchTerm, selectedSpecialties, selectedCredentials, advisors]);
 
 
     if (loading) {
         return <div className="flex justify-center items-center h-screen">Loading advisors...</div>;
     }
-
-    const specialtyOptions: Option[] = specialties.map(s => ({ label: s, value: s }));
-    const countryOptions: Option[] = countries.map(c => ({ label: c, value: c }));
 
     return (
         <div className="container mx-auto p-4 sm:p-6 lg:p-8">
@@ -143,28 +129,49 @@ const AdvisorHubPage = () => {
                 <p className="text-muted-foreground mt-2 text-sm">Connect with verified industry experts for structured, private consultations.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-8">
-                <Input 
-                    placeholder="Search by name, headline, or bio..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="md:col-span-1"
-                />
-                <MultiSelect
-                    options={specialtyOptions}
-                    selected={selectedSpecialties}
-                    onChange={setSelectedSpecialties}
-                    placeholder="Filter by specialty..."
-                    className="md:col-span-1"
-                />
-                 <MultiSelect
-                    options={countryOptions}
-                    selected={selectedCountries}
-                    onChange={setSelectedCountries}
-                    placeholder="Filter by country..."
-                    className="md:col-span-1"
-                />
+            <div className="mb-4">
+                <Button onClick={() => setShowFilters(!showFilters)} variant="outline">
+                    <SlidersHorizontal className="mr-2 h-4 w-4" />
+                    Filter
+                </Button>
             </div>
+
+            {showFilters && (
+                <Card className="mb-8 relative">
+                     <Button
+                        onClick={() => setShowFilters(false)}
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2"
+                    >
+                        <X className="h-4 w-4" />
+                    </Button>
+                    <CardHeader>
+                        <CardTitle>Filter Advisors</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <Input 
+                            placeholder="Search by name, headline, or bio..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        <TagInput
+                            value={selectedSpecialties}
+                            onChange={setSelectedSpecialties}
+                            placeholder="Filter by specialty..."
+                        />
+                        <TagInput
+                            value={selectedCredentials}
+                            onChange={setSelectedCredentials}
+                            placeholder="Filter by credentials..."
+                        />
+                        <Button onClick={resetFilters} variant="ghost" className="w-full">
+                            <X className="mr-2 h-4 w-4" />
+                            Reset Filters
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                 {filteredAdvisors.map((advisor) => {
@@ -181,7 +188,7 @@ const AdvisorHubPage = () => {
                                     <AvatarFallback>{(advisor.name || 'A')[0]}</AvatarFallback>
                                 </Avatar>
                                 <div>
-                                    <CardTitle>
+                                    <CardTitle className="text-lg font-semibold">
                                         <Link href={`/developers/${advisor.uid}`} onClick={(e) => e.stopPropagation()} className="hover:underline">
                                             {advisor.name}
                                         </Link>

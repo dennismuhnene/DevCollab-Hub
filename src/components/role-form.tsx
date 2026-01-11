@@ -32,7 +32,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 import { logAnalyticsEvent } from '@/firebase/analytics';
-import { MultiSelect } from '@/components/ui/multi-select';
 import { 
     professionalSkills, 
     incentiveOptions, 
@@ -228,43 +227,55 @@ export default function RoleForm({ role }: RoleFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="requiredTechStack">Required Tech Stack</Label>
-          <div className="flex flex-wrap gap-2 rounded-md border p-2">
+          <div className="flex flex-wrap gap-2 mb-2">
             {techStack.map((tech) => (
-              <Badge key={tech} variant="secondary" className="flex items-center gap-1 text-base">
+              <Badge key={tech} variant="secondary">
                 {tech}
-                <button type="button" onClick={() => handleTechStackRemove(tech)} className="rounded-full hover:bg-muted-foreground/20">
+                <button type="button" onClick={() => handleTechStackRemove(tech)} className="ml-2">
                   <X className="h-3 w-3" />
                 </button>
               </Badge>
             ))}
-            <Input
-              id="requiredTechStack"
-              value={techStackInput}
-              onChange={(e) => setTechStackInput(e.target.value)}
-              onKeyDown={handleTechStackAdd}
-              onBlur={handleTechStackBlur}
-              placeholder="Type a technology and press Enter"
-              className="flex-1 border-none shadow-none focus-visible:ring-0"
-            />
           </div>
+          <Input
+            id="requiredTechStack"
+            value={techStackInput}
+            onChange={(e) => setTechStackInput(e.target.value)}
+            onKeyDown={handleTechStackAdd}
+            onBlur={handleTechStackBlur}
+            placeholder="Type a technology and press Enter"
+          />
           {errors.requiredTechStack && <p className="text-sm text-destructive">{errors.requiredTechStack.message}</p>}
         </div>
 
         <div className="space-y-2">
             <Label>Required Professional Skills (Max 5)</Label>
-            <MultiSelect
-                options={professionalSkills.map(s => ({ label: s, value: s }))}
-                selected={skills}
-                onChange={(newSkills) => {
-                    const resolvedSkills = typeof newSkills === 'function' ? newSkills(getValues('requiredSkills')) : newSkills;
-                    if (resolvedSkills.length > 5) {
-                        toast({ variant: "destructive", title: "Skill limit reached", description: "You can only select up to 5 skills." })
-                    } else {
-                        setValue('requiredSkills', resolvedSkills, { shouldValidate: true, shouldDirty: true });
-                    }
-                }}
-                placeholder="Select or type skills..."
-            />
+            <div className="flex flex-wrap gap-1 mb-2">
+                {skills.map((skill) => (
+                    <Badge key={skill} variant="secondary" className="flex items-center gap-1">
+                        {skill}
+                        <button type="button" onClick={() => setValue('requiredSkills', skills.filter((s) => s !== skill), { shouldDirty: true, shouldValidate: true })} className="rounded-full hover:bg-muted-foreground/20">
+                            <X className="h-3 w-3" />
+                        </button>
+                    </Badge>
+                ))}
+            </div>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" className="w-full justify-between">
+                        <span className="truncate">{skills.length > 0 ? `${skills.length} skills selected` : 'Select up to 5 skills...'}</span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                        <CommandInput placeholder="Search skills..." />
+                        <CommandEmpty>No skill found.</CommandEmpty>
+                        <CommandList><CommandGroup>{professionalSkills.map((skill) => <CommandItem key={skill} value={skill} onSelect={() => { const currentSkills = getValues('requiredSkills') || []; if (currentSkills.includes(skill)) { setValue('requiredSkills', currentSkills.filter((s) => s !== skill), { shouldDirty: true, shouldValidate: true }); } else if (currentSkills.length < 5) { setValue('requiredSkills', [...currentSkills, skill], { shouldDirty: true, shouldValidate: true }); } else { toast({ variant: "destructive", title: "Skill limit reached", description: "You can only select up to 5 skills." }); } }}>
+                            <Check className={cn('mr-2 h-4 w-4', skills.includes(skill) ? 'opacity-100' : 'opacity-0')} />{skill}</CommandItem>)}</CommandGroup></CommandList>
+                    </Command>
+                </PopoverContent>
+            </Popover>
             {errors.requiredSkills && <p className="text-sm text-destructive">{errors.requiredSkills.message}</p>}
         </div>
         
@@ -308,10 +319,20 @@ export default function RoleForm({ role }: RoleFormProps) {
         {collaborationType === 'Co-founder / Partner' && (
             <div className="space-y-2">
               <Label>Looking for a Partner in:</Label>
+              <div className="flex flex-wrap gap-1 pt-2">
+                    {selectedPartnerFunctions.map((func) => (
+                      <Badge key={func} variant="secondary" className="flex items-center gap-1">
+                        {func}
+                        <button type="button" onClick={() => setValue('partnerFunctions', selectedPartnerFunctions.filter((f) => f !== func), { shouldDirty: true, shouldValidate: true })} className="rounded-full hover:bg-muted-foreground/20">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+              </div>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" role="combobox" className="w-full justify-between">
-                    <span className="truncate">{selectedPartnerFunctions.length > 0 ? selectedPartnerFunctions.join(', ') : 'Select partner functions...'}</span>
+                    <span className="truncate">{selectedPartnerFunctions.length > 0 ? `${selectedPartnerFunctions.length} functions selected` : 'Select partner functions...'}</span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -326,25 +347,25 @@ export default function RoleForm({ role }: RoleFormProps) {
                     </Command>
                 </PopoverContent>
               </Popover>
-              <div className="flex flex-wrap gap-1 pt-2">
-                    {selectedPartnerFunctions.map((func) => (
-                      <Badge key={func} variant="secondary" className="flex items-center gap-1">
-                        {func}
-                        <button type="button" onClick={() => setValue('partnerFunctions', selectedPartnerFunctions.filter((f) => f !== func), { shouldDirty: true, shouldValidate: true })} className="rounded-full hover:bg-muted-foreground/20">
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
-              </div>
             </div>
         )}
 
         <div className="space-y-2">
           <Label>Target Locations / Regions</Label>
+          <div className="flex flex-wrap gap-1 pt-2">
+                {selectedLocations.map((loc) => (
+                  <Badge key={loc} variant="secondary" className="flex items-center gap-1">
+                    {loc}
+                    <button type="button" onClick={() => setValue('locations', selectedLocations.filter((l) => l !== loc), { shouldDirty: true, shouldValidate: true })} className="rounded-full hover:bg-muted-foreground/20">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+          </div>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" role="combobox" className="w-full justify-between">
-                <span className="truncate">{selectedLocations.length > 0 ? selectedLocations.join(', ') : 'Select locations...'}</span>
+                <span className="truncate">{selectedLocations.length > 0 ? `${selectedLocations.length} locations selected` : 'Select locations...'}</span>
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
@@ -359,16 +380,6 @@ export default function RoleForm({ role }: RoleFormProps) {
                 </Command>
             </PopoverContent>
           </Popover>
-          <div className="flex flex-wrap gap-1 pt-2">
-                {selectedLocations.map((loc) => (
-                  <Badge key={loc} variant="secondary" className="flex items-center gap-1">
-                    {loc}
-                    <button type="button" onClick={() => setValue('locations', selectedLocations.filter((l) => l !== loc), { shouldDirty: true, shouldValidate: true })} className="rounded-full hover:bg-muted-foreground/20">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-          </div>
           {errors.locations && <p className="text-sm text-destructive">{errors.locations.message}</p>}
         </div>
       </div>

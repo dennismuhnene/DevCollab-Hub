@@ -96,7 +96,7 @@ export default function MessagesPage() {
       </aside>
       <main className="flex-1 hidden md:flex flex-col items-center justify-center text-center bg-background">
         <MessageSquare className="h-16 w-16 text-muted-foreground/50" />
-        <h2 className="mt-4 text-2xl font-semibold">Select a conversation</h2>
+        <h2 className="mt-4 text-lg font-semibold">Select a conversation</h2>
         <p className="text-muted-foreground">Choose one of your matches from the sidebar to start chatting.</p>
       </main>
     </div>

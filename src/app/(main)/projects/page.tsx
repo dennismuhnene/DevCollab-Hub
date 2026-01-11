@@ -61,7 +61,7 @@ export default function ProjectsPage() {
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
-        <h1 className="text-2xl font-semibold leading-none tracking-tight mb-4 sm:mb-0">My Projects</h1>
+        <h1 className="text-lg font-semibold leading-none tracking-tight mb-4 sm:mb-0">My Projects</h1>
         <Button asChild>
           <Link href="/projects/new">
             <PlusCircle className="mr-2 h-4 w-4" />
@@ -78,7 +78,7 @@ export default function ProjectsPage() {
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 py-20 text-center">
-          <h2 className="text-xl font-semibold">You haven't created any projects yet.</h2>
+          <h2 className="text-lg font-semibold">You haven't created any projects yet.</h2>
           <p className="mt-2 text-muted-foreground">Let's change that. Start your next big idea today!</p>
         </div>
       )}

@@ -110,6 +110,7 @@ export default function ProfileForm({ userProfile, isAdvisor }: ProfileFormProps
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [techStackInput, setTechStackInput] = useState('');
+  const [skillInput, setSkillInput] = useState('');
   const [isAiPending, startAiTransition] = useTransition();
 
   const profileSchema = isAdvisor ? advisorProfileSchema : developerProfileSchema;
@@ -233,6 +234,24 @@ export default function ProfileForm({ userProfile, isAdvisor }: ProfileFormProps
       { shouldValidate: true, shouldDirty: true }
     );
   };
+  
+  const handleSkillAdd = () => {
+    const newSkill = skillInput.trim();
+    if (newSkill) {
+        const currentSkills = getValues('skills') || [];
+        if (currentSkills.length < 5 && !currentSkills.find(s => s.toLowerCase() === newSkill.toLowerCase())) {
+            setValue('skills', [...currentSkills, newSkill], { shouldValidate: true, shouldDirty: true });
+        }
+        setSkillInput('');
+    }
+  };
+
+  const handleSkillKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter' || e.key === 'Tab') {
+          e.preventDefault();
+          handleSkillAdd();
+      }
+  };
 
   const handleGenerateBio = async () => {
     const currentSkills = getValues('skills');
@@ -346,63 +365,8 @@ export default function ProfileForm({ userProfile, isAdvisor }: ProfileFormProps
             )}
           </div>
           <div className="space-y-2">
-            <Label>Skills</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" className="w-full justify-between">
-                  <span className="truncate">
-                    {skills.length > 0 ? skills.join(', ') : 'Select up to 5 skills...'}
-                  </span>
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                <Command>
-                  <CommandInput placeholder="Search skills..." />
-                  <CommandEmpty>No skill found.</CommandEmpty>
-                  <CommandList>
-                    <CommandGroup>
-                      {professionalSkills.map((skill) => (
-                        <CommandItem
-                          key={skill}
-                          value={skill}
-                          onSelect={() => {
-                            const currentSkills = getValues('skills') || [];
-                            if (currentSkills.includes(skill)) {
-                              setValue(
-                                'skills',
-                                currentSkills.filter((s) => s !== skill),
-                                { shouldDirty: true, shouldValidate: true }
-                              );
-                            } else if (currentSkills.length < 5) {
-                              setValue('skills', [...currentSkills, skill], {
-                                shouldDirty: true,
-                                shouldValidate: true,
-                              });
-                            } else {
-                              toast({
-                                variant: 'destructive',
-                                title: 'Skill limit reached',
-                                description: 'You can only select up to 5 skills.',
-                              });
-                            }
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              'mr-2 h-4 w-4',
-                              (getValues('skills') || []).includes(skill) ? 'opacity-100' : 'opacity-0'
-                            )}
-                          />
-                          {skill}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-            <div className="flex flex-wrap gap-1 pt-2">
+            <Label>Skills (Max 5)</Label>
+            <div className="flex flex-wrap gap-1 mb-2">
               {skills.map((skill) => (
                 <Badge key={skill} variant="secondary" className="flex items-center gap-1">
                   {skill}
@@ -422,34 +386,72 @@ export default function ProfileForm({ userProfile, isAdvisor }: ProfileFormProps
                 </Badge>
               ))}
             </div>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" className="w-full justify-between">
+                        <span className="truncate">{skills.length > 0 ? `${skills.length} skills selected` : 'Select up to 5 skills...'}</span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput 
+                          placeholder="Type or select a skill..." 
+                          value={skillInput}
+                          onValueChange={setSkillInput}
+                          onKeyDown={handleSkillKeyDown}
+                          onBlur={handleSkillAdd}
+                      />
+                      <CommandEmpty>No skill found.</CommandEmpty>
+                      <CommandList>
+                        <CommandGroup>
+                          {professionalSkills.map((skill) => (
+                            <CommandItem
+                              key={skill}
+                              value={skill}
+                              onSelect={() => {
+                                const currentSkills = getValues('skills') || [];
+                                if (!currentSkills.includes(skill) && currentSkills.length < 5) {
+                                  setValue('skills', [...currentSkills, skill], { shouldDirty: true, shouldValidate: true });
+                                }
+                                setSkillInput('');
+                              }}
+                            >
+                              <Check
+                                className={cn('mr-2 h-4 w-4', skills.includes(skill) ? 'opacity-100' : 'opacity-0')}
+                              />
+                              {skill}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                </PopoverContent>
+            </Popover>
             {errors.skills && <p className="text-sm text-destructive">{errors.skills.message}</p>}
-          </div>
+        </div>
 
           {!isAdvisor && (
             <div className="space-y-2">
               <Label htmlFor="tech-stack-input">Tech Stack</Label>
-              <div className="flex flex-wrap gap-2 rounded-md border p-2">
+              <div className="flex flex-wrap gap-2 mb-2">
                 {techStack.map((tech) => (
-                  <div
-                    key={tech}
-                    className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary"
-                  >
+                  <Badge key={tech} variant="secondary">
                     {tech}
-                    <button type="button" onClick={() => handleTechStackRemove(tech)}>
-                      <X className="h-4 w-4" />
+                    <button type="button" onClick={() => handleTechStackRemove(tech)} className="ml-2">
+                      <X className="h-3 w-3" />
                     </button>
-                  </div>
+                  </Badge>
                 ))}
-                <Input
-                  id="tech-stack-input"
-                  value={techStackInput}
-                  onChange={(e) => setTechStackInput(e.target.value)}
-                  onKeyDown={handleTechStackKeyDown}
-                  onBlur={handleTechStackBlur}
-                  placeholder="Type a technology and press Enter"
-                  className="flex-1 border-none shadow-none focus-visible:ring-0"
-                />
               </div>
+              <Input
+                id="tech-stack-input"
+                value={techStackInput}
+                onChange={(e) => setTechStackInput(e.target.value)}
+                onKeyDown={handleTechStackKeyDown}
+                onBlur={handleTechStackBlur}
+                placeholder="Type a technology and press Enter"
+              />
             </div>
           )}
 

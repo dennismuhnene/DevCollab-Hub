@@ -346,9 +346,9 @@ export const ProjectDetailsContent = ({ project: initialProject }: { project: Pr
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold leading-none tracking-tight">{project.title}</h1>
+      <h2 className="text-xl font-semibold leading-none tracking-tight">{project.title}</h2> 
         {owner && (
-          <div className="flex items-center space-x-2 text-muted-foreground">
+          <div className="flex items-center pt-2 space-x-2 text-muted-foreground">
             <Avatar className="h-6 w-6"><AvatarImage src={owner.photoURL} /><AvatarFallback>{owner.name?.charAt(0) || 'U'}</AvatarFallback></Avatar>
             <span>by <Link href={`/developers/${owner.uid}`} className="hover:underline">{owner.name || 'A user'}</Link></span>
           </div>
@@ -366,22 +366,22 @@ export const ProjectDetailsContent = ({ project: initialProject }: { project: Pr
           )}
 
           <Card>
-            <CardHeader><CardTitle className="text-2xl font-semibold">About this Project</CardTitle></CardHeader>
-            <CardContent><p className="text-base text-foreground/80 whitespace-pre-wrap">{project.description}</p></CardContent>
+            <CardHeader className="pb-2"><CardTitle className="text-lg font-medium">About this Project</CardTitle></CardHeader>
+            <CardContent><p className="text-sm text-foreground/80 whitespace-pre-wrap">{project.description}</p></CardContent>
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="text-xl flex items-center gap-3"><UserPlus className="h-5 w-5" /> Seeking Collaborators</CardTitle></CardHeader>
-            <CardContent><p className="text-foreground/80 mt-2">{project.roleRequirements}</p></CardContent>
+            <CardHeader className="pb-2"><CardTitle className="text-lg flex items-center gap-3"><UserPlus className="h-5 w-5" /> Seeking Collaborators</CardTitle></CardHeader>
+            <CardContent><p className="text-sm text-foreground/80 mt-2">{project.roleRequirements}</p></CardContent>
           </Card>
         </div>
 
         <div className="lg:col-span-1 space-y-2">
-          <Card><CardHeader><CardTitle className="text-lg font-semibold flex items-center gap-2"><Briefcase className="h-4 w-4" /> Project Stage</CardTitle></CardHeader><CardContent><p className="text-base">{project.projectStage}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-lg font-semibold flex items-center gap-2"><Handshake className="h-4 w-4" /> Incentives</CardTitle></CardHeader><CardContent><p className="text-base">{project.incentives}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-lg font-semibold flex items-center gap-2"><Clock className="h-4 w-4" /> Required Experience</CardTitle></CardHeader><CardContent><p className="text-base">{formatExperience(project.requiredYearsOfExperience)}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-lg font-semibold flex items-center gap-2"><Code className="h-4 w-4" />Required Tech Stack</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{project.requiredTechStack?.map(tech => <Badge key={tech} variant="secondary">{tech}</Badge>)}</CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-lg font-semibold flex items-center gap-2"><BrainCircuit className="h-4 w-4" />Required Skills</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{project.requiredSkills?.map(skill => <Badge key={skill} variant="outline">{skill}</Badge>)}</CardContent></Card>
+          <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4" /> Project Stage</CardTitle></CardHeader><CardContent><p className="text-sm">{project.projectStage}</p></CardContent></Card>
+          <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Handshake className="h-4 w-4" /> Incentives</CardTitle></CardHeader><CardContent><p className="text-sm">{project.incentives}</p></CardContent></Card>
+          <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" /> Required Experience</CardTitle></CardHeader><CardContent><p className="text-sm">{formatExperience(project.requiredYearsOfExperience)}</p></CardContent></Card>
+          <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Code className="h-4 w-4" />Required Tech Stack</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{project.requiredTechStack?.map(tech => <Badge key={tech} variant="secondary">{tech}</Badge>)}</CardContent></Card>
+          <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><BrainCircuit className="h-4 w-4" />Required Skills</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{project.requiredSkills?.map(skill => <Badge key={skill} variant="outline">{skill}</Badge>)}</CardContent></Card>
 
           <div className="flex flex-col space-y-2 !mt-8"> 
             {isOwner ? (
@@ -413,8 +413,8 @@ export const ProjectDetailsContent = ({ project: initialProject }: { project: Pr
       {isOwner && (
         <div className="mt-8">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl font-semibold">Collaboration Hub</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle>Collaboration Hub</CardTitle>
               <CardDescription className="text-sm text-muted-foreground">Manage developers who are interested in this project.</CardDescription>
             </CardHeader>
             <CardContent>

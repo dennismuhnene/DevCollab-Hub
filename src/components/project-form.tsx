@@ -262,31 +262,33 @@ export default function ProjectForm({ project }: ProjectFormProps) {
 
             <div className="space-y-2">
               <Label htmlFor="requiredTechStack" className="font-semibold">Required Tech Stack</Label>
-              <div className="flex flex-wrap gap-2 rounded-md border p-2">
+              <div className="flex flex-wrap gap-2 mb-2">
                 {techStack.map((tech) => (
-                  <div key={tech} className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
+                  <Badge key={tech} variant="secondary">
                     {tech}
-                    <button type="button" onClick={() => handleTechStackRemove(tech)}><X className="h-4 w-4" /></button>
-                  </div>
+                    <button type="button" onClick={() => handleTechStackRemove(tech)} className="ml-2">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
                 ))}
-                <Input id="requiredTechStack" value={techStackInput} onChange={(e) => setTechStackInput(e.target.value)} onKeyDown={handleTechStackKeyDown} onBlur={handleTechStackBlur} placeholder="Type a technology and press Enter" className="flex-1 border-none shadow-none focus-visible:ring-0" />
               </div>
+              <Input id="requiredTechStack" value={techStackInput} onChange={(e) => setTechStackInput(e.target.value)} onKeyDown={handleTechStackKeyDown} onBlur={handleTechStackBlur} placeholder="Type a technology and press Enter" />
               {errors.requiredTechStack && <p className="text-sm text-destructive">{errors.requiredTechStack.message}</p>}
             </div>
 
             <div className="space-y-2">
               <Label className="font-semibold">Required Skills</Label>
+              <div className="flex flex-wrap gap-1 mb-2">{skills.map((skill) => <Badge key={skill} variant="secondary" className="flex items-center gap-1">{skill}<button type="button" onClick={() => setValue('requiredSkills', skills.filter((s) => s !== skill), { shouldDirty: true })} className="rounded-full hover:bg-muted-foreground/20"><X className="h-3 w-3" /></button></Badge>)}</div>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" role="combobox" className="w-full justify-between">
-                    <span className="truncate">{skills.length > 0 ? skills.join(', ') : 'Select up to 3 skills...'}</span>
+                    <span className="truncate">{skills.length > 0 ? `${skills.length} skills selected` : 'Select up to 3 skills...'}</span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0"><Command><CommandInput placeholder="Search skills..." /><CommandEmpty>No skill found.</CommandEmpty><CommandList><CommandGroup>{professionalSkills.map((skill) => <CommandItem key={skill} value={skill} onSelect={() => { const currentSkills = getValues('requiredSkills') || []; if (currentSkills.includes(skill)) { setValue('requiredSkills', currentSkills.filter((s) => s !== skill), { shouldDirty: true, shouldValidate: true }); } else if(currentSkills.length < 3) { setValue('requiredSkills', [...currentSkills, skill], { shouldDirty: true, shouldValidate: true }); } else { toast({ variant: "destructive", title: "Skill limit reached", description: "You can only select up to 3 skills." }) } }}>
                             <Check className={cn('mr-2 h-4 w-4', (getValues('requiredSkills') || []).includes(skill) ? 'opacity-100' : 'opacity-0')} />{skill}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
               </Popover>
-               <div className="flex flex-wrap gap-1 pt-2">{skills.map((skill) => <Badge key={skill} variant="secondary" className="flex items-center gap-1">{skill}<button type="button" onClick={() => setValue('requiredSkills', skills.filter((s) => s !== skill), { shouldDirty: true })} className="rounded-full hover:bg-muted-foreground/20"><X className="h-3 w-3" /></button></Badge>)}</div>
               {errors.requiredSkills && <p className="text-sm text-destructive">{errors.requiredSkills.message}</p>}
             </div>
 
