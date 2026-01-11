@@ -51,7 +51,7 @@ export default function MyRolesPage() {
   return (
     <div className="container mx-auto max-w-5xl px-4 py-12">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
-        <h1 className="text-2xl font-semibold leading-none tracking-tight mb-4 sm:mb-0">My Posted Roles</h1>
+        <h1 className="text-lg font-semibold leading-none tracking-tight mb-4 sm:mb-0">My Posted Roles</h1>
         <Button asChild>
           <Link href="/roles/create">
             <PlusCircle className="mr-2 h-4 w-4" /> Create New Role
@@ -69,7 +69,7 @@ export default function MyRolesPage() {
         </div>
       ) : (
         <div className="text-center py-16 border-2 border-dashed rounded-lg">
-          <h2 className="text-xl font-semibold">You haven't posted any roles yet.</h2>
+          <h2 className="text-lg font-semibold">You haven't posted any roles yet.</h2>
           <p className="text-muted-foreground mt-2">Click the button above to create a role and find collaborators.</p>
         </div>
       )}

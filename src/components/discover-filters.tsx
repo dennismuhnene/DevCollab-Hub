@@ -42,7 +42,7 @@ export function DiscoverFilters({
         <X className="h-4 w-4" />
       </Button>
       <CardHeader>
-        <CardTitle>Filter Results</CardTitle>
+        <CardTitle><h2 className="text-xl font-semibold leading-none trackin">Filter Results</h2></CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>

@@ -61,19 +61,19 @@ const ProjectDetailsInModal = ({ project, developer }: { project: Project; devel
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-8">
                 <div className="md:col-span-2 space-y-2">
                     <Card>
-                        <CardHeader><CardTitle className="text-lg font-semibold">About this Project</CardTitle></CardHeader>
+                        <CardHeader className="pb-2"><CardTitle className="text-lg font-semibold">About this Project</CardTitle></CardHeader>
                         <CardContent><p className="text-sm text-muted-foreground font-normal">{project.description}</p></CardContent>
                     </Card>
 
                     <Card>
-                        <CardHeader><CardTitle className="flex items-center text-lg font-semibold"><Code className="w-5 h-5 mr-2"/>Tech Stack</CardTitle></CardHeader>
+                        <CardHeader className="pb-2"><CardTitle className="flex items-center text-lg font-semibold"><Code className="w-5 h-5 mr-2"/>Tech Stack</CardTitle></CardHeader>
                         <CardContent className="flex flex-wrap gap-2">
                             {project.requiredTechStack.map(tech => <Badge variant="secondary" key={tech}>{tech}</Badge>)}
                         </CardContent>
                     </Card>
 
                      <Card>
-                        <CardHeader><CardTitle className="flex items-center text-lg font-semibold"><BrainCircuit className="w-5 h-5 mr-2"/>Required Skills</CardTitle></CardHeader>
+                        <CardHeader className="pb-2"><CardTitle className="flex items-center text-lg font-semibold"><BrainCircuit className="w-5 h-5 mr-2"/>Required Skills</CardTitle></CardHeader>
                         <CardContent className="flex flex-wrap gap-2">
                             {project.requiredSkills.map(skill => <Badge variant="outline" key={skill}>{skill}</Badge>)}
                         </CardContent>
@@ -82,7 +82,7 @@ const ProjectDetailsInModal = ({ project, developer }: { project: Project; devel
                 <div className="space-y-2">
                    {developer && (
                         <Card>
-                            <CardHeader><CardTitle className="text-lg font-semibold">Project Owner</CardTitle></CardHeader>
+                            <CardHeader className="pb-2"><CardTitle className="text-lg font-semibold">Project Owner</CardTitle></CardHeader>
                             <CardContent className="flex items-center space-x-4">
                                 <Avatar>
                                     <AvatarImage src={developer.photoURL} />
@@ -95,7 +95,7 @@ const ProjectDetailsInModal = ({ project, developer }: { project: Project; devel
                         </Card>
                     )}
                      <Card>
-                        <CardHeader><CardTitle className="flex items-center text-lg font-semibold"><Users className="w-5 h-5 mr-2"/>Open Roles</CardTitle></CardHeader>
+                        <CardHeader className="pb-2"><CardTitle className="flex items-center text-lg font-semibold"><Users className="w-5 h-5 mr-2"/>Open Roles</CardTitle></CardHeader>
                         <CardContent className="flex flex-wrap gap-2">
                             {rolesLoading ? <Skeleton className="h-8 w-full" /> : roles.length > 0 ? (
                                 roles.map((role: Role) => <Badge variant="default" key={role.id}>{role.title}</Badge>)
@@ -230,13 +230,13 @@ export const DeveloperProfileContent = ({ developer, isBlocked, onBlock, onUnblo
       
       <div className="space-y-2">
         <Card>
-          <CardHeader><CardTitle className="text-base">About</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base">About</CardTitle></CardHeader>
           <CardContent><p className="text-foreground/80 leading-relaxed text-base">{developer.bio || 'No bio provided yet.'}</p></CardContent>
         </Card>
 
         {developer.openForCollaboration && (developer.collaborationGoals?.length || developer.commitmentLevel) && (
             <Card>
-                <CardHeader><CardTitle className="flex items-center text-base"><Handshake className="mr-2 h-5 w-5 text-primary"/> Collaboration Preferences</CardTitle></CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="flex items-center text-base"><Handshake className="mr-2 h-5 w-5 text-primary"/> Collaboration Preferences</CardTitle></CardHeader>
                 <CardContent className="space-y-2">
                     {developer.collaborationGoals && developer.collaborationGoals.length > 0 && (
                         <div>
@@ -258,7 +258,7 @@ export const DeveloperProfileContent = ({ developer, isBlocked, onBlock, onUnblo
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <Card>
-                <CardHeader><CardTitle className="flex items-center text-base"><BrainCircuit className="mr-2 h-5 w-5 text-primary" /> Skills</CardTitle></CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="flex items-center text-base"><BrainCircuit className="mr-2 h-5 w-5 text-primary" /> Skills</CardTitle></CardHeader>
                 <CardContent>
                     {developer.skills && developer.skills.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
@@ -268,7 +268,7 @@ export const DeveloperProfileContent = ({ developer, isBlocked, onBlock, onUnblo
                 </CardContent>
             </Card>
              <Card>
-                <CardHeader><CardTitle className="flex items-center text-base"><Code className="mr-2 h-5 w-5 text-primary" /> Tech Stack</CardTitle></CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="flex items-center text-base"><Code className="mr-2 h-5 w-5 text-primary" /> Tech Stack</CardTitle></CardHeader>
                 <CardContent>
                     {developer.techStack && developer.techStack.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
@@ -281,7 +281,7 @@ export const DeveloperProfileContent = ({ developer, isBlocked, onBlock, onUnblo
 
         {allLinks.length > 0 && (
              <Card>
-                <CardHeader><CardTitle className="flex items-center text-base"><LinkIcon className="mr-2 h-5 w-5 text-primary"/> Links</CardTitle></CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="flex items-center text-base"><LinkIcon className="mr-2 h-5 w-5 text-primary"/> Links</CardTitle></CardHeader>
                 <CardContent className="flex flex-wrap gap-3">
                     {allLinks.map((link, index) => (
                         <Button asChild key={index} variant="outline">
