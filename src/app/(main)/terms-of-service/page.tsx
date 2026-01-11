@@ -174,7 +174,7 @@ export default function TermsOfServicePage() {
                         <p className="text-sm text-muted-foreground mb-3">
                             {item.description}
                             {section.id === 10 && (
-                                <Link href="/#contact" scroll={false} className="text-primary hover:underline">contact form</Link>
+                                <Link href="/#contact" className="text-primary hover:underline">contact form</Link>
                             )}
                         </p>
                     )}

@@ -218,7 +218,7 @@ export default function PrivacyPolicyPage() {
                         <p className="text-sm text-muted-foreground mb-3">
                             {item.description}
                             {section.id === 8 && (
-                                <Link href="/#contact" scroll={false} className="text-primary hover:underline">contact form</Link>
+                                <Link href="/#contact" className="text-primary hover:underline">contact form</Link>
                             )}
                         </p>
                     )}
@@ -236,7 +236,7 @@ export default function PrivacyPolicyPage() {
                         <p className="text-sm text-muted-foreground mt-3">
                             {item.footer}
                             {section.id === 5 && (
-                                <Link href="/#contact" scroll={false} className="text-primary hover:underline">contact form</Link>
+                                <Link href="/#contact" className="text-primary hover:underline">contact form</Link>
                             )}
                         </p>
                     )}

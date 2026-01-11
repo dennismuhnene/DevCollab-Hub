@@ -29,18 +29,36 @@ export default function Header() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
-  const handleScroll = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
-    if (pathname === '/') {
-      e.preventDefault();
-      const targetId = e.currentTarget.href.split('#')[1];
-      const targetElement = document.getElementById(targetId);
-      if (targetElement) {
-        targetElement.scrollIntoView({ behavior: 'smooth' });
+  useEffect(() => {
+    const scrollToContact = () => {
+      if (window.location.hash === '#contact') {
+        const targetElement = document.getElementById('contact');
+        if (targetElement) {
+          targetElement.scrollIntoView({ behavior: 'smooth' });
+        }
       }
-    } else {
-        router.push('/#contact');
+    };
+
+    if (pathname === '/' && window.location.hash === '#contact') {
+      const timer = setTimeout(scrollToContact, 100);
+      return () => clearTimeout(timer);
     }
+  }, [pathname]);
+
+  const handleScroll = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
     setIsSheetOpen(false);
+    const href = e.currentTarget.getAttribute('href');
+    if (href === '/#contact') {
+      if (pathname === '/') {
+        e.preventDefault();
+        const targetElement = document.getElementById('contact');
+        if (targetElement) {
+          targetElement.scrollIntoView({ behavior: 'smooth' });
+        }
+      } else {
+        router.push('/#contact');
+      }
+    }
   };
 
 
