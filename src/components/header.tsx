@@ -220,16 +220,16 @@ export default function Header() {
                                       <span className="font-bold text-[#c5a35a]">DevCollab Hub</span>
                                   </Link>
                               </div>
-                              <div className="flex flex-col space-y-2 p-4 flex-1">
+                              <div className="flex flex-col space-y-1 p-4 flex-1">
                                   {user ? (
                                       mobileNavLinks.map((link) => (
                                           <SheetClose asChild key={link.href}>
                                               <Link 
                                                 href={link.href} 
                                                 onClick={link.href === '/#contact' ? handleScroll : () => setIsSheetOpen(false)}
-                                                className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2"
+                                                className="text-base font-medium text-foreground/80 hover:text-foreground flex items-center gap-1.5 py-1.5"
                                                >
-                                                  <link.icon className="h-5 w-5" />
+                                                  <link.icon className="h-4 w-4" />
                                                   {link.label}
                                               </Link>
                                           </SheetClose>
@@ -237,14 +237,14 @@ export default function Header() {
                                   ) : (
                                       <>
                                           <SheetClose asChild>
-                                              <Link href="/blogs" className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
-                                                  <PenSquare className="h-5 w-5" />
+                                              <Link href="/blogs" className="text-base font-medium text-foreground/80 hover:text-foreground flex items-center gap-1.5 py-1.5">
+                                                  <PenSquare className="h-4 w-4" />
                                                   Blog
                                               </Link>
                                           </SheetClose>
                                           <SheetClose asChild>
-                                              <Link href="/#contact" onClick={handleScroll} className="text-lg font-medium text-foreground/80 hover:text-foreground flex items-center gap-2 py-2">
-                                                  <Contact className="h-5 w-5" />
+                                              <Link href="/#contact" onClick={handleScroll} className="text-base font-medium text-foreground/80 hover:text-foreground flex items-center gap-1.5 py-1.5">
+                                                  <Contact className="h-4 w-4" />
                                                   Contact
                                               </Link>
                                           </SheetClose>
