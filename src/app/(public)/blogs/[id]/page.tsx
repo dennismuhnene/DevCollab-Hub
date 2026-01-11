@@ -202,7 +202,7 @@ export default function BlogPostPage() {
                     <div className="flex items-center space-x-6 text-white/90">
                         <div className="flex items-center space-x-2">
                             <User className="h-4 w-4" />
-                            <span>{post.authorName}</span>
+                            <span>Admin</span>
                         </div>
                         {post.createdAt && (
                             <div className="flex items-center space-x-2">
