@@ -10,6 +10,8 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {createHash} from 'crypto';
+import {getRedisClient} from '@/lib/redis';
 
 const SummarizeUserSkillsInputSchema = z.object({
   profileDescription: z
@@ -31,7 +33,31 @@ export type SummarizeUserSkillsOutput = z.infer<typeof SummarizeUserSkillsOutput
 export async function summarizeUserSkills(
   input: SummarizeUserSkillsInput
 ): Promise<SummarizeUserSkillsOutput> {
-  return summarizeUserSkillsFlow(input);
+  const redis = getRedisClient();
+  const inputJson = JSON.stringify(input);
+  const hash = createHash('sha256').update(inputJson).digest('hex');
+  const cacheKey = `user-skills-summary:${hash}`;
+
+  try {
+    const cachedResult = await redis.get<SummarizeUserSkillsOutput>(cacheKey);
+    if (cachedResult) {
+      console.log('Cache hit for user skills summary.');
+      return cachedResult;
+    }
+  } catch (error) {
+    console.error('Redis cache lookup failed:', error);
+  }
+
+  console.log('Cache miss for user skills summary. Generating new summary.');
+  const result = await summarizeUserSkillsFlow(input);
+
+  try {
+    await redis.set(cacheKey, JSON.stringify(result), { ex: 3600 }); // Expires in 1 hour
+  } catch (error) {
+    console.error('Redis cache set failed:', error);
+  }
+
+  return result;
 }
 
 const prompt = ai.definePrompt({
