@@ -20,9 +20,9 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog';
 import { TagInput } from '@/components/ui/tag-input';
-import { SlidersHorizontal, X } from 'lucide-react';
+import { SlidersHorizontal, X, CheckSquare } from 'lucide-react';
 
-// Add the advisorApplicationId to the type
+// This local interface is now cleaner because standardDeliverables is part of PublicAdvisorProfile
 interface DisplayAdvisorProfile extends PublicAdvisorProfile {
     advisorApplicationId: string;
 }
@@ -68,8 +68,12 @@ const AdvisorHubPage = () => {
                 const fetchedAdvisors: DisplayAdvisorProfile[] = [];
                 querySnapshot.forEach((doc) => {
                     const advisor = doc.data() as PublicAdvisorProfile;
-                    if (!allBlockedIds.includes(advisor.uid)) {
-                        fetchedAdvisors.push({ ...advisor, advisorApplicationId: doc.id });
+                    // Correctly read the true application ID from the profile and ensure it exists
+                     if (!allBlockedIds.includes(advisor.uid) && advisor.activeAdvisorApplicationId) {
+                        fetchedAdvisors.push({ 
+                            ...advisor, 
+                            advisorApplicationId: advisor.activeAdvisorApplicationId 
+                        } as DisplayAdvisorProfile);
                     }
                 });
                 setAdvisors(fetchedAdvisors);
@@ -173,9 +177,11 @@ const AdvisorHubPage = () => {
                 </Card>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredAdvisors.map((advisor) => {
                     const advisorSpecialties = getAsArray(advisor.specialties);
+                    const advisorDeliverables = getAsArray(advisor.standardDeliverables);
+
                     return (
                         <Card 
                             key={advisor.uid} 
@@ -196,7 +202,7 @@ const AdvisorHubPage = () => {
                                     <CardDescription>{advisor.headline}</CardDescription>
                                 </div>
                             </CardHeader>
-                            <CardContent className="flex-grow">
+                            <CardContent className="flex-grow flex flex-col">
                                 <p className="text-sm text-muted-foreground line-clamp-3 mb-4">{advisor.bio}</p>
                                  <div className="flex flex-wrap gap-2">
                                     {advisorSpecialties.slice(0,3).map((spec: string) => (
@@ -206,6 +212,20 @@ const AdvisorHubPage = () => {
                                         <Badge variant="outline">+{advisorSpecialties.length - 3} more</Badge>
                                     )}
                                 </div>
+
+                                {advisorDeliverables && advisorDeliverables.length > 0 && (
+                                    <div className="mt-auto pt-4">
+                                        <h4 className="font-semibold text-xs text-muted-foreground mb-2 flex items-center"><CheckSquare className="h-3 w-3 mr-1.5" />COMMON DELIVERABLES</h4>
+                                        <div className="flex flex-wrap gap-1">
+                                            {advisorDeliverables.slice(0, 2).map((del: string) => (
+                                                <Badge key={del} variant="outline" className="text-xs font-normal">{del}</Badge>
+                                            ))}
+                                            {advisorDeliverables.length > 2 && (
+                                                <Badge variant="outline" className="text-xs font-normal">+{advisorDeliverables.length - 2} more</Badge>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     );
@@ -222,6 +242,7 @@ const AdvisorHubPage = () => {
             {selectedAdvisor && (() => {
                 const modalSpecialties = getAsArray(selectedAdvisor.specialties);
                 const modalCredentials = getAsArray(selectedAdvisor.credentials);
+                const modalDeliverables = getAsArray(selectedAdvisor.standardDeliverables);
 
                 return (
                     <Dialog open={!!selectedAdvisor} onOpenChange={(isOpen) => !isOpen && setSelectedAdvisor(null)}>
@@ -243,7 +264,7 @@ const AdvisorHubPage = () => {
                                 </div>
                             </DialogHeader>
 
-                            <div className="grid gap-2 py-4 overflow-y-auto px-6">
+                            <div className="grid gap-6 py-4 overflow-y-auto px-6">
                                 <div>
                                     <h3 className="font-semibold text-base mb-2">About Me</h3>
                                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedAdvisor.bio}</p>
@@ -270,12 +291,26 @@ const AdvisorHubPage = () => {
                                         </div>
                                     </div>
                                 )}
+
+                                {modalDeliverables && modalDeliverables.length > 0 && (
+                                    <div>
+                                        <h3 className="font-semibold text-base mb-2">Standard Deliverables</h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {modalDeliverables.map((del: string) => (
+                                                <Badge key={del}>{del}</Badge>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             
                             <DialogFooter className="mt-auto pt-4 border-t">
                                 {user?.uid !== selectedAdvisor.uid && (
-                                    <Button asChild className="w-full sm:w-auto" size="lg">
-                                        <Link href={`/advisory/${selectedAdvisor.uid}/request?applicationId=${selectedAdvisor.advisorApplicationId}`}>Request Engagement</Link>
+                                     <Button asChild className="w-full sm:w-auto" size="lg">
+                                        {/* Correctly pass the true application ID */}
+                                        <Link href={`/advisory/${selectedAdvisor.uid}/request?applicationId=${selectedAdvisor.activeAdvisorApplicationId}`}>
+                                            Request Engagement
+                                        </Link>
                                     </Button>
                                 )}
                             </DialogFooter>

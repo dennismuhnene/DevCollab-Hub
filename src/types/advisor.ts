@@ -12,6 +12,8 @@ export interface PublicAdvisorProfile {
     specialties: string[] | string;
     credentials?: string[] | string;
     country?: string;
+    standardDeliverables?: string[];
+    activeAdvisorApplicationId?: string; //  This links the public profile to the source application
 }
 
 export interface AdvisorProfile {
@@ -37,6 +39,7 @@ export interface AdvisorApplication {
     bio: string;
     credentials: string[];
     specialties: string[];
+    standardDeliverables?: string[]; // NEW: Advisor-defined capabilities
     verificationStatus: 'pending' | 'verified' | 'rejected';
     submissionCount: number;
     editCount: number;
@@ -60,11 +63,12 @@ export interface Engagement {
     id: string;
     developerId: string;
     advisorId: string;
-    status: 'requested' | 'active' | 'closed' | 'archived' | 'rejected';
+    status: 'requested' | 'active' | 'closed' | 'rejected' | 'pending_proposal' | 'pending_developer_acceptance' | 'revision_requested';
     message: string;
     createdAt: Timestamp | FieldValue;
     activatedAt?: Timestamp | FieldValue;
     closedAt?: Timestamp | FieldValue;
+    archivedBy?: string[]; // Tracks which users have archived this engagement
     developerName: string;
     developerPhotoURL: string;
     advisorName: string;
@@ -74,6 +78,33 @@ export interface Engagement {
     meetLink?: string; // Preserved for compatibility and primary link display
     meetings?: { [key: string]: Meeting }; // New map for multiple meetings
     advisorApplicationId?: string; // The ID of the specific advisor application
+
+    // New structured fields for the proposal flow
+    developerRequest?: {
+        subject: string;
+        message: string;
+        selectedDeliverables: string[];
+        proposedTimeline: string;
+        constraints?: string;
+    };
+    advisorProposal?: {
+        milestones: {
+            id: string;
+            description: string;
+            deliverable: string;
+            timeline: string;
+            status: 'pending' | 'in_progress' | 'submitted' | 'accepted';
+        }[];
+        notes?: string;
+    };
+    developerRevisionNote?: string; // Field to hold the developer's revision request message
+    outcomeLog?: {
+        milestoneId: string;
+        milestoneDescription: string;
+        advisorSummary: string;
+        developerReflection?: string;
+        completedAt: Timestamp;
+    }[];
 }
 
 export interface EngagementMessage {

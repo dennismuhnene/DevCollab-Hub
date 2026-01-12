@@ -34,7 +34,7 @@ export const getGoogleAuthUrl = functions.https.onCall(async (data, context) => 
     redirectUri
   );
 
-  const scopes = ['https://www.googleapis.com/auth/calendar'];
+  const scopes = ['https://www.googleapis.com/auth/calendar.events.owned'];
 
   const url = oauth2Client.generateAuthUrl({
     access_type: 'offline',

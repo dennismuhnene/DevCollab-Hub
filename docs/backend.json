@@ -278,7 +278,117 @@
           "isPublished": { "type": "boolean", "description": "Whether the blog post is visible to the public." }
         },
         "required": ["id", "title", "content", "authorId", "authorName", "createdAt", "updatedAt", "isPublished"]
-      }
+      },
+      "Engagement": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Engagement",
+      "type": "object",
+      "description": "Represents a professional engagement between a developer and an advisor.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Engagement entity."
+        },
+        "developerId": {
+          "type": "string",
+          "description": "The UID of the developer who initiated the engagement."
+        },
+        "developerName": {
+          "type": "string",
+          "description": "The name of the developer."
+        },
+        "developerPhotoURL": {
+          "type": "string",
+          "description": "The photo URL of the developer.",
+          "format": "uri"
+        },
+        "advisorId": {
+          "type": "string",
+          "description": "The UID of the advisor."
+        },
+        "advisorName": {
+          "type": "string",
+          "description": "The name of the advisor."
+        },
+        "advisorPhotoURL": {
+          "type": "string",
+          "description": "The photo URL of the advisor.",
+          "format": "uri"
+        },
+        "advisorHeadline": {
+          "type": "string",
+          "description": "The headline of the advisor at the time of engagement."
+        },
+        "advisorApplicationId": {
+          "type": "string",
+          "description": "The ID of the specific advisor application used for this engagement."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the engagement.",
+          "enum": [
+            "pending_proposal",
+            "pending_developer_acceptance",
+            "revision_requested",
+            "active",
+            "closed",
+            "rejected"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the engagement was created.",
+          "format": "date-time"
+        },
+        "developerRequest": {
+          "type": "object",
+          "description": "The initial request details sent by the developer.",
+          "properties": {
+            "subject": {
+              "type": "string",
+              "description": "The subject line of the engagement request.",
+              "maxLength": 37
+            },
+            "message": {
+              "type": "string",
+              "description": "The detailed message from the developer.",
+              "maxLength": 2000
+            },
+            "selectedDeliverables": {
+              "type": "array",
+              "description": "A list of standard deliverables selected by the developer.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "proposedTimeline": {
+              "type": "string",
+              "description": "The developer's proposed timeline for the engagement."
+            },
+            "constraints": {
+              "type": "string",
+              "description": "Any constraints or special considerations from the developer."
+            }
+          },
+          "required": [
+            "subject",
+            "message",
+            "selectedDeliverables",
+            "proposedTimeline"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "developerId",
+        "developerName",
+        "advisorId",
+        "advisorName",
+        "status",
+        "createdAt",
+        "developerRequest"
+      ]
+    }
   },
   "auth": {
     "providers": [
@@ -340,6 +450,16 @@
           "entityName": "BlogPost",
           "schema": { "$ref": "#/entities/BlogPost" },
           "description": "Stores individual blog posts."
+        }
+      },
+       {
+        "path": "/engagements/{engagementId}",
+        "definition": {
+          "entityName": "Engagement",
+          "schema": {
+            "$ref": "#/entities/Engagement"
+          },
+          "description": "Stores engagement data between developers and advisors."
         }
       }
     ]

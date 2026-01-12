@@ -163,7 +163,7 @@ export const manageMeeting = functions.https.onCall(async (data, context) => {
                 if (!meeting.id || !meeting.eventId) throw new functions.https.HttpsError('invalid-argument', 'Meeting ID and Event ID are required for rescheduling.');
                 
                 const existingMeeting = meetings[meeting.id];
-                if (!existingMeeting) throw new functions.https.HttpsError('not-found', 'The meeting to reschedule does not exist.');
+                if (!existingMeeting || existingMeeting.eventId !== meeting.eventId) throw new functions.https.HttpsError('not-found', 'The meeting to reschedule does not exist or you do not have permission to modify it.');
 
                 const rescheduleCount = existingMeeting.rescheduleCount || 0;
                 if (rescheduleCount >= 5) {
@@ -187,6 +187,10 @@ export const manageMeeting = functions.https.onCall(async (data, context) => {
 
             } else if (action === 'cancel') {
                 if (!meeting.id || !meeting.eventId) throw new functions.https.HttpsError('invalid-argument', 'Meeting ID and Event ID are required for cancellation.');
+                
+                const existingMeeting = meetings[meeting.id];
+                if (!existingMeeting || existingMeeting.eventId !== meeting.eventId) throw new functions.https.HttpsError('not-found', 'The meeting to cancel does not exist or you do not have permission to modify it.');
+
                 try {
                     await calendar.events.delete({ calendarId: 'primary', eventId: meeting.eventId });
                 } catch(err: any) {

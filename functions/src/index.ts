@@ -7,7 +7,7 @@ export * from './google-auth'; // Exports getGoogleAuthUrl and handleGoogleRedir
 import * as functions from "firebase-functions";
 import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getAuth, UserRecord } from "firebase-admin/auth";
 import axios from 'axios';
 
@@ -251,18 +251,18 @@ export const onEngagementCreated = functions.firestore
     .document('engagements/{engagementId}')
     .onCreate(async (snapshot, context) => {
         const engagement = snapshot.data();
-        if (!engagement) {
-            logger.error("No data associated with the engagement creation event.");
+        if (!engagement || !engagement.developerRequest) {
+            logger.error("No data or developer request associated with the engagement creation event.");
             return;
         }
 
-        const { advisorId, developerName } = engagement;
+        const { advisorId, developerName, developerRequest } = engagement;
         logger.info(`New engagement ${context.params.engagementId} created. Notifying advisor ${advisorId}.`);
 
         const notificationRef = adminDb.collection(`users/${advisorId}/notifications`).doc();
         await notificationRef.set({
             type: 'engagement',
-            title: 'New Engagement Request',
+            title: developerRequest.subject || 'New Engagement Request',
             message: `You have a new advisory request from ${developerName}.`,
             link: '/dashboard',
             read: false,
@@ -271,115 +271,99 @@ export const onEngagementCreated = functions.firestore
     });
 
 /**
- * Sends notifications when an engagement's status or meetings change.
+ * Sends notifications when an engagement's status changes.
  */
 export const onEngagementUpdated = functions.firestore
     .document('engagements/{engagementId}')
     .onUpdate(async (change, context) => {
         const before = change.before.data();
         const after = change.after.data();
-        const engagementId = context.params.engagementId;
 
-        const { developerId, advisorId, developerName, advisorName } = after;
-        let recipientId: string | null = null;
-        let notification: { type: string, title: string, message: string, link: string } | null = null;
-
-        // Case 1: Status changed from 'requested'
-        if (before.status === 'requested' && before.status !== after.status) {
-            recipientId = developerId;
-            if (after.status === 'active') {
-                logger.info(`Engagement ${engagementId} accepted. Notifying developer ${developerId}.`);
-                notification = {
-                    type: 'engagement',
-                    title: 'Engagement Request Accepted!',
-                    message: `${advisorName} has accepted your request. The engagement room is now open.`,
-                    link: `/engagements/${engagementId}`,
-                };
-            } else if (after.status === 'rejected') {
-                logger.info(`Engagement ${engagementId} rejected. Notifying developer ${developerId}.`);
-                notification = {
-                    type: 'engagement',
-                    title: 'Engagement Request Denied',
-                    message: `Unfortunately, ${advisorName} has denied your recent engagement request.`,
-                    link: '/dashboard',
-                };
-            }
+        if (before.status === after.status) {
+            return; // Exit if status hasn't changed
         }
 
-        // Case 2: Engagement was closed
-        else if (after.status === 'closed' && before.status === 'active') {
-            const closerId = after.lastMessageSenderId;
-            const closerName = closerId === developerId ? developerName : advisorName;
-            recipientId = closerId === developerId ? advisorId : developerId;
+        const { developerId, advisorId, developerName, advisorName, developerRequest } = after;
+        let recipientId: string | null = null;
+        let notificationPayload: { title: string, message: string, link: string } | null = null;
+        const subject = developerRequest?.subject;
 
-            logger.info(`Engagement ${engagementId} closed by ${closerName}. Notifying ${recipientId}.`);
-
-            notification = {
-                type: 'engagement',
-                title: 'Engagement Closed',
-                message: `${closerName} has closed the engagement.`,
-                link: `/engagements/${engagementId}`,
+        // Scenario 1: Advisor sends a proposal (or a revision)
+        if ((before.status === 'pending_proposal' || before.status === 'revision_requested') && after.status === 'pending_developer_acceptance') {
+            recipientId = developerId;
+            notificationPayload = {
+                title: subject ? `Re: ${subject}` : 'Proposal Ready for Review',
+                message: before.status === 'revision_requested' 
+                    ? `${advisorName} has revised their proposal for your engagement.`
+                    : `${advisorName} has sent you a proposal for your engagement request.`,
+                link: '/dashboard'
             };
         }
-
-        // **NEW**: Case 3: Meeting has been updated
-        const beforeMeetings = before.meetings || {};
-        const afterMeetings = after.meetings || {};
-        const beforeMeetingIds = Object.keys(beforeMeetings);
-        const afterMeetingIds = Object.keys(afterMeetings);
-        recipientId = developerId; // The developer is always the recipient of meeting notifications
-
-        if (afterMeetingIds.length > beforeMeetingIds.length) {
-            const newMeetingId = afterMeetingIds.find(id => !beforeMeetingIds.includes(id));
-            if (newMeetingId) {
-                const newMeeting = afterMeetings[newMeetingId];
-                logger.info(`Meeting scheduled in engagement ${engagementId}. Notifying developer ${developerId}.`);
-                notification = {
-                    type: 'engagement',
-                    title: 'New Meeting Scheduled',
-                    message: `${advisorName} has scheduled a new meeting for ${new Date(newMeeting.startTime).toLocaleString()}.`,
-                    link: `/engagements/${engagementId}`,
+        // Scenario 2: Developer requests a revision
+        else if (before.status === 'pending_developer_acceptance' && after.status === 'revision_requested') {
+            recipientId = advisorId;
+            notificationPayload = {
+                title: subject ? `Re: ${subject}` : 'Revision Requested',
+                message: `${developerName} has requested a revision to your proposal.`,
+                link: '/dashboard'
+            };
+        }
+        // Scenario 3: Developer accepts the proposal, activating the engagement
+        else if (before.status === 'pending_developer_acceptance' && after.status === 'active') {
+            recipientId = advisorId;
+            notificationPayload = {
+                title: 'Proposal Accepted!',
+                message: `${developerName} has accepted your proposal and activated the engagement.`,
+                link: `/engagements/${context.params.engagementId}`
+            };
+        }
+        // Scenario 4: The engagement is rejected
+        else if (after.status === 'rejected') {
+            if (before.status === 'pending_proposal' || before.status === 'revision_requested') {
+                recipientId = developerId;
+                notificationPayload = {
+                    title: 'Engagement Request Rejected',
+                    message: `${advisorName} has rejected your engagement request.`,
+                    link: '/dashboard'
                 };
             }
-        } else if (afterMeetingIds.length < beforeMeetingIds.length) {
-            const cancelledMeetingId = beforeMeetingIds.find(id => !afterMeetingIds.includes(id));
-            if (cancelledMeetingId) {
-                const cancelledMeeting = beforeMeetings[cancelledMeetingId];
-                logger.info(`Meeting cancelled in engagement ${engagementId}. Notifying developer ${developerId}.`);
-                notification = {
-                    type: 'engagement',
-                    title: 'Meeting Canceled',
-                    message: `${advisorName} has canceled your meeting that was scheduled for ${new Date(cancelledMeeting.startTime).toLocaleString()}.`,
-                    link: `/engagements/${engagementId}`,
+            else if (before.status === 'pending_developer_acceptance') {
+                recipientId = advisorId;
+                notificationPayload = {
+                    title: 'Proposal Rejected',
+                    message: `${developerName} has rejected your proposal.`,
+                    link: '/dashboard'
                 };
             }
-        } else {
-            for (const id of afterMeetingIds) {
-                if (beforeMeetings[id] && beforeMeetings[id].startTime !== afterMeetings[id].startTime) {
-                    const rescheduledMeeting = afterMeetings[id];
-                    logger.info(`Meeting rescheduled in engagement ${engagementId}. Notifying developer ${developerId}.`);
-                    notification = {
-                        type: 'engagement',
-                        title: 'Meeting Rescheduled',
-                        message: `${advisorName} has rescheduled your meeting to ${new Date(rescheduledMeeting.startTime).toLocaleString()}.`,
-                        link: `/engagements/${engagementId}`,
-                    };
-                    break; // Found the rescheduled meeting, no need to check others
-                }
+        }
+        // Scenario 5: Engagement is closed from an active state
+        else if (before.status === 'active' && after.status === 'closed') {
+            const closerId = after.closedById; // Assuming a 'closedById' field is set on closure
+            const closerName = closerId === developerId ? developerName : advisorName;
+            recipientId = closerId === developerId ? advisorId : developerId; // Notify the other party
+
+            if (recipientId) {
+                 notificationPayload = {
+                    title: 'Engagement Closed',
+                    message: `${closerName} has closed the engagement.`,
+                    link: `/engagements/${context.params.engagementId}`
+                };
             }
         }
 
-
-        if (recipientId && notification) {
+        // Send the notification if a valid scenario was matched
+        if (recipientId && notificationPayload) {
+            logger.info(`Sending notification to ${recipientId} for status change from ${before.status} to ${after.status} in engagement ${context.params.engagementId}`);
             const notificationRef = adminDb.collection(`users/${recipientId}/notifications`).doc();
             await notificationRef.set({
-                ...notification,
+                ...notificationPayload,
+                type: 'engagement',
                 read: false,
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                createdAt: FieldValue.serverTimestamp(),
             });
+        } else {
+            logger.info(`No notification logic for status change from ${before.status} to ${after.status} in engagement ${context.params.engagementId}`);
         }
-
-        return null;
     });
 
 /**

@@ -1,4 +1,3 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -12,6 +11,11 @@ service cloud.firestore {
     }
     function isAdmin() {
       return request.auth.token.get('admin', false) == true || request.auth.uid == 'Jv4XV8flpAgUqJpd2P7SKr3PijX2';
+    }
+
+    // Collection Group Rules
+    match /{path=**}/advisorApplications/{applicationId} {
+      allow list: if isSignedIn();
     }
 
     // USERS
@@ -37,12 +41,9 @@ service cloud.firestore {
             );
         allow delete: if false;
 
-        // CORRECTED RULE: This rule now correctly targets the subcollection.
         match /advisorApplications/{applicationId} {
-            // Allow any signed-in user to read verified applications for the public profile page.
-            allow get, list: if isSignedIn();
-
-            // Allow an advisor to create and update their own application.
+            allow get: if isSignedIn() && (isAdmin() || uid() == userId || resource.data.verificationStatus == 'verified');
+            allow list: if isSignedIn();
             allow create: if isSignedIn() && uid() == userId;
             allow update: if isSignedIn() && (isAdmin() || (uid() == userId && (request.resource.data.verificationStatus == resource.data.verificationStatus || (resource.data.verificationStatus == 'rejected' && request.resource.data.verificationStatus == 'pending'))));
             allow delete: if false;
@@ -119,13 +120,50 @@ service cloud.firestore {
 
     // ENGAGEMENTS & REVIEWS
     match /engagements/{engagementId} {
+      // Helper functions for this resource
+      function isDeveloper() { return uid() == resource.data.developerId; }
+      function isAdvisor() { return uid() == resource.data.advisorId; }
+      function isParticipant() { return isDeveloper() || isAdvisor(); }
+      function statusTransition(before, after) {
+        return resource.data.status == before && request.resource.data.status == after;
+      }
+      function affectedKeysAre(keys) {
+          let allKeys = keys.concat(['status']);
+          return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allKeys);
+      }
+      function statusOnly() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      }
+
       allow create: if isSignedIn() && request.resource.data.developerId == uid();
-      allow read: if isSignedIn() && (uid() == resource.data.developerId || uid() == resource.data.advisorId);
-      allow get: if isSignedIn();
-      allow update: if isSignedIn() && (
-        (resource.data.status == 'requested' && request.resource.data.status == 'active' && uid() == resource.data.advisorId) ||
-        (resource.data.status == 'requested' && request.resource.data.status == 'rejected' && uid() == resource.data.advisorId) ||
-        (resource.data.status == 'active' && request.resource.data.status == 'closed' && (uid() == resource.data.developerId || uid() == resource.data.advisorId))
+      allow read, get: if isSignedIn() && isParticipant();
+
+      allow update: if isSignedIn() && isParticipant() && (
+        // Advisor submits initial proposal or a revision
+        ( (statusTransition('pending_proposal', 'pending_developer_acceptance') || statusTransition('revision_requested', 'pending_developer_acceptance')) && 
+            isAdvisor() && affectedKeysAre(['advisorProposal']) ) ||
+        // Advisor rejects initial request or revision request
+        ( (statusTransition('pending_proposal', 'rejected') || statusTransition('revision_requested', 'rejected')) && 
+            isAdvisor() && statusOnly() ) ||
+        
+        // Developer requests revision
+        ( statusTransition('pending_developer_acceptance', 'revision_requested') && 
+            isDeveloper() && affectedKeysAre(['developerRevisionNote']) ) ||
+        // Developer accepts proposal
+        ( statusTransition('pending_developer_acceptance', 'active') && 
+            isDeveloper() && affectedKeysAre(['activatedAt']) ) ||
+        // Developer rejects proposal
+        ( statusTransition('pending_developer_acceptance', 'rejected') && 
+            isDeveloper() && statusOnly() ) ||
+
+        // Either participant closes the engagement
+        ( statusTransition('active', 'closed') && 
+            isParticipant() && affectedKeysAre(['closedById']) ) ||
+
+        // A participant can archive/unarchive for themselves.
+        ( request.resource.data.diff(resource.data).affectedKeys().hasOnly(['archivedBy']) &&
+          (request.resource.data.archivedBy == (resource.data.get('archivedBy', [])).concat([uid()])) ||
+          (request.resource.data.archivedBy == (resource.data.get('archivedBy', [])).removeAll([uid()])) )
       );
 
       match /messages/{messageId} {

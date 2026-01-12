@@ -65,6 +65,8 @@ export const setActiveAdvisorProfile = functions.https.onCall(async (data, conte
                 bio: appData.bio,
                 specialties: appData.specialties || [],
                 credentials: appData.credentials || [],
+                standardDeliverables: appData.standardDeliverables || [],
+                activeAdvisorApplicationId: applicationId, // This links the public profile to the source application
                 createdAt: admin.firestore.FieldValue.serverTimestamp(), // Use server timestamp for consistency
             });
             await admin.auth().setCustomUserClaims(userId, { ...(userDoc.data()?.customClaims || {}), isAdvisor: true });
