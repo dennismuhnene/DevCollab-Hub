@@ -1,219 +1,315 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, or, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import { Engagement } from '@/types/advisor';
+import type { Engagement } from '@/types/advisor';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-    DialogFooter,
-} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { CircleX, FileText, Send, SquarePen, Star, ThumbsDown, ThumbsUp, Hourglass, CheckCircle, PencilRuler, Briefcase, Eye, Archive, ArchiveRestore } from 'lucide-react';
+import { RequestDetails, ProposalDetails } from './engagement-details';
+import { ProposalBuilderDialog, RevisionRequestDialog, RejectedDetailsDialog } from './engagement-dialogs';
 
+
+// Main Component
 export default function Engagements() {
     const { user, userProfile } = useAuth();
-    const router = useRouter();
     const { toast } = useToast();
-    
-    const [developerEngagements, setDeveloperEngagements] = useState<Engagement[]>([]);
-    const [advisorRequests, setAdvisorRequests] = useState<Engagement[]>([]);
-    const [advisorEngagements, setAdvisorEngagements] = useState<Engagement[]>([]);
-    const [showMessageModal, setShowMessageModal] = useState(false);
-    const [modalMessage, setModalMessage] = useState('');
-    const [modalTitle, setModalTitle] = useState('');
+    const [engagements, setEngagements] = useState<Engagement[]>([]);
+    const [showArchived, setShowArchived] = useState(false);
 
     useEffect(() => {
-        if (!user || !userProfile) return;
-
-        // Engagements where the current user is the developer
-        const devQuery = query(collection(db, 'engagements'), where('developerId', '==', user.uid));
-        const unsubscribeDev = onSnapshot(devQuery, (snapshot) => {
+        if (!user) return;
+        const q = query(collection(db, 'engagements'), or(
+            where('developerId', '==', user.uid),
+            where('advisorId', '==', user.uid)
+        ));
+        const unsubscribe = onSnapshot(q, snapshot => {
             const engs: Engagement[] = [];
             snapshot.forEach(doc => engs.push({ id: doc.id, ...doc.data() } as Engagement));
-            setDeveloperEngagements(engs);
+            setEngagements(engs);
         });
+        return () => unsubscribe();
+    }, [user]);
 
-        let unsubscribeAdvisor: (() => void) | null = null;
-        // Engagements where the current user is the advisor (if they have the role)
-        if (userProfile?.roles?.advisor) {
-            const advisorQuery = query(collection(db, 'engagements'), where('advisorId', '==', user.uid));
-            unsubscribeAdvisor = onSnapshot(advisorQuery, (snapshot) => {
-                const reqs: Engagement[] = [];
-                const otherEngs: Engagement[] = [];
-                snapshot.forEach(doc => {
-                    const engagement = { id: doc.id, ...doc.data() } as Engagement;
-                    if (engagement.status === 'requested') {
-                        reqs.push(engagement);
-                    } else {
-                        otherEngs.push(engagement);
-                    }
-                });
-                setAdvisorRequests(reqs);
-                setAdvisorEngagements(otherEngs);
-            });
-        }
-
-        return () => {
-            unsubscribeDev();
-            if (unsubscribeAdvisor) {
-                unsubscribeAdvisor();
-            }
+    const { developerEngagements, advisorEngagements, archivedDeveloperEngagements, archivedAdvisorEngagements } = useMemo(() => {
+        if (!user) return { developerEngagements: [], advisorEngagements: [], archivedDeveloperEngagements: [], archivedAdvisorEngagements: [] };
+        const nonArchived = engagements.filter(e => !e.archivedBy || !e.archivedBy.includes(user.uid));
+        const archived = engagements.filter(e => e.archivedBy && e.archivedBy.includes(user.uid));
+        return {
+            developerEngagements: nonArchived.filter(e => e.developerId === user.uid),
+            advisorEngagements: nonArchived.filter(e => e.advisorId === user.uid),
+            archivedDeveloperEngagements: archived.filter(e => e.developerId === user.uid),
+            archivedAdvisorEngagements: archived.filter(e => e.advisorId === user.uid),
         };
+    }, [engagements, user]);
 
-    }, [user, userProfile]);
-
-    const handleAccept = async (engagementId: string) => {
+    const handleArchiveToggle = async (engagementId: string, archive: boolean) => {
+        if(!user) return;
         const engagementRef = doc(db, 'engagements', engagementId);
         try {
-            await updateDoc(engagementRef, {
-                status: 'active',
-                activatedAt: serverTimestamp()
+            await updateDoc(engagementRef, { 
+                archivedBy: archive ? arrayUnion(user.uid) : arrayRemove(user.uid) 
             });
-            toast({ title: "Request Accepted", description: "The engagement room is now active." });
-            router.push(`/engagements/${engagementId}`);
+            toast({ title: `Engagement ${archive ? 'Archived' : 'Restored'}` });
         } catch (error) {
-            console.error("Error accepting engagement:", error);
-            toast({ variant: 'destructive', title: "Error", description: "Could not accept the request." });
-        }
-    };
-    
-    const handleDeny = async (engagementId: string) => {
-        const engagementRef = doc(db, 'engagements', engagementId);
-        try {
-            await updateDoc(engagementRef, {
-                status: 'rejected'
-            });
-            toast({ title: "Request Denied", description: "The developer will be notified." });
-        } catch (error) {
-            console.error("Error denying engagement:", error);
-            toast({ variant: 'destructive', title: "Error", description: "Could not deny the request." });
+            toast({ variant: 'destructive', title: "Error", description: "Could not update the engagement." });
         }
     };
 
-    const handleViewMessage = (message: string, participantName: string, isAdvisorView: boolean) => {
-        setModalTitle(isAdvisorView ? `Original Request from ${participantName}` : `Your Original Request to ${participantName}`);
-        setModalMessage(message);
-        setShowMessageModal(true);
-    };
+    const hasArchivedEngagements = archivedDeveloperEngagements.length > 0 || archivedAdvisorEngagements.length > 0;
 
-    const getStatusColor = (status: Engagement['status']) => {
-        switch (status) {
-            case 'active': return 'text-green-500';
-            case 'requested': return 'text-yellow-500';
-            case 'rejected': return 'text-red-500';
-            case 'closed': return 'text-gray-500';
-            default: return 'text-gray-500';
-        }
-    };
+    return (
+        <div className="space-y-6">
+            <EngagementsListSection title="My Engagements" description="Engagements you have requested as a developer." Icon={Briefcase} engagements={developerEngagements} onArchiveToggle={handleArchiveToggle} userRole="developer" />
+            {userProfile?.roles?.advisor && (
+                 <EngagementsListSection title="Advisory Dashboard" description="Engagements where you are the advisor." Icon={Star} engagements={advisorEngagements} onArchiveToggle={handleArchiveToggle} userRole="advisor" />
+            )}
 
-    if (!user || !userProfile) {
-        return null; // Don't render anything if user is not fully loaded
+            {hasArchivedEngagements && (
+                 <Accordion type="single" collapsible onValueChange={(value) => setShowArchived(!!value)}>
+                    <AccordionItem value="archived">
+                        <AccordionTrigger className="text-base font-semibold">Archived Engagements</AccordionTrigger>
+                        <AccordionContent className="space-y-6 pt-4">
+                            <EngagementsListSection title="My Engagements" engagements={archivedDeveloperEngagements} onArchiveToggle={handleArchiveToggle} userRole="developer" isArchivedList />
+                            {userProfile?.roles?.advisor && (
+                                <EngagementsListSection title="Advisory Dashboard" engagements={archivedAdvisorEngagements} onArchiveToggle={handleArchiveToggle} userRole="advisor" isArchivedList />
+                            )}
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+            )}
+        </div>
+    );
+}
+
+// List Section Component
+function EngagementsListSection({ title, description, Icon, engagements, onArchiveToggle, userRole, isArchivedList = false }: { title: string, description?: string, Icon?: React.ElementType, engagements: Engagement[], onArchiveToggle: (id: string, archive: boolean) => void, userRole: 'developer' | 'advisor', isArchivedList?: boolean }) {
+    const { user } = useAuth();
+    if (engagements.length === 0) {
+        if (isArchivedList) return null; // Don't show card if there are no archived items for a section
+        return (
+            <Card>
+                <CardHeader>
+                    {Icon && <CardTitle className="flex items-center gap-2 text-base"><Icon />{title}</CardTitle>}
+                    {description && <CardDescription className="text-sm">{description}</CardDescription>}
+                </CardHeader>
+                <CardContent><p className="text-sm text-muted-foreground">You have no engagements here.</p></CardContent>
+            </Card>
+        );
     }
 
     return (
+        <Card>
+            <CardHeader>
+                {Icon && <CardTitle className="flex items-center gap-2 text-base"><Icon />{title}</CardTitle>}
+                {!isArchivedList && description && <CardDescription className="text-sm">{description}</CardDescription>}
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {engagements.map(eng => {
+                    const isArchived = eng.archivedBy?.includes(user!.uid) ?? false;
+                    return userRole === 'developer' 
+                        ? <DeveloperEngagementCard key={eng.id} engagement={eng} onArchiveToggle={(archive) => onArchiveToggle(eng.id, archive)} isArchived={isArchived} /> 
+                        : <AdvisorEngagementCard key={eng.id} engagement={eng} onArchiveToggle={(archive) => onArchiveToggle(eng.id, archive)} isArchived={isArchived} />
+                })}
+            </CardContent>
+        </Card>
+    );
+}
+
+
+// Card Components
+function DeveloperEngagementCard({ engagement, onArchiveToggle, isArchived }: { engagement: Engagement; onArchiveToggle: (archive: boolean) => void; isArchived: boolean; }) {
+    const { toast } = useToast();
+    const [showRevisionDialog, setShowRevisionDialog] = useState(false);
+    
+    const handleStatusUpdate = async (status: Engagement['status'], revisionNote?: string) => {
+        const engagementRef = doc(db, 'engagements', engagement.id);
+        try {
+            const updatePayload: any = { status };
+            if (status === 'revision_requested' && revisionNote) updatePayload.developerRevisionNote = revisionNote;
+            if (status === 'active') updatePayload.activatedAt = new Date();
+            await updateDoc(engagementRef, updatePayload);
+            toast({ title: "Success", description: `Engagement status updated.` });
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Error", description: "Could not update the engagement." });
+        }
+    };
+
+    const renderContent = () => {
+        switch (engagement.status) {
+            case 'pending_proposal':
+                return <PendingProposalView participant={engagement.advisorName} participantRole="Advisor" />;
+            case 'pending_developer_acceptance':
+                return <ProposalReviewView engagement={engagement} onAccept={() => handleStatusUpdate('active')} onReject={() => handleStatusUpdate('rejected')} onRequestRevision={() => setShowRevisionDialog(true)} />;
+            case 'revision_requested':
+                return <RevisionRequestedView participant={engagement.advisorName} participantRole="Advisor" />;
+            case 'active':
+                return <ActiveEngagementView engagement={engagement} userRole="developer" />;
+            case 'rejected':
+            case 'closed':
+                 return <StatusView engagement={engagement} userRole="developer" onArchiveToggle={onArchiveToggle} isArchived={isArchived} />;
+            default:
+                return <PendingProposalView participant={engagement.advisorName} participantRole="Advisor" />;
+        }
+    };
+
+    return (
+        <div className="p-4 border rounded-lg">
+            {renderContent()}
+            {showRevisionDialog && <RevisionRequestDialog open={showRevisionDialog} onOpenChange={setShowRevisionDialog} onSubmit={(note) => handleStatusUpdate('revision_requested', note)} />}
+        </div>
+    );
+}
+
+function AdvisorEngagementCard({ engagement, onArchiveToggle, isArchived }: { engagement: Engagement; onArchiveToggle: (archive: boolean) => void; isArchived: boolean;}) {
+    const { toast } = useToast();
+    const [showProposalDialog, setShowProposalDialog] = useState(false);
+
+    const handleReject = async () => {
+        const engagementRef = doc(db, 'engagements', engagement.id);
+        try {
+            await updateDoc(engagementRef, { status: 'rejected' });
+            toast({ title: "Engagement Rejected" });
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Error", description: "Could not reject the engagement." });
+        }
+    };
+
+    const renderContent = () => {
+        switch (engagement.status) {
+            case 'pending_proposal':
+                return <ProposalCreationView engagement={engagement} onPropose={() => setShowProposalDialog(true)} onReject={handleReject} />;
+            case 'pending_developer_acceptance':
+                return <PendingResponseView participant={engagement.developerName} participantRole="Developer" />;
+            case 'revision_requested':
+                return <ProposalCreationView engagement={engagement} onPropose={() => setShowProposalDialog(true)} onReject={handleReject} isRevision />;
+            case 'active':
+                return <ActiveEngagementView engagement={engagement} userRole="advisor" />;
+            case 'rejected':
+            case 'closed':
+                return <StatusView engagement={engagement} userRole="advisor" onArchiveToggle={onArchiveToggle} isArchived={isArchived} />;
+            default:
+                 return <PendingResponseView participant={engagement.developerName} participantRole="Developer" />;
+        }
+    }
+
+    return (
+        <div className="p-4 border rounded-lg">
+            {renderContent()}
+            {showProposalDialog && <ProposalBuilderDialog open={showProposalDialog} onOpenChange={setShowProposalDialog} engagement={engagement} />}
+        </div>
+    )
+}
+
+// Reusable UI Components
+const PendingProposalView = ({ participant, participantRole }: { participant: string, participantRole: string }) => (
+    <div className="flex items-center justify-between">
+        <div>
+            <p className="font-semibold text-sm">vs {participant}</p>
+            <p className="text-sm text-muted-foreground">Waiting for {participantRole} to create a proposal.</p>
+        </div>
+        <Hourglass className="h-5 w-5 text-yellow-500" />
+    </div>
+);
+
+const ProposalCreationView = ({ engagement, onPropose, onReject, isRevision = false }: { engagement: Engagement, onPropose: () => void, onReject: () => void, isRevision?: boolean }) => (
+    <div>
+        <div className="flex items-start justify-between">
+            <div className="flex-1">
+                <p className="font-semibold text-sm">Request from {engagement.developerName}</p>
+                {isRevision && engagement.developerRevisionNote && (
+                    <Alert variant="default" className="mt-2 bg-yellow-50 border-yellow-200">
+                        <PencilRuler className="h-4 w-4" />
+                        <AlertTitle className="text-sm font-semibold">Revision Requested</AlertTitle>
+                        <AlertDescription className="text-xs text-yellow-800">{engagement.developerRevisionNote}</AlertDescription>
+                    </Alert>
+                )}
+            </div>
+            <Avatar className="ml-4"><AvatarImage src={engagement.developerPhotoURL} /><AvatarFallback>{engagement.developerName?.[0]}</AvatarFallback></Avatar>
+        </div>
+        <Accordion type="single" collapsible className="w-full mt-2"><AccordionItem value="request"><AccordionTrigger className="text-sm">View Developer's Request</AccordionTrigger><AccordionContent><RequestDetails engagement={engagement} /></AccordionContent></AccordionItem></Accordion>
+        <CardFooter className="flex justify-end gap-2 pt-4 px-0 pb-0"><Button variant="destructive" onClick={onReject}>Reject</Button><Button onClick={onPropose}><SquarePen className="mr-2 h-4 w-4" />{isRevision ? 'Revise Proposal' : 'Create Proposal'}</Button></CardFooter>
+    </div>
+);
+
+const ProposalReviewView = ({ engagement, onAccept, onReject, onRequestRevision }: { engagement: Engagement, onAccept: () => void, onReject: () => void, onRequestRevision: () => void }) => (
+    <div>
+        <div className="flex items-center justify-between">
+            <div><p className="font-semibold text-sm">Proposal from {engagement.advisorName}</p><Alert variant="default" className="mt-2 bg-blue-50 border-blue-200"><FileText className="h-4 w-4" /><AlertTitle className="text-sm font-semibold">Action Required</AlertTitle><AlertDescription className="text-xs text-blue-800">Review the proposal and take action.</AlertDescription></Alert></div>
+            <Avatar className="ml-4"><AvatarImage src={engagement.advisorPhotoURL} /><AvatarFallback>{engagement.advisorName?.[0]}</AvatarFallback></Avatar>
+        </div>
+        <Accordion type="single" collapsible className="w-full mt-4" defaultValue="proposal">
+            <AccordionItem value="request"><AccordionTrigger className="text-sm font-semibold">Your Original Request</AccordionTrigger><AccordionContent><RequestDetails engagement={engagement} /></AccordionContent></AccordionItem>
+            {engagement.developerRevisionNote && <AccordionItem value="revision"><AccordionTrigger className="text-sm font-semibold text-yellow-600">Your Revision Request</AccordionTrigger><AccordionContent><p className="p-3 bg-yellow-50 rounded-md text-yellow-800 text-sm border border-yellow-200">{engagement.developerRevisionNote}</p></AccordionContent></AccordionItem>}
+            <AccordionItem value="proposal"><AccordionTrigger className="text-sm font-semibold">Advisor's Proposal</AccordionTrigger><AccordionContent><ProposalDetails engagement={engagement} /></AccordionContent></AccordionItem>
+        </Accordion>
+        <CardFooter className="flex justify-end gap-2 pt-4 px-0 pb-0"><Button variant="destructive" size="sm" onClick={onReject}><ThumbsDown className="mr-2 h-4 w-4"/>Reject</Button><Button variant="outline" size="sm" onClick={onRequestRevision} disabled={!!engagement.developerRevisionNote}><PencilRuler className="mr-2 h-4 w-4"/>Request Revision</Button><Button size="sm" onClick={onAccept}><ThumbsUp className="mr-2 h-4 w-4"/>Accept & Activate</Button></CardFooter>
+    </div>
+);
+
+const RevisionRequestedView = ({ participant, participantRole }: { participant: string, participantRole: string }) => (
+    <div className="flex items-center justify-between">
+        <div><p className="font-semibold text-sm">vs {participant}</p><p className="text-sm text-muted-foreground">Revision requested. Waiting for {participantRole} to respond.</p></div>
+        <PencilRuler className="h-5 w-5 text-yellow-500" />
+    </div>
+);
+
+const PendingResponseView = ({ participant, participantRole }: { participant: string, participantRole: string }) => (
+    <div className="flex items-center justify-between">
+        <div><p className="font-semibold text-sm">with {participant}</p><p className="text-sm text-muted-foreground">Proposal sent. Waiting for {participantRole} to respond.</p></div>
+        <Send className="h-5 w-5 text-blue-500" />
+    </div>
+);
+
+const ActiveEngagementView = ({ engagement, userRole }: { engagement: Engagement, userRole: 'developer' | 'advisor' }) => (
+    <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+			<p className="font-semibold text-sm">{userRole === 'developer' ? `vs ${engagement.advisorName}` : `with ${engagement.developerName}`}</p>
+			<Badge className="bg-green-100 text-green-800 hover:bg-green-100/80">Active</Badge>
+		</div>
+        <Button asChild><Link href={`/engagements/${engagement.id}`}>Enter Room</Link></Button>
+    </div>
+);
+
+function StatusView({ engagement, userRole, onArchiveToggle, isArchived }: { engagement: Engagement, userRole: 'developer' | 'advisor', onArchiveToggle: (archive: boolean) => void, isArchived: boolean }) {
+    const [showDetails, setShowDetails] = useState(false);
+    const participantName = userRole === 'developer' ? engagement.advisorName : engagement.developerName;
+    // @ts-ignore
+    const createdAtDate = engagement.createdAt?.toDate ? engagement.createdAt.toDate().toLocaleDateString() : '-';
+    const statusConfig = {
+        rejected: { Icon: CircleX, color: 'text-red-500', description: "This engagement was rejected." },
+        closed: { Icon: CheckCircle, color: 'text-gray-500', description: "This engagement is closed." },
+    };
+    const { Icon, color, description } = statusConfig[engagement.status as 'rejected' | 'closed'] || { Icon: CircleX, color: 'text-gray-500', description: '' };
+
+    return (
         <>
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-base">My Engagements</CardTitle>
-                    <CardDescription className="text-sm">Engagements you have requested as a developer.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {developerEngagements.length > 0 ? developerEngagements.map(eng => (
-                        <div key={eng.id} className="flex items-center justify-between p-2 border rounded-lg">
-                            <div>
-                                <p className="font-semibold text-sm">vs {eng.advisorName}</p>
-                                <p className="text-sm">Status: <span className={`font-medium ${getStatusColor(eng.status)}`}>{eng.status}</span></p>
-                            </div>
-                            {eng.status === 'rejected' ? (
-                                <Button variant="outline" onClick={() => handleViewMessage(eng.message, eng.advisorName, false)}>View Message</Button>
-                            ) : (
-                                <Button asChild><Link href={`/engagements/${eng.id}`}>View</Link></Button>
-                            )}
-                        </div>
-                    )) : (
-                        <p className="text-sm text-muted-foreground">You have not requested any engagements.</p>
-                    )}
-                </CardContent>
-            </Card>
-
-            {userProfile?.roles?.advisor && (
-                <>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Advisory Requests</CardTitle>
-                            <CardDescription className="text-sm">Requests from developers seeking your advice.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {advisorRequests.length > 0 ? advisorRequests.map(req => (
-                                <div key={req.id} className="p-4 border rounded-lg">
-                                    <div className="flex items-start justify-between">
-                                        <div>
-                                            <p className="font-semibold text-sm">{req.developerName}</p>
-                                            <p className="text-sm text-muted-foreground mt-1 line-clamp-3">{req.message}</p>
-                                        </div>
-                                        <Avatar>
-                                            <AvatarImage src={req.developerPhotoURL} />
-                                            <AvatarFallback>{req.developerName?.[0]}</AvatarFallback>
-                                        </Avatar>
-                                    </div>
-                                    <CardFooter className="flex justify-end gap-2 pt-4 px-0 pb-0">
-                                       <Button variant="outline" onClick={() => handleDeny(req.id)}>Deny</Button>
-                                       <Button onClick={() => handleAccept(req.id)}>Accept & Open Room</Button>
-                                    </CardFooter>
-                                </div>
-                            )) : (
-                                <p className="text-sm text-muted-foreground">You have no pending advisory requests.</p>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">My Advisor Engagements</CardTitle>
-                            <CardDescription className="text-sm">Your ongoing and past engagements as an advisor.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {advisorEngagements.length > 0 ? advisorEngagements.map(eng => (
-                                <div key={eng.id} className="flex items-center justify-between p-2 border rounded-lg">
-                                    <div>
-                                       <p className="font-semibold text-sm">with {eng.developerName}</p>
-                                       <p className="text-sm">Status: <span className={`font-medium ${getStatusColor(eng.status)}`}>{eng.status}</span></p>
-                                    </div>
-                                    {eng.status === 'rejected' ? (
-                                        <Button variant="outline" onClick={() => handleViewMessage(eng.message, eng.developerName, true)}>View Message</Button>
-                                    ) : (
-                                        <Button asChild><Link href={`/engagements/${eng.id}`}>View</Link></Button>
-                                    )}
-                                </div>
-                            )) : (
-                                <p className="text-sm text-muted-foreground">You have no active or past engagements.</p>
-                            )}
-                        </CardContent>
-                    </Card>
-                </>
-            )}
-
-            <Dialog open={showMessageModal} onOpenChange={setShowMessageModal}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>{modalTitle}</DialogTitle>
-                        <DialogDescription className="whitespace-pre-wrap pt-4">{modalMessage}</DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button onClick={() => setShowMessageModal(false)}>Close</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <div className="flex items-start justify-between">
+                <div className="flex-1 space-y-1">
+                    <p className="font-semibold text-sm">{userRole === 'developer' ? `vs ${participantName}` : `with ${participantName}`}</p>
+                    {engagement.developerRequest?.subject && <p className="text-sm font-medium text-gray-700">Subject: {engagement.developerRequest.subject}</p>}
+                    <p className="text-xs text-muted-foreground">Date: {createdAtDate}</p>
+                    <p className="text-sm text-muted-foreground">{description}</p>
+                </div>
+                <div className="flex items-center gap-2 ml-4">
+                     {engagement.status === 'closed' && <Button variant="outline" size="sm" asChild><Link href={`/engagements/${engagement.id}`}><Eye className="mr-2 h-4 w-4"/>View</Link></Button>}
+                    {engagement.status === 'rejected' && <Button variant="outline" size="sm" onClick={() => setShowDetails(true)}><Eye className="mr-2 h-4 w-4"/>View Details</Button>}
+                    {isArchived
+                        ? <Button variant="outline" size="sm" onClick={() => onArchiveToggle(false)}><ArchiveRestore className="mr-2 h-4 w-4"/>Restore</Button>
+                        : <Button variant="outline" size="sm" onClick={() => onArchiveToggle(true)}><Archive className="mr-2 h-4 w-4"/>Archive</Button>
+                    }
+                    <Icon className={`h-5 w-5 ${color}`} />
+                </div>
+            </div>
+            {engagement.status === 'rejected' && <RejectedDetailsDialog open={showDetails} onOpenChange={setShowDetails} engagement={engagement} />}
         </>
     );
 }

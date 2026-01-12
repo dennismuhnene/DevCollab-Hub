@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -33,6 +33,7 @@ export default function EngagementVideo({ engagement }: EngagementVideoProps) {
 
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(new Date());
   const [scheduleTime, setScheduleTime] = useState<string>("09:00");
+  const [pendingAction, setPendingAction] = useState<(() => Promise<void>) | null>(null);
 
   const isUserTheAdvisor = currentUser?.uid === engagement.advisorId;
   const isEngagementActive = engagement.status === 'active';
@@ -40,97 +41,142 @@ export default function EngagementVideo({ engagement }: EngagementVideoProps) {
   const meetings: Meeting[] = engagement.meetings ? Object.values(engagement.meetings).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()) : [];
   const meetingLimitReached = meetings.length >= 3;
 
-  const handleGoogleCalendarAuth = async () => {
+  const handleGoogleCalendarAuth = useCallback(async () => {
     setIsLoading(true);
+
+    const authWindow = window.open('', 'google-auth', 'width=600,height=700');
+    if (!authWindow) {
+        toast({
+            variant: 'destructive',
+            title: 'Popup Blocked',
+            description: 'Please allow popups for this site to connect your Google Account.'
+        });
+        setIsLoading(false);
+        return;
+    }
+
     try {
         const functions = getFunctions();
         const getGoogleAuthUrl = httpsCallable(functions, 'getGoogleAuthUrl');
         const result = await getGoogleAuthUrl();
         const { url } = result.data as { url: string };
-        window.open(url, 'google-auth', 'width=600,height=700');
-        setIsLoading(false);
-        setIsPermissionModalOpen(false);
-        toast({ title: 'Permissions window opened', description: 'Please complete the authentication in the popup and try your action again.' });
+        
+        authWindow.location.href = url;
+
+        const checkAuth = setInterval(() => {
+            if (authWindow.closed) {
+                clearInterval(checkAuth);
+                setIsLoading(false);
+                setIsPermissionModalOpen(false);
+                if (pendingAction) {
+                    toast({ title: 'Re-authenticating...', description: 'Permissions refreshed. Retrying your last action.' });
+                    setTimeout(() => { // Gives a small buffer for backend to process
+                        pendingAction();
+                        setPendingAction(null);
+                    }, 2000);
+                } else {
+                    toast({ title: 'Permissions Granted', description: 'Your Google Calendar is connected.' });
+                }
+            }
+        }, 500);
+
     } catch (error: any) {
         console.error("Google Calendar auth error:", error);
         toast({ variant: 'destructive', title: 'Connection Error', description: error.message || 'Failed to connect Google Calendar.' });
         setIsLoading(false);
+        setPendingAction(null);
+        if (authWindow) {
+            authWindow.close();
+        }
     }
-  };
+}, [pendingAction, toast]);
 
-  const handleManageMeeting = async () => {
+
+  const handleManageMeeting = useCallback(async () => {
     if (!scheduleDate || !scheduleTime || !currentUser) return;
     setIsLoading(true);
     const action = editingMeeting ? 'reschedule' : 'schedule';
 
-    try {
-        if (action === 'schedule' && meetingLimitReached) {
-            throw new Error('You can only schedule a maximum of 3 meetings.');
+    const meetingAction = async () => {
+        try {
+            if (action === 'schedule' && meetingLimitReached) {
+                throw new Error('You can only schedule a maximum of 3 meetings.');
+            }
+            const currentRescheduleCount = editingMeeting?.rescheduleCount || 0;
+            if (action === 'reschedule' && currentRescheduleCount >= 5) {
+                throw new Error('This meeting has been rescheduled the maximum number of times.');
+            }
+    
+            const [hours, minutes] = scheduleTime.split(':').map(Number);
+            const startTime = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate(), hours, minutes);
+            const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+            const result = await callManageMeeting({
+                engagementId: engagement.id,
+                action,
+                meeting: {
+                    ...editingMeeting,
+                    id: editingMeeting?.id,
+                    eventId: editingMeeting?.eventId,
+                    title: `DevCollab Session: ${engagement.developerName} & ${engagement.advisorName}`,
+                    startTime: startTime.toISOString(),
+                    endTime: endTime.toISOString(),
+                    timezone: timezone,
+                },
+            }) as { message: string };
+          
+          toast({ title: 'Success', description: result.message });
+          setIsScheduleModalOpen(false);
+          setEditingMeeting(null);
+    
+        } catch (error: any) {
+            if (error.code === 'functions/permission-denied' && error.message.includes('Failed to refresh Google authentication token')) {
+                setPendingAction(() => meetingAction); 
+                setIsScheduleModalOpen(false);
+                setIsPermissionModalOpen(true);
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: 'Action Denied',
+                    description: error.message || 'Could not perform this action. Please check the rules and try again.',
+                });
+            }
+        } finally {
+          setIsLoading(false);
         }
-        const currentRescheduleCount = editingMeeting?.rescheduleCount || 0;
-        if (action === 'reschedule' && currentRescheduleCount >= 5) {
-            throw new Error('This meeting has been rescheduled the maximum number of times.');
-        }
+    };
+    
+    await meetingAction();
 
-        const [hours, minutes] = scheduleTime.split(':').map(Number);
-        const startTime = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate(), hours, minutes);
-        const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  }, [scheduleDate, scheduleTime, currentUser, editingMeeting, engagement, meetingLimitReached, toast]);
 
-        const result = await callManageMeeting({
-            engagementId: engagement.id,
-            action,
-            meeting: {
-                ...editingMeeting,
-                id: editingMeeting?.id,
-                eventId: editingMeeting?.eventId,
-                title: `DevCollab Session: ${engagement.developerName} & ${engagement.advisorName}`,
-                startTime: startTime.toISOString(),
-                endTime: endTime.toISOString(),
-                timezone: timezone,
-            },
-        }) as { message: string };
-      
-      toast({ title: 'Success', description: result.message });
-      setIsScheduleModalOpen(false);
-      setEditingMeeting(null);
-
-    } catch (error: any) {
-        if (error.code === 'functions/failed-precondition' && !error.message.includes('limit') && !error.message.includes('maximum')) {
-            setIsScheduleModalOpen(false);
-            setIsPermissionModalOpen(true);
-        } else {
-            toast({
-                variant: 'destructive',
-                title: 'Action Denied',
-                description: error.message || 'Could not perform this action. Please check the rules and try again.',
-            });
-        }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCancelMeeting = async (meeting: Meeting) => {
+  const handleCancelMeeting = useCallback(async (meeting: Meeting) => {
     if (!currentUser) return;
     setIsLoading(true);
-    try {
-      const result = await callManageMeeting({
-        engagementId: engagement.id,
-        action: 'cancel',
-        meeting: { id: meeting.id, eventId: meeting.eventId, startTime: meeting.startTime, endTime: meeting.endTime },
-      }) as { message: string };
-      toast({ title: 'Success', description: result.message });
-    } catch (error: any) {
-        if (error.code === 'functions/failed-precondition') {
-            setIsPermissionModalOpen(true);
-        } else {
-            toast({ variant: 'destructive', title: 'Error', description: error.message || 'Could not cancel meeting.' });
+
+    const cancelAction = async () => {
+        try {
+          const result = await callManageMeeting({
+            engagementId: engagement.id,
+            action: 'cancel',
+            meeting: { id: meeting.id, eventId: meeting.eventId, startTime: meeting.startTime, endTime: meeting.endTime },
+          }) as { message: string };
+          toast({ title: 'Success', description: result.message });
+        } catch (error: any) {
+            if (error.code === 'functions/permission-denied' && error.message.includes('Failed to refresh Google authentication token')) {
+                setPendingAction(() => cancelAction);
+                setIsPermissionModalOpen(true);
+            } else {
+                toast({ variant: 'destructive', title: 'Error', description: error.message || 'Could not cancel meeting.' });
+            }
+        } finally {
+            setIsLoading(false);
         }
-    } finally {
-        setIsLoading(false);
-    }
-  };
+    };
+
+    await cancelAction();
+  }, [currentUser, engagement.id, toast]);
 
   const handleEditClick = (meeting: Meeting) => {
     const rescheduleLimitReached = (meeting.rescheduleCount || 0) >= 5;
@@ -149,7 +195,7 @@ export default function EngagementVideo({ engagement }: EngagementVideoProps) {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Video Sessions</CardTitle>
+          <CardTitle className="text-base">Video Sessions</CardTitle>
           <CardDescription>
             {isUserTheAdvisor
               ? "Schedule and manage video meetings with your client. A maximum of 3 meetings can be scheduled."
@@ -243,7 +289,7 @@ export default function EngagementVideo({ engagement }: EngagementVideoProps) {
             <DialogDescription>To schedule meetings, this application needs permission to access your Google Calendar. Please connect your account to continue.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-             <Button onClick={() => setIsPermissionModalOpen(false)} variant="ghost">Cancel</Button>
+             <Button onClick={() => { setIsPermissionModalOpen(false); setPendingAction(null); }} variant="ghost">Cancel</Button>
             <Button onClick={handleGoogleCalendarAuth} disabled={isLoading}>
               {isLoading ? <Loader2 className="animate-spin mr-2" /> : 'Connect Account'}
             </Button>

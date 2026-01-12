@@ -1,6 +1,6 @@
 'use client';
 import type { Timestamp, FieldValue } from 'firebase/firestore';
-import type { AdvisorProfile, PublicAdvisorProfile } from './advisor'; // Correctly import both types
+import type { AdvisorProfile, PublicAdvisorProfile, AdvisorApplication } from './advisor'; // Correctly import all needed types
 
 // Defines a structure for external links
 export interface ExternalLink {
@@ -174,4 +174,4 @@ export interface Question {
 
 
 // Make the new PublicAdvisorProfile type available for import elsewhere
-export type { PublicAdvisorProfile };
+export type { PublicAdvisorProfile, AdvisorApplication };

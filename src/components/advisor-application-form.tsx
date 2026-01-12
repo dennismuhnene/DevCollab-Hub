@@ -32,6 +32,7 @@ const formSchema = z.object({
   bio: z.string().min(50, 'Bio must be at least 50 characters.'),
   credentials: z.array(z.string()).min(1, 'Please list at least one credential.'),
   specialties: z.array(z.string()).min(1, 'Please list at least one specialty.'),
+  standardDeliverables: z.array(z.string()).min(1, 'Please list at least one standard deliverable.').optional(),
 });
 
 const ADMIN_UID = 'Jv4XV8flpAgUqJpd2P7SKr3PijX2';
@@ -79,6 +80,7 @@ export function AdvisorApplicationForm({ userProfile, application: initialApplic
       bio: application?.bio || '',
       credentials: application?.credentials || [],
       specialties: application?.specialties || [],
+      standardDeliverables: application?.standardDeliverables || [],
     },
   });
 
@@ -89,8 +91,9 @@ export function AdvisorApplicationForm({ userProfile, application: initialApplic
     const currentSubmissionCount = application?.submissionCount || 0;
 
     const applicationData: Omit<AdvisorApplication, 'id'> = {
+      uid: user.uid, // <-- FIXED: Added the missing uid
       ...values,
-      slot: application.slot, // <-- FIXED: Ensure slot is always included
+      slot: application.slot,
       verificationStatus: 'pending',
       submissionCount: isNewApplication ? 1 : currentSubmissionCount + 1,
       editCount: application?.editCount ? application.editCount + 1 : 1,
@@ -111,7 +114,7 @@ export function AdvisorApplicationForm({ userProfile, application: initialApplic
         await sendAdminNotification(userProfile.name || 'Anonymous', user.uid, application.id, true);
         toast({ title: 'Application Updated and Resubmitted' });
       }
-      onFormSubmit(); // <-- FIXED: Call the callback on success
+      onFormSubmit();
     } catch (error) {
       console.error('Error submitting application:', error);
       toast({ variant: 'destructive', title: 'Error submitting application.' });
@@ -180,8 +183,9 @@ export function AdvisorApplicationForm({ userProfile, application: initialApplic
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <FormField control={form.control} name="headline" render={({ field }) => (<FormItem><FormLabel>Headline</FormLabel><FormControl><Input placeholder="e.g., Go-to-Market Strategist for SaaS Startups" {...field} /></FormControl><FormMessage /></FormItem>)} />
             <FormField control={form.control} name="bio" render={({ field }) => (<FormItem><FormLabel>Advisor Bio</FormLabel><FormControl><Textarea placeholder="Tell us about your experience, your areas of expertise, and what makes you a great advisor." className="resize-none" rows={5} {...field} /></FormControl><FormMessage /></FormItem>)} />
-            <FormField control={form.control} name="credentials" render={({ field }) => (<FormItem><FormLabel>Credentials</FormLabel><FormControl><TagInput {...field} placeholder="Type a credential (e.g., PhD, MBA) and press Enter" /></FormControl><FormMessage /></FormItem>)} />
-            <FormField control={form.control} name="specialties" render={({ field }) => (<FormItem><FormLabel>Specialties</FormLabel><FormControl><TagInput {...field} placeholder="Type a specialty (e.g., Marketing, Fundraising) and press Enter" /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="credentials" render={({ field }) => (<FormItem><FormLabel>Credentials</FormLabel><FormControl><TagInput {...field} value={field.value ?? []} placeholder="Type a credential (e.g., PhD, MBA) and press Enter" /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="specialties" render={({ field }) => (<FormItem><FormLabel>Specialties</FormLabel><FormControl><TagInput {...field} value={field.value ?? []} placeholder="Type a specialty (e.g., Marketing, Fundraising) and press Enter" /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="standardDeliverables" render={({ field }) => (<FormItem><FormLabel>Standard Deliverables</FormLabel><FormControl><TagInput {...field} value={field.value ?? []} placeholder="Type a deliverable (e.g., MVP Scope, Architecture Review) and press Enter" /></FormControl><FormDescription>List your core, repeatable services.</FormDescription><FormMessage /></FormItem>)} />
             
             <Button type="submit" disabled={isSubmitting || remainingSubmissions <= 0}>
               {isSubmitting ? (

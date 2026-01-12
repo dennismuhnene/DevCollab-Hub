@@ -38,11 +38,52 @@ This document outlines the core features, technology stack, and data models for 
 
 - **Integrated Communication:** A real-time chat system for matched users.
 
-- **Expert Advisory Marketplace:** A structured, four-phase system for expert consultations:
-    - **Phase 1: Application & Vetting:** A formal application and admin review process for advisors.
-    - **Phase 2: Discovery & Request:** A filterable marketplace (`/advisory`) for users to find and formally request sessions with approved advisors.
-    - **Phase 3: The Engagement:** A central hub (`/engagements/[id]`) for active engagements, featuring integrated video calls (Google Meet) and scheduling.
-    - **Phase 4: Review & Completion:** A two-way feedback system to build advisor reputation.
+- **Expert Advisory & Engagement System (Confidential & Outcome-Driven):** A structured system for private, milestone-based collaborations. Engagements are standalone, confidential contracts, not publicly tied to projects or roles.
+
+    - **Phase 1: Advisor Supply-Side Setup**
+        - **Application:** A formal application and admin review process for advisors.
+        - **Standard Deliverables:** Advisors define a list of their core capabilities (e.g., "MVP Scope Definition," "Architecture Review"). These serve as building blocks for proposals.
+
+    - **Phase 2: Engagement Request & Proposal Negotiation**
+        1.  **Developer Initiates Request:** From an advisor's profile, a developer sends a confidential request including a context message, selected deliverables (from the advisor's list), a proposed timeline, and optional constraints. This is a request, not a booking.
+        2.  **Advisor Responds:** The advisor has three options:
+            - **Reject Immediately:** The request is closed.
+            - **Accept As-Is:** The advisor defines milestones matching the developer's request and sends it for final confirmation.
+            - **Propose a Structured Plan (Primary Path):** The advisor creates and sends a detailed counter-proposal with specific milestones (description, deliverable, timeline) and notes.
+        3.  **Developer Decision Gate:** The developer reviews the advisor's proposal and has three options:
+            - **Accept:** The engagement becomes `active`, and a private Engagement Room is created.
+            - **Reject:** The engagement is `rejected` and permanently closed.
+            - **Request Revision (One-Time Only):** The status becomes `revision_requested`. The developer sends feedback, and the proposal goes back to the advisor.
+        4.  **Advisor's Final Response:** After a revision request, the advisor has two options:
+            - **Reject:** The engagement is `rejected` and permanently closed.
+            - **Resend Final Proposal:** The advisor makes adjustments and sends one last proposal. The status returns to `pending_developer_acceptance`.
+        5.  **Developer's Final Decision:** Faced with the revised proposal, the developer can only:
+            - **Accept:** The engagement becomes `active`.
+            - **Reject:** The engagement is `rejected`. There are no more revisions.
+
+    - **Phase 3: Execution in the Engagement Room**
+        - Upon acceptance, a private, confidential **Engagement Room** (`/engagements/[id]`) is created.
+        - **Contents:** The room contains an integrated Chat, a read-only **Milestone Panel**, a timeline overview, and a private **Outcome Log**.
+        - **Confidentiality:** There are explicitly **no links** to public projects, ensuring complete privacy.
+
+    - **Phase 4: Milestone Tracking & Outcome Logging**
+        - **Lightweight Accountability:** The milestone tracking is not a project management tool. It's a simple accountability scaffold.
+        - **Flow:** An advisor marks a milestone as `Submitted`. The developer then reviews it. They can `Accept` it (which marks it complete and triggers the Outcome Log) or `Request Clarification` via the chat without resetting the milestone's state.
+        - **Automated Outcome Logging:** Each accepted milestone automatically creates a **Private Engagement Outcome Entry** in the Outcome Log. This entry contains the milestone description, a required summary from the advisor, and an optional reflection from the developer.
+
+    - **Phase 5: Post-Engagement Closure & Intelligence**
+        - **Completion:** Once all milestones are accepted, the engagement is marked "Completed."
+        - **Review:** A two-way, confidential review process is initiated.
+        - **Reputation & Progress Tracking:**
+            - **For Advisors:** The system internally tracks metrics like deliverables completed, acceptance rates, and revision frequency. This builds a reputation score based on execution, giving their "Standard Deliverables" a credibility weight.
+            - **For Developers:** The platform tracks a private history of completed engagements, deliverables achieved, and time-to-completion patterns. This provides a valuable record of their progress and decisions.
+
+- **Non-Intrusive AI Coach (New & Separate):** A new AI system that operates at the engagement meta-level without reading content. Its role is to act as a private coach.
+    - **Capabilities:**
+        - Detect stalled engagements (based on milestone inactivity).
+        - Flag repeated revision requests as a potential mismatch.
+        - Privately summarize completed outcomes for the developer.
+        - Recommend the next type of advisor based on the developer's engagement history.
 
 - **Administrative Oversight:** Systems for vetting advisor applications (`/admin/applications`) and managing user feedback.
 
@@ -55,7 +96,7 @@ This document outlines the core features, technology stack, and data models for 
 - **Backend & Database:** Firebase (Authentication, Firestore, Storage)
 - **Styling:** Tailwind CSS with shadcn/ui components
 - **State Management:** React Hooks, Context API
-- **AI Integration:** Google AI (Genkit) for dashboard insights.
+- **AI Integration:** Google AI (Genkit). Used for two **separate** features: the public project dashboard insights and the new, non-intrusive engagement AI coach.
 - **Analytics:** Firebase Analytics.
 
 ## 3. Data Models
@@ -116,6 +157,7 @@ This document outlines the core features, technology stack, and data models for 
   bio: string;
   specialties: string[];
   credentials: string[];
+  standardDeliverables?: string[]; // NEW: Advisor-defined capabilities
   verificationStatus: 'pending' | 'verified' | 'rejected';
 }
 ```
@@ -126,10 +168,32 @@ This document outlines the core features, technology stack, and data models for 
   id: string; // Firestore Document ID
   developerId: string;
   advisorId: string;
-  message: string;
-  status: 'requested' | 'active' | 'completed' | 'declined';
-  googleMeetLink?: string;
-  calendarEventId?: string;
+  status: 'pending_proposal' | 'pending_developer_acceptance' | 'revision_requested' | 'active' | 'completed' | 'rejected';
+  developerRequest: {
+    message: string;
+    selectedDeliverables: string[];
+    proposedTimeline: string;
+    constraints?: string;
+  };
+  advisorProposal?: {
+    milestones: {
+        id: string;
+        description: string;
+        deliverable: string;
+        timeline: string;
+        status: 'pending' | 'in_progress' | 'submitted' | 'accepted'; // Milestone-specific status
+    }[];
+    notes?: string;
+  };
+  outcomeLog?: {
+    milestoneId: string;
+    milestoneDescription: string;
+    advisorSummary: string;
+    developerReflection?: string;
+    completedAt: Timestamp;
+  }[];
+  googleMeetLink?: string; // Optional
+  calendarEventId?: string; // Optional
 }
 ```
 
@@ -146,7 +210,7 @@ This document outlines the core features, technology stack, and data models for 
 ```typescript
 {
   id: string;
-  type: 'match' | 'message' | 'system';
+  type: 'match' | 'message' | 'system' | 'engagement_update';
   link: string; // URL to the relevant page
   read: boolean;
   createdAt: Timestamp;
@@ -169,9 +233,8 @@ This document outlines the core features, technology stack, and data models for 
 - `/messages` - Main messages view
 - `/messages/[matchId]` - A direct chat with a specific match
 - `/advisory` - The main discovery hub for finding advisors.
-- `/advisory/[advisorId]/request` - Form to submit a formal engagement request.
-- `/engagements/[engagementId]` - The central hub for a specific, active engagement.
-- `/engagements/[engagementId]/review` - Page for submitting a review after completion.
+- `/engagements` - A new central page to manage all engagement requests and active engagements.
+- `/engagements/[engagementId]` - The private Engagement Room for a specific, active engagement.
 - `/admin/applications` - Admin page for reviewing advisor applications.
 - `/admin/applications/[userId]/[applicationId]` - Admin page for viewing a specific application.
 - `/blogs` - Public-facing content and articles.

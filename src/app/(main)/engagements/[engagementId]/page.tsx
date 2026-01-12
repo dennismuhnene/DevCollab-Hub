@@ -12,11 +12,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Paperclip, Send, XCircle, Loader2, ShieldAlert } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { checkBlockStatus } from '@/lib/firebase/users';
 import EngagementVideo from '@/components/engagement-video';
+import { RequestDetails, ProposalDetails } from '@/components/dashboard/engagement-details';
 
 const EngagementRoomPage = (): JSX.Element => {
     const { engagementId } = useParams();
@@ -259,7 +261,7 @@ const EngagementRoomPage = (): JSX.Element => {
                 <div className="space-y-2">
                     <Card>
                         <CardHeader><CardTitle className="text-base">Engagement Details</CardTitle></CardHeader>
-                        <CardContent className="space-y-2">
+                        <CardContent className="space-y-4">
                             <div>
                                 <h4 className="font-semibold text-sm">Advisor</h4>
                                 <div className="flex items-center gap-2 mt-1">
@@ -277,9 +279,32 @@ const EngagementRoomPage = (): JSX.Element => {
                                     <p>{engagement.developerName}</p>
                                 </div>
                             </div>
-                            <div>
-                                <h4 className="font-semibold text-sm">Request Message</h4>
-                                <p className="text-sm text-muted-foreground mt-1 bg-gray-50 p-3 rounded-md">{engagement.message}</p>
+                            <div className="space-y-2">
+                                <h3 className="text-sm font-semibold">Negotiation History</h3>
+                                <Accordion type="single" collapsible className="w-full">
+                                    <AccordionItem value="developer-request">
+                                        <AccordionTrigger className="text-sm font-semibold">Developer's Request</AccordionTrigger>
+                                        <AccordionContent>
+                                            <RequestDetails engagement={engagement} />
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                    {engagement.advisorProposal && (
+                                        <AccordionItem value="advisor-proposal">
+                                            <AccordionTrigger className="text-sm font-semibold">Advisor's Proposal</AccordionTrigger>
+                                            <AccordionContent>
+                                                <ProposalDetails engagement={engagement} />
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    )}
+                                    {engagement.developerRevisionNote && (
+                                        <AccordionItem value="revision-note">
+                                            <AccordionTrigger className="text-sm font-semibold">Developer's Revision Note</AccordionTrigger>
+                                            <AccordionContent>
+                                                <p className="p-3 bg-yellow-50 rounded-md text-yellow-800 text-sm border border-yellow-200">{engagement.developerRevisionNote}</p>
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    )}
+                                </Accordion>
                             </div>
                         </CardContent>
                     </Card>
@@ -288,7 +313,7 @@ const EngagementRoomPage = (): JSX.Element => {
 
             <div className="space-y-2">
                 <Card>
-                    <CardHeader><CardTitle className="text-base">Video Sessions</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="text-base font-semibold">Video Sessions</CardTitle></CardHeader>
                     <CardContent>
                         {isRoomActive ? (
                             <EngagementVideo engagement={engagement} />
