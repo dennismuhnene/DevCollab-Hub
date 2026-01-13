@@ -108,7 +108,21 @@ const ProjectDetailsInModal = ({ project, developer }: { project: Project; devel
     );
 };
 
-export const DeveloperProfileContent = ({ developer, isBlocked, onBlock, onUnblock, blockLoading }: { developer: UserProfile, isBlocked: boolean, onBlock?: () => void, onUnblock?: () => void, blockLoading?: boolean }) => {
+export const DeveloperProfileContent = ({ 
+    developer, 
+    isBlocked, 
+    onBlock, 
+    onUnblock, 
+    blockLoading, 
+    isBlockingEnabled = true 
+}: { 
+    developer: UserProfile, 
+    isBlocked: boolean, 
+    onBlock?: () => void, 
+    onUnblock?: () => void, 
+    blockLoading?: boolean,
+    isBlockingEnabled?: boolean
+}) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -210,11 +224,21 @@ export const DeveloperProfileContent = ({ developer, isBlocked, onBlock, onUnblo
             </div>
             <div className="flex flex-col items-end gap-2">
                 {isBlocked ? (
-                    <Button variant="destructive" onClick={() => onUnblock && onUnblock()} disabled={blockLoading || !onUnblock}>
+                    <Button 
+                        variant="destructive" 
+                        onClick={() => isBlockingEnabled && onUnblock && onUnblock()} 
+                        disabled={!isBlockingEnabled || blockLoading || !onUnblock}
+                        className={!isBlockingEnabled ? 'filter blur-sm cursor-not-allowed' : ''}
+                    >
                         <ShieldOff className="mr-2 h-4 w-4" /> Unblock User
                     </Button>
                 ) : (
-                    <Button variant="outline" onClick={() => onBlock && onBlock()} disabled={blockLoading || !onBlock}>
+                    <Button 
+                        variant="outline" 
+                        onClick={() => isBlockingEnabled && onBlock && onBlock()} 
+                        disabled={!isBlockingEnabled || blockLoading || !onBlock}
+                        className={!isBlockingEnabled ? 'filter blur-sm cursor-not-allowed' : ''}
+                    >
                         <ShieldOff className="mr-2 h-4 w-4" /> Block User
                     </Button>
                 )}

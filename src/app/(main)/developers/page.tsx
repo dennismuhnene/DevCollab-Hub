@@ -273,7 +273,7 @@ export default function DiscoverPage() {
   };
 
   const ListSkeleton = () => (
-    <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${filtersVisible ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
+    <div className={`grid grid-cols-1 gap-2 sm:grid-cols-2 ${filtersVisible ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
       {[...Array(ITEMS_PER_PAGE)].map((_, i) => (
         <Card key={i}>
           <CardContent className="p-4">
@@ -296,7 +296,7 @@ export default function DiscoverPage() {
 
     return (
       <>
-        <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${filtersVisible ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
+        <div className={`grid grid-cols-1 gap-2 sm:grid-cols-2 ${filtersVisible ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
           {paginatedResults.map((item, index) => {
             const itemIndex = ((currentPage - 1) * ITEMS_PER_PAGE) + index;
             if (isProject(item)) return <div key={`proj-${item.id}`} onClick={() => handleCardClick(item, itemIndex)}><ProjectCard project={item} /></div>;
@@ -341,7 +341,7 @@ export default function DiscoverPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-2">
         {filtersVisible ? (
           <div className="lg:col-span-1">
             <DiscoverFilters
