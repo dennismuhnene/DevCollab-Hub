@@ -30,11 +30,6 @@ export default function RoleCard({ role, isDiscoverMode = false }: RoleCardProps
             ))}
         </div>
       </CardContent>
-      <CardFooter>
-        <Button variant="default" className="w-full">
-          View Role
-        </Button>
-      </CardFooter>
     </Card>
   );
 }
