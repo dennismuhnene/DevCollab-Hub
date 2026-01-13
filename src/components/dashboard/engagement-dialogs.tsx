@@ -14,10 +14,16 @@ import {
     DialogFooter,
     DialogClose
 } from '@/components/ui/dialog';
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from "@/components/ui/accordion"
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { nanoid } from 'nanoid';
-import { CircleX } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { RequestDetails, ProposalDetails, CharacterCounter } from './engagement-details';
 
 // Dialog for Advisor to Build Proposal
@@ -25,10 +31,10 @@ export function ProposalBuilderDialog({ open, onOpenChange, engagement }: { open
     const { toast } = useToast();
     const [milestones, setMilestones] = useState(engagement.advisorProposal?.milestones || [{ id: nanoid(8), description: '', deliverable: '', timeline: '', status: 'pending'}]);
     const [notes, setNotes] = useState(engagement.advisorProposal?.notes || '');
-    const NOTE_MAX_LENGTH = 1000;
-    const MILESTONE_DESC_MAX_LENGTH = 200;
-    const MILESTONE_DELIVERABLE_MAX_LENGTH = 100;
-    const MILESTONE_TIMELINE_MAX_LENGTH = 50;
+    const NOTE_MAX_LENGTH = 2500;
+    const MILESTONE_DESC_MAX_LENGTH = 2500;
+    const MILESTONE_DELIVERABLE_MAX_LENGTH = 2500;
+    const MILESTONE_TIMELINE_MAX_LENGTH = 2500;
 
     const handleSubmit = async () => {
         if (milestones.some(m => !m.description || !m.deliverable || !m.timeline)) {
@@ -56,42 +62,76 @@ export function ProposalBuilderDialog({ open, onOpenChange, engagement }: { open
                     <DialogDescription>Review the developer's request and define the milestones for this engagement.</DialogDescription>
                 </DialogHeader>
                 <div className="flex-grow overflow-y-auto -mx-6 px-6 py-4 space-y-6">
-                    <div className="space-y-2 p-4 border rounded-lg bg-slate-50">
-                        <h3 className="text-sm font-semibold text-slate-600">Developer's Request</h3>
-                        <RequestDetails engagement={engagement} />
-                    </div>
+                    <Accordion type="single" collapsible defaultValue='item-1'>
+                        <AccordionItem value="item-1">
+                            <AccordionTrigger className='text-sm font-semibold text-slate-600'>Developer's Request</AccordionTrigger>
+                            <AccordionContent>
+                                <div className="space-y-2 p-4 border rounded-lg bg-slate-50">
+                                    <RequestDetails engagement={engagement} />
+                                </div>
+                            </AccordionContent>
+                        </AccordionItem>
+                    </Accordion>
+
                     <div className="space-y-4">
                         <h3 className="text-sm font-semibold text-slate-600">Your Proposal</h3>
-                        {milestones.map((m, i) => (
-                            <div key={m.id} className="p-3 border rounded-lg space-y-2 relative bg-white">
-                                <Textarea rows={3} maxLength={MILESTONE_DESC_MAX_LENGTH} placeholder={`Milestone ${i + 1} Description`} value={m.description} onChange={e => {
-                                    const newMilestones = [...milestones];
-                                    newMilestones[i].description = e.target.value;
-                                    setMilestones(newMilestones);
-                                }} className="font-semibold" />
-                                <CharacterCounter value={m.description} maxLength={MILESTONE_DESC_MAX_LENGTH} />
-
-                                <Textarea rows={3} maxLength={MILESTONE_DELIVERABLE_MAX_LENGTH} placeholder="Deliverable" value={m.deliverable} onChange={e => {
-                                    const newMilestones = [...milestones];
-                                    newMilestones[i].deliverable = e.target.value;
-                                    setMilestones(newMilestones);
-                                }} />
-                                <CharacterCounter value={m.deliverable} maxLength={MILESTONE_DELIVERABLE_MAX_LENGTH} />
-
-                                <Textarea maxLength={MILESTONE_TIMELINE_MAX_LENGTH} placeholder="Timeline (e.g., 1 week)" value={m.timeline} onChange={e => {
-                                    const newMilestones = [...milestones];
-                                    newMilestones[i].timeline = e.target.value;
-                                    setMilestones(newMilestones);
-                                }} />
-                                <CharacterCounter value={m.timeline} maxLength={MILESTONE_TIMELINE_MAX_LENGTH} />
-
-                                {i > 0 && <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7" onClick={() => setMilestones(milestones.filter(stone => stone.id !== m.id))}><CircleX className="h-4 w-4"/></Button>}
-                            </div>
-                        ))}
+                        <Accordion type="multiple" className="w-full space-y-3">
+                            {milestones.map((m, i) => (
+                                <AccordionItem value={`milestone-${i}`} key={m.id} className="border-none">
+                                    <div className="flex items-center w-full border rounded-lg bg-white p-0">
+                                        <AccordionTrigger className="p-3 flex-1 text-left font-semibold hover:no-underline text-sm">
+                                            <span>Milestone {i + 1}</span>
+                                        </AccordionTrigger>
+                                        {i > 0 && 
+                                            <div className="pr-3">
+                                                <Button variant="destructive" size="sm" className="h-8" onClick={() => setMilestones(milestones.filter(stone => stone.id !== m.id))}>
+                                                    <Trash2 className="h-4 w-4 mr-1"/> Remove
+                                                </Button>
+                                            </div>
+                                        }
+                                    </div>
+                                    <AccordionContent className="p-4 bg-gray-50 rounded-b-lg mt-1 border">
+                                        <div className="space-y-4">
+                                            <div>
+                                                <Textarea rows={5} maxLength={MILESTONE_DESC_MAX_LENGTH} placeholder={`Milestone ${i + 1} Description`} value={m.description} onChange={e => {
+                                                    const newMilestones = [...milestones];
+                                                    newMilestones[i].description = e.target.value;
+                                                    setMilestones(newMilestones);
+                                                }} className="font-semibold" />
+                                                <CharacterCounter value={m.description} maxLength={MILESTONE_DESC_MAX_LENGTH} />
+                                            </div>
+                                            <div>
+                                                <Textarea rows={5} maxLength={MILESTONE_DELIVERABLE_MAX_LENGTH} placeholder="Deliverable" value={m.deliverable} onChange={e => {
+                                                    const newMilestones = [...milestones];
+                                                    newMilestones[i].deliverable = e.target.value;
+                                                    setMilestones(newMilestones);
+                                                }} />
+                                                <CharacterCounter value={m.deliverable} maxLength={MILESTONE_DELIVERABLE_MAX_LENGTH} />
+                                            </div>
+                                            <div>
+                                                <Textarea rows={2} maxLength={MILESTONE_TIMELINE_MAX_LENGTH} placeholder="Timeline (e.g., 1 week)" value={m.timeline} onChange={e => {
+                                                    const newMilestones = [...milestones];
+                                                    newMilestones[i].timeline = e.target.value;
+                                                    setMilestones(newMilestones);
+                                                }} />
+                                                <CharacterCounter value={m.timeline} maxLength={MILESTONE_TIMELINE_MAX_LENGTH} />
+                                            </div>
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            ))}
+                        </Accordion>
                         <Button variant="outline" onClick={() => setMilestones([...milestones, { id: nanoid(8), description: '', deliverable: '', timeline: '', status: 'pending' }])}>+ Add Milestone</Button>
                         
-                        <Textarea rows={6} maxLength={NOTE_MAX_LENGTH} placeholder="Additional notes (optional)" value={notes} onChange={e => setNotes(e.target.value)} />
-                        <CharacterCounter value={notes} maxLength={NOTE_MAX_LENGTH} />
+                        <Accordion type="single" collapsible className="w-full">
+                             <AccordionItem value="notes">
+                                <AccordionTrigger className="p-3 border rounded-lg bg-white font-semibold hover:no-underline text-sm">Additional Notes (Optional)</AccordionTrigger>
+                                <AccordionContent className="p-4 bg-gray-50 rounded-b-lg">
+                                    <Textarea rows={8} maxLength={NOTE_MAX_LENGTH} placeholder="Provide any extra context or details here..." value={notes} onChange={e => setNotes(e.target.value)} />
+                                    <CharacterCounter value={notes} maxLength={NOTE_MAX_LENGTH} />
+                                </AccordionContent>
+                            </AccordionItem>
+                        </Accordion>
                     </div>
                 </div>
                 <DialogFooter className="mt-auto">

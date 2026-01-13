@@ -3,6 +3,7 @@ export * from './generate-upload-url';
 export * from './set-active-advisor-profile';
 export * from './manage-meeting';
 export * from './google-auth'; // Exports getGoogleAuthUrl and handleGoogleRedirect
+export * from './get-advisor-application';
 
 import * as functions from "firebase-functions";
 import * as logger from "firebase-functions/logger";

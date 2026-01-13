@@ -57,9 +57,6 @@ export default function DeveloperCard({ developer, isAdvisor }: DeveloperCardPro
             </div>
           </div>
         </div>
-        <Button variant="outline" className="w-full mt-4">
-            View Profile <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
       </CardContent>
     </Card>
   );
