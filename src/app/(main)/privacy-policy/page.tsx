@@ -80,8 +80,8 @@ export default function PrivacyPolicyPage() {
             subtitle: "1.7 Google Calendar Data",
             description: "To facilitate scheduling for our advisory service, we request access to your Google Calendar for the sole purpose of creating events. Use of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements.",
             points: [
-                "We request permission for the 'https://www.googleapis.com/auth/calendar.events' scope.",
-                "When an advisory engagement is confirmed, our application uses this permission to create a calendar event with the session details and a Google Meet link on both the user's and the advisor's calendars.",
+                "We request permission for the 'https://www.googleapis.com/auth/calendar.events.owned' scope.",
+                "When an advisory engagement is confirmed, our application uses this permission to create a calendar event with the session details and a Google Meet link on both the user\'s and the advisor\'s calendars.",
                 "The application ONLY creates events for confirmed engagements. It DOES NOT read, update, or delete any other existing events from your Google Calendar."
             ]
         },
@@ -123,7 +123,7 @@ export default function PrivacyPolicyPage() {
               points: [
                 "Your public profile, created projects, and any advisor profile details (if applicable) are visible to other users.",
                 "Your confidential Roles are only visible in the discovery hub and do not link back to your public profile until you decide to match.",
-                "Reviews you leave for an advisor are displayed publicly on that advisor's profile.",
+                "Reviews you leave for an advisor are displayed publicly on that advisor\'s profile.",
                 "Private messages are visible only to the participants in that specific chat.",
               ]
           },

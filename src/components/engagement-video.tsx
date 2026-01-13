@@ -131,7 +131,10 @@ export default function EngagementVideo({ engagement }: EngagementVideoProps) {
           setEditingMeeting(null);
     
         } catch (error: any) {
-            if (error.code === 'functions/permission-denied' && error.message.includes('Failed to refresh Google authentication token')) {
+            const isPermissionDenied = error.code === 'functions/permission-denied' && error.message.includes('Failed to refresh Google authentication token');
+            const isFailedPrecondition = error.code === 'functions/failed-precondition' && error.message.includes('The advisor has not connected their Google account');
+
+            if (isPermissionDenied || isFailedPrecondition) {
                 setPendingAction(() => meetingAction); 
                 setIsScheduleModalOpen(false);
                 setIsPermissionModalOpen(true);
@@ -164,7 +167,10 @@ export default function EngagementVideo({ engagement }: EngagementVideoProps) {
           }) as { message: string };
           toast({ title: 'Success', description: result.message });
         } catch (error: any) {
-            if (error.code === 'functions/permission-denied' && error.message.includes('Failed to refresh Google authentication token')) {
+            const isPermissionDenied = error.code === 'functions/permission-denied' && error.message.includes('Failed to refresh Google authentication token');
+            const isFailedPrecondition = error.code === 'functions/failed-precondition' && error.message.includes('The advisor has not connected their Google account');
+            
+            if (isPermissionDenied || isFailedPrecondition) {
                 setPendingAction(() => cancelAction);
                 setIsPermissionModalOpen(true);
             } else {

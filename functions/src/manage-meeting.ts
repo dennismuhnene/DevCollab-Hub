@@ -37,13 +37,11 @@ async function getOAuth2Client(userId: string): Promise<Auth.OAuth2Client> {
         try {
             const { credentials } = await oauth2Client.refreshAccessToken();
             tokens = { ...tokens, ...credentials };
-            
             await userRef.update({ googleTokens: tokens });
 
         } catch (error: any) {
             functions.logger.error("Error refreshing access token:", error);
-            const errorDetails = JSON.stringify({ message: error.message, code: error.code, errors: error.errors });
-            throw new functions.https.HttpsError('permission-denied', `Failed to refresh Google authentication token: ${error.message}`, { details: errorDetails });
+            throw new functions.https.HttpsError('permission-denied', `Failed to refresh Google authentication token: ${error.message}`);
         }
     }
 
@@ -67,7 +65,6 @@ export const manageMeeting = functions.https.onCall(async (data, context) => {
     }
 
     const engagementRef = db.collection('engagements').doc(engagementId);
-    let oauth2Client: Auth.OAuth2Client;
 
     try {
         const engagementSnapshot = await engagementRef.get();
@@ -80,7 +77,7 @@ export const manageMeeting = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError('permission-denied', 'Only the assigned advisor can manage meetings.');
         }
 
-        oauth2Client = await getOAuth2Client(advisorId);
+        const oauth2Client = await getOAuth2Client(advisorId);
 
         const transactionResult = await db.runTransaction(async (transaction) => {
             const engagementDoc = await transaction.get(engagementRef);
@@ -209,18 +206,23 @@ export const manageMeeting = functions.https.onCall(async (data, context) => {
 
     } catch (err: any) {
         functions.logger.error("Error in manageMeeting function:", err);
-        const errorDetails = JSON.stringify({ message: err.message, code: err.code, errors: err.errors });
-        
-        let userFacingMessage = `An unexpected error occurred: ${err.message}`;
+
         if (err instanceof functions.https.HttpsError) {
-            userFacingMessage = err.message;
-        } else if (err.code) { 
-            userFacingMessage = `Google Calendar API Error: ${err.message} (Code: ${err.code})`;
+            throw err;
+        }
+        
+        if (err.code === 401 || (err.message && err.message.includes('invalid_grant'))) {
+            throw new functions.https.HttpsError(
+                'permission-denied',
+                'Failed to refresh Google authentication token. The user may need to re-authenticate.',
+                { originalError: err.message }
+            );
         }
 
+        const errorDetails = JSON.stringify({ message: err.message, code: err.code, errors: err.errors });
         throw new functions.https.HttpsError(
-            err.code && (typeof err.code === 'string' || typeof err.code === 'number') ? err.code : 'internal', 
-            userFacingMessage,
+            'internal',
+            `An unexpected error occurred: ${err.message}`,
             { details: errorDetails }
         );
     }
