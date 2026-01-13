@@ -8,6 +8,7 @@ import { DeveloperProfileContent } from '../../app/(main)/developers/[id]/page';
 import { ProjectDetailsContent } from '../../app/(main)/projects/[id]/page';
 import { RoleDetailsContent } from '../../app/(main)/roles/[roleId]/page';
 import { useDrag } from '@use-gesture/react';
+import { useItemNavigation } from '@/hooks/use-item-navigation';
 
 interface ItemDialogProps {
   open: boolean;
@@ -33,6 +34,22 @@ export function ItemDialog({ open, onOpenChange, items, initialIndex, viewMode }
   const handlePrevious = () => {
     setCurrentIndex(prev => Math.max(prev - 1, 0));
   };
+
+  const goToFirst = () => {
+    setCurrentIndex(0);
+  };
+
+  const goToLast = () => {
+    setCurrentIndex(items.length - 1);
+  };
+
+  useItemNavigation({
+    isOpen: open,
+    onNext: handleNext,
+    onPrevious: handlePrevious,
+    onGoToFirst: goToFirst,
+    onGoToLast: goToLast,
+  });
 
   const bind = useDrag(
     ({ down, swipe: [swipeX] }) => {
@@ -60,7 +77,12 @@ export function ItemDialog({ open, onOpenChange, items, initialIndex, viewMode }
   const renderContent = () => {
     switch (viewMode) {
       case 'developers':
-        return <DeveloperProfileContent key={item.uid} developer={item} />;
+        return <DeveloperProfileContent 
+                    key={item.uid} 
+                    developer={item} 
+                    isBlocked={false} 
+                    isBlockingEnabled={false} 
+                />;
       case 'projects':
         return <ProjectDetailsContent key={item.id} project={item} />;
       case 'posts':
