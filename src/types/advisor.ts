@@ -94,6 +94,9 @@ export interface Engagement {
             deliverable: string;
             timeline: string;
             status: 'pending' | 'in_progress' | 'submitted' | 'accepted';
+            advisorSummary?: string; // Summary from the advisor when they submit
+            startedAt?: Timestamp; // CORRECTLY ADDED: Timestamp for when the milestone enters 'in_progress'
+            completedAt?: Timestamp; // CORRECTLY ADDED: Timestamp for when the milestone enters 'submitted'
         }[];
         notes?: string;
     };
