@@ -1,9 +1,12 @@
 
+export * from './engagements';
 export * from './generate-upload-url';
 export * from './set-active-advisor-profile';
 export * from './manage-meeting';
 export * from './google-auth'; // Exports getGoogleAuthUrl and handleGoogleRedirect
 export * from './get-advisor-application';
+export * from './startMilestone';
+export * from './closeEngagement';
 
 import * as functions from "firebase-functions";
 import * as logger from "firebase-functions/logger";
@@ -272,89 +275,126 @@ export const onEngagementCreated = functions.firestore
     });
 
 /**
- * Sends notifications when an engagement's status changes.
+ * Sends notifications when an engagement's status or milestones change.
  */
 export const onEngagementUpdated = functions.firestore
     .document('engagements/{engagementId}')
     .onUpdate(async (change, context) => {
         const before = change.before.data();
         const after = change.after.data();
-
-        if (before.status === after.status) {
-            return; // Exit if status hasn't changed
-        }
+        const engagementId = context.params.engagementId;
 
         const { developerId, advisorId, developerName, advisorName, developerRequest } = after;
         let recipientId: string | null = null;
         let notificationPayload: { title: string, message: string, link: string } | null = null;
-        const subject = developerRequest?.subject;
 
-        // Scenario 1: Advisor sends a proposal (or a revision)
-        if ((before.status === 'pending_proposal' || before.status === 'revision_requested') && after.status === 'pending_developer_acceptance') {
-            recipientId = developerId;
-            notificationPayload = {
-                title: subject ? `Re: ${subject}` : 'Proposal Ready for Review',
-                message: before.status === 'revision_requested' 
-                    ? `${advisorName} has revised their proposal for your engagement.`
-                    : `${advisorName} has sent you a proposal for your engagement request.`,
-                link: '/dashboard'
-            };
-        }
-        // Scenario 2: Developer requests a revision
-        else if (before.status === 'pending_developer_acceptance' && after.status === 'revision_requested') {
-            recipientId = advisorId;
-            notificationPayload = {
-                title: subject ? `Re: ${subject}` : 'Revision Requested',
-                message: `${developerName} has requested a revision to your proposal.`,
-                link: '/dashboard'
-            };
-        }
-        // Scenario 3: Developer accepts the proposal, activating the engagement
-        else if (before.status === 'pending_developer_acceptance' && after.status === 'active') {
-            recipientId = advisorId;
-            notificationPayload = {
-                title: 'Proposal Accepted!',
-                message: `${developerName} has accepted your proposal and activated the engagement.`,
-                link: `/engagements/${context.params.engagementId}`
-            };
-        }
-        // Scenario 4: The engagement is rejected
-        else if (after.status === 'rejected') {
-            if (before.status === 'pending_proposal' || before.status === 'revision_requested') {
-                recipientId = developerId;
-                notificationPayload = {
-                    title: 'Engagement Request Rejected',
-                    message: `${advisorName} has rejected your engagement request.`,
-                    link: '/dashboard'
-                };
-            }
-            else if (before.status === 'pending_developer_acceptance') {
-                recipientId = advisorId;
-                notificationPayload = {
-                    title: 'Proposal Rejected',
-                    message: `${developerName} has rejected your proposal.`,
-                    link: '/dashboard'
-                };
-            }
-        }
-        // Scenario 5: Engagement is closed from an active state
-        else if (before.status === 'active' && after.status === 'closed') {
-            const closerId = after.closedById; // Assuming a 'closedById' field is set on closure
-            const closerName = closerId === developerId ? developerName : advisorName;
-            recipientId = closerId === developerId ? advisorId : developerId; // Notify the other party
+        // --- Status Change Notifications (Negotiation) ---
+        const statusChanged = before.status !== after.status;
+        if (statusChanged) {
+            const subject = developerRequest?.subject;
+            switch (after.status) {
+                case 'pending_developer_acceptance':
+                    if (before.status === 'pending_proposal' || before.status === 'revision_requested') {
+                        recipientId = developerId;
+                        notificationPayload = {
+                            title: subject ? `Re: ${subject}` : 'Proposal Ready for Review',
+                            message: `${advisorName} has sent you a proposal. Please review and respond.`,
+                            link: `/engagements/${engagementId}`
+                        };
+                    }
+                    break;
+                case 'revision_requested':
+                    recipientId = advisorId;
+                    notificationPayload = {
+                        title: subject ? `Re: ${subject}` : 'Revision Requested',
+                        message: `${developerName} has requested a revision to your proposal.`,
+                        link: `/engagements/${engagementId}`
+                    };
+                    break;
+                case 'active':
+                    if (before.status === 'pending_developer_acceptance') {
+                        recipientId = advisorId;
+                        notificationPayload = {
+                            title: 'Proposal Accepted!',
+                            message: `${developerName} has accepted your proposal. The engagement is now active.`,
+                            link: `/engagements/${engagementId}`
+                        };
+                    }
+                    break;
+                case 'rejected':
+                    if (before.status.startsWith('pending')) {
+                        recipientId = (after.closedById === developerId) ? advisorId : developerId;
+                        const closingParty = (after.closedById === developerId) ? developerName : advisorName;
+                        notificationPayload = {
+                            title: 'Engagement Closed',
+                            message: `${closingParty} has closed the engagement request.`,
+                            link: '/dashboard'
+                        };
+                    }
+                    break;
+                case 'closed':
+                     if (before.status === 'active') {
+                        const closerId = after.closedById;
+                        const closerName = closerId === developerId ? developerName : advisorName;
+                        recipientId = closerId === developerId ? advisorId : developerId;
 
-            if (recipientId) {
-                 notificationPayload = {
-                    title: 'Engagement Closed',
-                    message: `${closerName} has closed the engagement.`,
-                    link: `/engagements/${context.params.engagementId}`
-                };
+                        if (recipientId) {
+                            notificationPayload = {
+                                title: 'Engagement Closed',
+                                message: `${closerName} has closed the engagement.`,
+                                link: `/engagements/${engagementId}`
+                            };
+                        }
+                    }
+                    break;
             }
         }
+
+        // --- Milestone Change Notifications ---
+        const milestonesBefore = before.advisorProposal?.milestones || [];
+        const milestonesAfter = after.advisorProposal?.milestones || [];
+
+        if (milestonesAfter.length > 0) {
+            for (let i = 0; i < milestonesAfter.length; i++) {
+                const beforeMilestone = milestonesBefore[i] || {};
+                const afterMilestone = milestonesAfter[i];
+
+                if (beforeMilestone.status !== afterMilestone.status) {
+                    const milestoneDesc = afterMilestone.description.substring(0, 50);
+                    switch (afterMilestone.status) {
+                        case 'in_progress':
+                            recipientId = developerId;
+                            notificationPayload = {
+                                title: 'Milestone Started',
+                                message: `${advisorName} has started work on: "${milestoneDesc}..."`,
+                                link: `/engagements/${engagementId}`
+                            };
+                            break;
+                        case 'submitted':
+                            recipientId = developerId;
+                            notificationPayload = {
+                                title: 'Work Submitted for Review',
+                                message: `${advisorName} has submitted work for: "${milestoneDesc}..."`,
+                                link: `/engagements/${engagementId}`
+                            };
+                            break;
+                        case 'accepted':
+                            recipientId = advisorId;
+                            notificationPayload = {
+                                title: 'Milestone Complete!',
+                                message: `${developerName} has accepted your work for: "${milestoneDesc}..."`,
+                                link: `/engagements/${engagementId}`
+                            };
+                            break;
+                    }
+                }
+            }
+        }
+
 
         // Send the notification if a valid scenario was matched
         if (recipientId && notificationPayload) {
-            logger.info(`Sending notification to ${recipientId} for status change from ${before.status} to ${after.status} in engagement ${context.params.engagementId}`);
+            logger.info(`Sending notification to ${recipientId} for engagement ${engagementId}`);
             const notificationRef = adminDb.collection(`users/${recipientId}/notifications`).doc();
             await notificationRef.set({
                 ...notificationPayload,
@@ -363,7 +403,7 @@ export const onEngagementUpdated = functions.firestore
                 createdAt: FieldValue.serverTimestamp(),
             });
         } else {
-            logger.info(`No notification logic for status change from ${before.status} to ${after.status} in engagement ${context.params.engagementId}`);
+            logger.info(`No notification needed for this update in engagement ${engagementId}`);
         }
     });
 
@@ -396,7 +436,7 @@ export const onNewEngagementMessage = functions.firestore
         // Determine recipient and sender
         const recipientId = senderId === developerId ? advisorId : developerId;
         const senderName = senderId === developerId ? developerName : advisorName;
-
+	
         if (!recipientId) {
             logger.error(`Recipient could not be determined for message in engagement ${engagementId}.`);
             return;
