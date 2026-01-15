@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { logAnalyticsEvent } from '@/firebase/analytics';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
@@ -18,18 +18,27 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 
+interface FeedbackData {
+  answers: { [key: string]: string | number | string[] };
+  hasBeenUpdated?: boolean;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+}
+
 export function FeedbackForm() {
   const [isOpen, setIsOpen] = useState(false);
   const [formStarted, setFormStarted] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<{ [key: string]: string | number | string[] }>({});
+  const [feedbackData, setFeedbackData] = useState<FeedbackData | null>(null);
   const { user } = useAuth();
   const [isClient, setIsClient] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [hasSubmitted, setHasSubmitted] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
 
   const TEXTAREA_MAX_LENGTH = 500;
   const TEXT_INPUT_MAX_LENGTH = 150;
@@ -39,22 +48,30 @@ export function FeedbackForm() {
   }, []);
 
   useEffect(() => {
-    const checkForPreviousSubmission = async () => {
+    const fetchPreviousSubmission = async () => {
       if (user && isOpen) {
-        setHasSubmitted(null); 
-        const feedbackCol = collection(db, 'feedback');
-        const q = query(feedbackCol, where('userId', '==', user.uid));
+        setIsLoading(true);
+        const feedbackDocRef = doc(db, 'feedback', user.uid);
         try {
-            const querySnapshot = await getDocs(q);
-            setHasSubmitted(!querySnapshot.empty);
+          const docSnap = await getDoc(feedbackDocRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data() as FeedbackData;
+            setFeedbackData(data);
+            setAnswers(data.answers || {});
+          } else {
+            setFeedbackData(null);
+            setAnswers({}); // Reset answers for a new submission
+          }
         } catch (error) {
-            console.error("Failed to check for previous submissions:", error);
-            setHasSubmitted(false); // Assume no submission if check fails
+          console.error("Failed to check for previous submissions:", error);
+          setFeedbackData(null); // Assume no submission if there's a permission error
+        } finally {
+          setIsLoading(false);
         }
       }
     };
 
-    checkForPreviousSubmission();
+    fetchPreviousSubmission();
   }, [user, isOpen]);
 
   const handleAnswerChange = (questionId: string, value: string | number) => {
@@ -90,14 +107,26 @@ export function FeedbackForm() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    const feedbackDocRef = doc(db, 'feedback', user.uid);
+
     try {
-      await addDoc(collection(db, 'feedback'), {
+      const submissionData: any = {
         userId: user.uid,
         answers,
-        createdAt: new Date(),
+        updatedAt: serverTimestamp(),
         url: window.location.href,
-      });
-      logAnalyticsEvent('feedback_submitted', { user_id: user.uid });
+      };
+
+      if (isEditing) {
+        submissionData.hasBeenUpdated = true;
+      } else if (!feedbackData) { // Only set these on initial creation
+        submissionData.createdAt = serverTimestamp();
+        submissionData.hasBeenUpdated = false;
+      }
+
+      await setDoc(feedbackDocRef, submissionData, { merge: true });
+
+      logAnalyticsEvent(isEditing ? 'feedback_updated' : 'feedback_submitted', { user_id: user.uid });
       setSubmissionStatus('success');
     } catch (error) {
       console.error('Error submitting feedback: ', error);
@@ -112,15 +141,20 @@ export function FeedbackForm() {
     }
   };
 
+  const startEditing = () => {
+    setIsEditing(true);
+    setFormStarted(true);
+    setSubmissionStatus('idle');
+  };
+
   const resetForm = () => {
     setIsOpen(false);
     setTimeout(() => {
-        setAnswers({});
         setCurrentQuestionIndex(0);
         setFormStarted(false);
         setSubmissionStatus('idle');
-        setHasSubmitted(true); // Assume submitted so they see the thank you page next time
-    }, 300); // Delay to allow dialog to close smoothly
+        setIsEditing(false);
+    }, 300);
   }
   
   const currentQuestion = questions[currentQuestionIndex];
@@ -238,25 +272,12 @@ export function FeedbackForm() {
   }
 
   const renderContent = () => {
-    if (hasSubmitted === null) {
+    if (isLoading) {
         return (
             <div className="p-4 sm:p-8 flex items-center justify-center h-full">
                 <DialogTitle className="sr-only">Loading</DialogTitle>
-                <DialogDescription className="sr-only">Loading feedback status.</DialogDescription>
+                <DialogDescription className="sr-only">Loading previous feedback submission.</DialogDescription>
                 <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-        );
-    }
-    if (hasSubmitted) {
-        return (
-            <div className="p-4 sm:p-8 text-center flex flex-col items-center justify-center h-full">
-                <DialogTitle className="text-2xl font-bold mb-2">Thank You!</DialogTitle>
-                <DialogDescription className="mb-6">
-                    You have already submitted your feedback. We appreciate your input!
-                    <br />
-                    For any other concerns, please reach out to us.
-                </DialogDescription>
-                <Button onClick={() => setIsOpen(false)}>Close</Button>
             </div>
         );
     }
@@ -276,12 +297,43 @@ export function FeedbackForm() {
            <div className="p-4 sm:p-8 text-center flex flex-col items-center justify-center h-full">
                <DialogTitle className="text-2xl font-bold mb-2 text-red-600">Submission Failed</DialogTitle>
                <DialogDescription className="mb-6">
-                   {errorMessage}
+                   {errorMessage || "An unexpected error occurred. Please try again."}
                </DialogDescription>
                <Button onClick={() => setSubmissionStatus('idle')}>Try Again</Button>
            </div>
         );
    }
+    // User has submitted and already updated their feedback once.
+    if (feedbackData && feedbackData.hasBeenUpdated) {
+        return (
+            <div className="p-4 sm:p-8 text-center flex flex-col items-center justify-center h-full">
+                <DialogTitle className="text-2xl font-bold mb-2">Thank You!</DialogTitle>
+                <DialogDescription className="mb-6">
+                    We have recorded your updated feedback. Thank you for helping us improve.
+                </DialogDescription>
+                <Button onClick={() => setIsOpen(false)}>Close</Button>
+            </div>
+        );
+    }
+    // User has submitted but has NOT updated their feedback yet.
+    if (feedbackData && !isEditing) {
+        return (
+            <div className="p-4 sm:p-8 text-center flex flex-col items-center justify-center h-full">
+                <DialogTitle className="text-xl font-bold mb-2">Thank you for your feedback</DialogTitle>
+                <DialogDescription asChild>
+                  <div className="mb-6">
+                    We have a record of your previous responses.
+                    <p className="font-semibold text-orange-600 mt-4">Please note: This will be the only update to your responses.</p>
+                  </div>
+                </DialogDescription>
+                <div className="flex gap-4">
+                    <Button variant="outline" onClick={() => setIsOpen(false)}>Close</Button>
+                    <Button onClick={startEditing}>Update My Answers</Button>
+                </div>
+            </div>
+        );
+    }
+    // This is the first time the user is giving feedback.
     if (!formStarted) {
       return (
         <div className="p-4 sm:p-8 text-center flex flex-col items-center justify-center h-full">
@@ -293,6 +345,7 @@ export function FeedbackForm() {
         </div>
       )
     }
+    // The main form for submitting or editing.
     return (
         <div className="p-4 sm:p-8 flex flex-col h-full">
             <DialogHeader className="mb-4">
@@ -317,7 +370,7 @@ export function FeedbackForm() {
                 ) : (
                     <Button onClick={handleSubmit} disabled={isSubmitting}>
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {isSubmitting ? 'Saving...' : 'Save Responses'}
+                        {isSubmitting ? 'Saving...' : isEditing ? 'Save & Finalize Update' : 'Save Responses'}
                     </Button>
                 )}
                 </div>

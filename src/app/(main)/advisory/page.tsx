@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { TagInput } from '@/components/ui/tag-input';
 import { SlidersHorizontal, X, CheckSquare } from 'lucide-react';
+import { AdvisorCardSkeleton } from '@/components/skeletons/advisor-card-skeleton';
 
 interface DisplayAdvisorProfile extends PublicAdvisorProfile {
     advisorApplicationId: string;
@@ -123,7 +124,25 @@ const AdvisorHubPage = () => {
 
 
     if (loading) {
-        return <div className="flex justify-center items-center h-screen">Loading advisors...</div>;
+        return (
+            <div className="container mx-auto p-4 sm:p-6 lg:p-8">
+                <div className="mb-8 text-center">
+                    <h1 className="text-2xl font-semibold leading-none tracking-tight">Expert Advisory Hub</h1>
+                    <p className="text-muted-foreground mt-2 text-sm">Connect with verified industry experts for structured, private consultations.</p>
+                </div>
+                <div className="mb-4">
+                    <Button variant="outline" disabled>
+                        <SlidersHorizontal className="mr-2 h-4 w-4" />
+                        Filter
+                    </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Array.from({ length: 6 }).map((_, index) => (
+                        <AdvisorCardSkeleton key={index} />
+                    ))}
+                </div>
+            </div>
+        );
     }
 
     return (

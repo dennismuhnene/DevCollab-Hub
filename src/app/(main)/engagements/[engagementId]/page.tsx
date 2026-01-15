@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Paperclip, Send, XCircle, Loader2, ShieldAlert, PlayCircle, Edit, UserX } from 'lucide-react'; // Added UserX
+import { Paperclip, Send, XCircle, Loader2, ShieldAlert, PlayCircle, Edit, UserX } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { checkBlockStatus } from '@/lib/firebase/users';
@@ -23,6 +23,7 @@ import { RequestDetails, ProposalDetails } from '@/components/dashboard/engageme
 import OutcomeLog from '@/components/engagement/outcome-log';
 import SubmitWorkDialog from '@/components/engagement/submit-work-dialog';
 import AcceptWorkDialog from '@/components/engagement/accept-work-dialog';
+import { EngagementRoomSkeleton } from '@/components/skeletons/engagement-room-skeleton';
 
 // Correctly infer the Milestone type from the imported Engagement interface.
 type Milestone = NonNullable<Engagement['advisorProposal']>['milestones'][number];
@@ -233,8 +234,8 @@ const EngagementRoomPage = (): JSX.Element => {
     const isRoomActive = engagement?.status === 'active';
     const isRoomReadOnly = engagement?.status === 'closed' || engagement?.status === 'participant_deleted';
 
-    if (loading) return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-    if (!engagement || !isParticipant || !user) return <div>Engagement not found or access denied.</div>
+    if (loading) return <EngagementRoomSkeleton />;
+    if (!engagement || !isParticipant || !user) return <div>Engagement not found or access denied.</div>;
 
     return (
         <div className="container mx-auto p-4 space-y-2">
