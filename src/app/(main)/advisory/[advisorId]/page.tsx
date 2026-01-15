@@ -34,11 +34,6 @@ const AdvisorProfilePage = () => {
     useEffect(() => {
         if (typeof advisorId !== 'string' || authLoading) return;
 
-        if (user && user.uid === advisorId) {
-            router.push('/dashboard');
-            return;
-        }
-
         const fetchProfileData = async () => {
             setLoading(true);
             try {

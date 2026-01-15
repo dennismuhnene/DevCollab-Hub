@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { CircleX, FileText, Send, SquarePen, Star, ThumbsDown, ThumbsUp, Hourglass, CheckCircle, PencilRuler, Briefcase, Eye, Archive, ArchiveRestore, CheckSquare } from 'lucide-react';
+import { CircleX, FileText, Send, SquarePen, Star, ThumbsDown, ThumbsUp, Hourglass, CheckCircle, PencilRuler, Briefcase, Eye, Archive, ArchiveRestore, CheckSquare, UserX } from 'lucide-react'; // Added UserX
 import { RequestDetails, ProposalDetails } from './engagement-details';
 import { ProposalBuilderDialog, RevisionRequestDialog, RejectedDetailsDialog } from './engagement-dialogs';
 import { AdvisorDetailsModal } from './advisor-details-modal';
@@ -190,7 +190,8 @@ function DeveloperEngagementCard({ engagement, onArchiveToggle, isArchived }: { 
                 return <ActiveEngagementView engagement={engagement} userRole="developer" onParticipantClick={handleAdvisorNameClick} />;
             case 'rejected':
             case 'closed':
-                 return <StatusView engagement={engagement} userRole="developer" onArchiveToggle={onArchiveToggle} isArchived={isArchived} onParticipantClick={handleAdvisorNameClick} />;
+            case 'participant_deleted':
+                return <StatusView engagement={engagement} userRole="developer" onArchiveToggle={onArchiveToggle} isArchived={isArchived} onParticipantClick={handleAdvisorNameClick} />;
             default:
                 return <PendingProposalView participant={engagement.advisorName} participantRole="Advisor" onParticipantClick={handleAdvisorNameClick} />;
         }
@@ -255,6 +256,7 @@ function AdvisorEngagementCard({ engagement, onArchiveToggle, isArchived }: { en
                 return <ActiveEngagementView engagement={engagement} userRole="advisor" onParticipantClick={handleDeveloperNameClick} />;
             case 'rejected':
             case 'closed':
+            case 'participant_deleted':
                 return <StatusView engagement={engagement} userRole="advisor" onArchiveToggle={onArchiveToggle} isArchived={isArchived} onParticipantClick={handleDeveloperNameClick} />;
             default:
                  return <PendingResponseView participant={engagement.developerName} participantRole="Developer" onParticipantClick={handleDeveloperNameClick} />;
@@ -356,21 +358,26 @@ function StatusView({ engagement, userRole, onArchiveToggle, isArchived, onParti
     const statusConfig = {
         rejected: { Icon: CircleX, color: 'text-red-500', description: "This engagement was rejected." },
         closed: { Icon: CheckCircle, color: 'text-gray-500', description: "This engagement is closed." },
+        participant_deleted: { Icon: UserX, color: 'text-yellow-600', description: "A participant in this engagement has deleted their account." },
     };
-    const { Icon, color, description } = statusConfig[engagement.status as 'rejected' | 'closed'] || { Icon: CircleX, color: 'text-gray-500', description: '' };
+    
+    type EngagementStatus = keyof typeof statusConfig;
+    const currentStatus = engagement.status as EngagementStatus;
+
+    const { Icon, color, description } = statusConfig[currentStatus] || { Icon: CircleX, color: 'text-gray-500', description: '' };
 
     return (
         <>
             <div className="flex items-start justify-between">
                 <div className="flex-1 space-y-1">
-                    <p className="font-semibold text-sm">{userRole === 'developer' ? <span className='cursor-pointer hover:underline' onClick={onParticipantClick}>{`vs ${participantName}`}</span> : <span className="cursor-pointer hover:underline" onClick={onParticipantClick}>{`with ${participantName}`}</span>}</p>
+                    <p className="font-semibold text-sm">{userRole === 'developer' ? <span className={onParticipantClick && currentStatus !== 'participant_deleted' ? 'cursor-pointer hover:underline' : ''} onClick={currentStatus !== 'participant_deleted' ? onParticipantClick : undefined}>{`vs ${participantName}`}</span> : <span className={onParticipantClick && currentStatus !== 'participant_deleted' ? 'cursor-pointer hover:underline' : ''} onClick={currentStatus !== 'participant_deleted' ? onParticipantClick : undefined}>{`with ${participantName}`}</span>}</p>
                     {engagement.developerRequest?.subject && <p className="text-sm font-medium text-gray-700">Subject: {engagement.developerRequest.subject}</p>}
                     <p className="text-xs text-muted-foreground">Date: {createdAtDate}</p>
                     <p className="text-sm text-muted-foreground">{description}</p>
                 </div>
                 <div className="flex items-center gap-2 ml-4">
-                     {engagement.status === 'closed' && <Button variant="outline" size="sm" asChild><Link href={`/engagements/${engagement.id}`}><Eye className="mr-2 h-4 w-4"/>View</Link></Button>}
-                    {engagement.status === 'rejected' && <Button variant="outline" size="sm" onClick={() => setShowDetails(true)}><Eye className="mr-2 h-4 w-4"/>View Details</Button>}
+                    {(currentStatus === 'closed' || currentStatus === 'participant_deleted') && <Button variant="outline" size="sm" asChild><Link href={`/engagements/${engagement.id}`}><Eye className="mr-2 h-4 w-4"/>View</Link></Button>}
+                    {currentStatus === 'rejected' && <Button variant="outline" size="sm" onClick={() => setShowDetails(true)}><Eye className="mr-2 h-4 w-4"/>View Details</Button>}
                     {isArchived
                         ? <Button variant="outline" size="sm" onClick={() => onArchiveToggle(false)}><ArchiveRestore className="mr-2 h-4 w-4"/>Restore</Button>
                         : <Button variant="outline" size="sm" onClick={() => onArchiveToggle(true)}><Archive className="mr-2 h-4 w-4"/>Archive</Button>
