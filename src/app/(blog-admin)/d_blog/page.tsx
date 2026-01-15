@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -43,7 +42,12 @@ import { Plus, Trash2, Save, X, LogOut, Loader2, Upload, Image as ImageIcon, Ext
 import * as mammoth from 'mammoth';
 import type { BlogPost } from '@/types/blog';
 import { format } from 'date-fns';
-import RichContentEditor from '@/components/RichContentEditor';
+import dynamic from 'next/dynamic';
+
+const RichContentEditor = dynamic(() => import('@/components/RichContentEditor'), { 
+    ssr: false, 
+    loading: () => <div className="w-full bg-muted rounded-lg border h-64 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground"/></div>
+});
 
 const CATEGORIES: string[] = ['Web Development', 'Data Engineering', 'Machine Learning', 'DevOps', 'Engineering', 'Full Stack'];
 
@@ -327,7 +331,7 @@ export default function BlogAdminPage() {
       <div className="bg-muted/40 min-h-screen">
         <div className="container mx-auto p-4 sm:p-6 lg:p-8 max-w-8xl">
           <header className="flex justify-between items-center pb-6">
-            <h1 className="text-4xl font-bold tracking-tight text-foreground">Blog Dashboard</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Blog Dashboard</h1>
             <Button variant="outline" onClick={() => auth.signOut()}>
               <LogOut className="h-4 w-4 mr-2" /> Sign Out
             </Button>
@@ -338,8 +342,8 @@ export default function BlogAdminPage() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle>Your Posts</CardTitle>
-                    <CardDescription>{posts.length} posts</CardDescription>
+                    <CardTitle className="text-lg">Your Posts</CardTitle>
+                    <CardDescription className="text-sm">{posts.length} posts</CardDescription>
                   </div>
                   <Button size="sm" onClick={resetForm}>
                     <Plus className="h-4 w-4 mr-2" /> New
@@ -354,14 +358,14 @@ export default function BlogAdminPage() {
                       <p className="text-sm text-muted-foreground">Click "New" to start.</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {posts.map((post) => (
                         <div
                           key={post.id}
                           onClick={() => handleSelectPost(post)}
                           className={`p-3 rounded-lg border cursor-pointer transition-all ${editingPost?.id === post.id ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'}`}
                         >
-                          <h4 className="font-semibold truncate">{post.title}</h4>
+                          <h4 className="font-semibold truncate text-base">{post.title}</h4>
                           <p className="text-sm text-muted-foreground truncate">{post.excerpt || `/${post.slug}`}</p>
                           <div className="flex items-center gap-2 mt-2">
                             <Badge variant={post.isPublished ? 'default' : 'secondary'}>{post.isPublished ? 'Published' : 'Draft'}</Badge>
@@ -380,7 +384,7 @@ export default function BlogAdminPage() {
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle className="text-2xl">{editingPost ? 'Edit Post' : 'Create New Post'}</CardTitle>
+                      <CardTitle className="text-xl">{editingPost ? 'Edit Post' : 'Create New Post'}</CardTitle>
                       <CardDescription>{editingPost ? `Editing "${editingPost.title}"` : 'Fill out the details below.'}</CardDescription>
                     </div>
                     {editingPost && formData.isPublished && (

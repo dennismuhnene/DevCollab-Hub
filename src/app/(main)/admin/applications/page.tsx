@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from 'lucide-react';
+import { ApplicationListSkeleton } from '@/components/skeletons/application-list-skeleton';
 
 interface FullApplicationInfo {
     application: AdvisorApplication;
@@ -139,7 +140,12 @@ const ApplicationsListPage = () => {
     };
 
     if (loading) {
-        return <div className="container mx-auto p-4 flex justify-center"><Loader2 className="h-12 w-12 animate-spin"/></div>;
+        return (
+            <div className="container mx-auto p-4">
+                <h1 className="text-2xl font-bold mb-6">All Advisor Applications</h1>
+                <ApplicationListSkeleton />
+            </div>
+        );
     }
 
     const pendingApps = applications.filter(a => a.application.verificationStatus === 'pending');
@@ -148,7 +154,7 @@ const ApplicationsListPage = () => {
 
     return (
         <div className="container mx-auto p-4">
-            <h1 className="text-3xl font-bold mb-6">All Advisor Applications</h1>
+            <h1 className="text-2xl font-bold mb-6">All Advisor Applications</h1>
             <Tabs defaultValue="pending" className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="pending">Pending ({pendingApps.length})</TabsTrigger>

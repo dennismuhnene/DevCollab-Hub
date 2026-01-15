@@ -11,7 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { questions } from '@/lib/questions';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
-import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Loader2 } from 'lucide-react';
+import { FeedbackSkeleton } from '@/components/skeletons/feedback-skeleton';
 
 // Define the shape of the feedback data for type safety
 interface FeedbackData {
@@ -26,17 +27,27 @@ export default function FeedbackPage() {
   const [feedback, setFeedback] = useState<FeedbackData[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
 
   useEffect(() => {
     const fetchFeedback = async () => {
-      const feedbackCol = collection(db, 'feedback');
-      const q = query(feedbackCol, orderBy('createdAt', 'desc'));
-      const feedbackSnapshot = await getDocs(q);
-      const feedbackList = feedbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as FeedbackData[];
-      setFeedback(feedbackList);
+      setLoading(true);
+      try {
+        const feedbackCol = collection(db, 'feedback');
+        const q = query(feedbackCol, orderBy('createdAt', 'desc'));
+        const feedbackSnapshot = await getDocs(q);
+        const feedbackList = feedbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as FeedbackData[];
+        setFeedback(feedbackList);
+      } catch (error) {
+        console.error("Failed to fetch feedback:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     const prepareLogo = async () => {
+      try {
         const response = await fetch('/images/devcollab-logo.png');
         const blob = await response.blob();
         const base64 = await new Promise<string>((resolve) => {
@@ -45,7 +56,10 @@ export default function FeedbackPage() {
           reader.readAsDataURL(blob);
         });
         setLogoBase64(base64);
-    }
+      } catch (error) {
+        console.error("Failed to prepare logo:", error);
+      }
+    };
 
     fetchFeedback();
     prepareLogo();
@@ -139,12 +153,14 @@ export default function FeedbackPage() {
               height={80}
               className="mb-2"
             />
-            <p className="text-muted-foreground mb-4">Find your Crew, build your vision.</p>
-            <h1 className="text-2xl sm:text-3xl font-bold">Feedback Submissions</h1>
+            <p className="text-muted-foreground text-base mb-4">Find your Crew, build your vision.</p>
+            <h1 className="text-xl sm:text-3xl font-bold">Feedback Submissions</h1>
             <p className="text-muted-foreground mt-2">Review and export user feedback.</p>
           </div>
 
-          {currentFeedback ? (
+          {loading ? (
+            <FeedbackSkeleton />
+          ) : currentFeedback ? (
             <>
               <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
                   <div className="flex items-center gap-4">
