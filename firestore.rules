@@ -119,10 +119,9 @@ service cloud.firestore {
     }
 
     // FEEDBACK
-    match /feedback/{feedbackId} {
-      allow create: if isSignedIn();
-      allow read, list: if isSignedIn() && (resource.data.userId == uid() || isAdmin());
-      allow update, delete: if isAdmin();
+    match /feedback/{userId} {
+      allow read, create, update: if request.auth.uid == userId;
+      allow list: if isAdmin();
     }
 
     // ENGAGEMENTS & REVIEWS

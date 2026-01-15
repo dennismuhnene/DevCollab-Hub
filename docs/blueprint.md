@@ -16,6 +16,10 @@ This document outlines the core features, technology stack, and data models for 
         - Collaboration settings: `openForCollaboration` status, `collaborationGoals`, `commitmentLevel`
         - External links: `portfolioUrl`, `socials`, and up to 3 custom links.
 
+- **User Account Deletion & Data Integrity:** Users can permanently delete their account. The system ensures data integrity for other users by:
+    - **Freezing associated Engagements:** The engagement status is changed to `participant_deleted`, and the UI becomes a read-only historical record for the remaining participant.
+    - **Archiving associated Chats:** The chat interface indicates the user has left and disables further interaction, preserving the conversation history.
+
 - **Dual-Entity Creation (Projects vs. Roles):** Users can create:
     - **Projects:** Public-facing listings for an entire idea, seeking a team.
     - **Roles:** Confidential, specific posts for a single need, allowing for discreet talent acquisition.
@@ -28,7 +32,8 @@ This document outlines the core features, technology stack, and data models for 
         - **AI Insights Card:** An on-demand feature for users to generate a strategic analysis of developers who have engaged with their projects. It provides an "Audience Summary," identifies "Potential Gaps," and offers "Actionable Advice."
         - **My Projects Section:** A preview of the user's created projects with a link to create more.
         - **Collaboration Hub:** A dynamic section that appears when developers show interest in a project. It lists the interested users and provides direct actions to "View Profile" or "Match."
-        - **Public Profile Preview:** A detailed preview of how the user's own profile appears to others on the platform, showing their bio, skills, preferences, and status.
+        - **Public Profile Preview:** A detailed preview of how the user's own main developer profile (`/profile`) appears to others on the platform.
+        - **Public Advisory Profile Navigation:** Users can seamlessly view both their own and other users' public-facing advisory profiles (`/advisory/[id]`), ensuring consistent navigation and allowing advisors to see their own public presence.
     - **Engagements View:** A dedicated section to manage all formal advisory engagements.
 
 - **Structured Connection & Matching Flow:**
@@ -168,7 +173,7 @@ This document outlines the core features, technology stack, and data models for 
   id: string; // Firestore Document ID
   developerId: string;
   advisorId: string;
-  status: 'pending_proposal' | 'pending_developer_acceptance' | 'revision_requested' | 'active' | 'completed' | 'rejected';
+  status: 'pending_proposal' | 'pending_developer_acceptance' | 'revision_requested' | 'active' | 'completed' | 'rejected' | 'participant_deleted';
   developerRequest: {
     message: string;
     selectedDeliverables: string[];

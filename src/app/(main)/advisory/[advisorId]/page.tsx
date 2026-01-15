@@ -11,10 +11,11 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Star, Loader2, BadgeCheck } from 'lucide-react';
+import { Star, BadgeCheck } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { checkBlockStatus } from '@/lib/firebase/users';
 import { useToast } from '@/hooks/use-toast';
+import { AdvisorProfileSkeleton } from '@/components/skeletons/advisor-profile-skeleton';
 
 type ProfileData = {
     application: AdvisorApplication;
@@ -108,7 +109,7 @@ const AdvisorProfilePage = () => {
     );
 
     if (loading || authLoading) {
-        return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+        return <AdvisorProfileSkeleton />;
     }
 
     if (!advisor) {
