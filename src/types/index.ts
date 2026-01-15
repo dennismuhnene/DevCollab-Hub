@@ -119,6 +119,7 @@ export interface Match {
   };
   archivedBy?: string[];
   deletedBy?: string[];
+  deletedParticipants?: string[];
 
   // LEGACY FIELDS (pre-refactor)
   projectId?: string; 

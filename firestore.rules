@@ -97,7 +97,14 @@ service cloud.firestore {
     match /matches/{matchId} {
       allow read, list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.keys().hasAll(['participants', 'participantsDetails']) && request.resource.data.participants is list && uid() in request.resource.data.participants;
-      allow update: if isSignedIn() && uid() in resource.data.participants;
+      allow update: if isSignedIn() && uid() in resource.data.participants && (
+          // Allow updating standard fields like last message, unread counts, etc.
+          request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastMessage', 'lastMessageSender', 'lastMessageTimestamp', 'unreadCounts']) ||
+          // Allow archiving/unarchiving
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['archivedBy']) ||
+          // Allow deleting/undeleting for the user
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletedBy'])
+      );
       allow delete: if false;
 
       match /messages/{messageId} {
@@ -138,32 +145,36 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.developerId == uid();
       allow read, get: if isSignedIn() && isParticipant();
 
-      allow update: if isSignedIn() && isParticipant() && (
-        // Advisor submits initial proposal or a revision
-        ( (statusTransition('pending_proposal', 'pending_developer_acceptance') || statusTransition('revision_requested', 'pending_developer_acceptance')) && 
-            isAdvisor() && affectedKeysAre(['advisorProposal']) ) ||
-        // Advisor rejects initial request or revision request
-        ( (statusTransition('pending_proposal', 'rejected') || statusTransition('revision_requested', 'rejected')) && 
-            isAdvisor() && statusOnly() ) ||
-        
-        // Developer requests revision
-        ( statusTransition('pending_developer_acceptance', 'revision_requested') && 
-            isDeveloper() && affectedKeysAre(['developerRevisionNote']) ) ||
-        // Developer accepts proposal
-        ( statusTransition('pending_developer_acceptance', 'active') && 
-            isDeveloper() && affectedKeysAre(['activatedAt']) ) ||
-        // Developer rejects proposal
-        ( statusTransition('pending_developer_acceptance', 'rejected') && 
-            isDeveloper() && statusOnly() ) ||
+      allow update: if isSignedIn() && (
+        (isParticipant() && (
+            // Advisor submits initial proposal or a revision
+            ( (statusTransition('pending_proposal', 'pending_developer_acceptance') || statusTransition('revision_requested', 'pending_developer_acceptance')) && 
+                isAdvisor() && affectedKeysAre(['advisorProposal']) ) ||
+            // Advisor rejects initial request or revision request
+            ( (statusTransition('pending_proposal', 'rejected') || statusTransition('revision_requested', 'rejected')) && 
+                isAdvisor() && statusOnly() ) ||
+            
+            // Developer requests revision
+            ( statusTransition('pending_developer_acceptance', 'revision_requested') && 
+                isDeveloper() && affectedKeysAre(['developerRevisionNote']) ) ||
+            // Developer accepts proposal
+            ( statusTransition('pending_developer_acceptance', 'active') && 
+                isDeveloper() && affectedKeysAre(['activatedAt']) ) ||
+            // Developer rejects proposal
+            ( statusTransition('pending_developer_acceptance', 'rejected') && 
+                isDeveloper() && statusOnly() ) ||
 
-        // Either participant closes the engagement
-        ( statusTransition('active', 'closed') && 
-            isParticipant() && affectedKeysAre(['closedById']) ) ||
+            // Either participant closes the engagement
+            ( statusTransition('active', 'closed') && 
+                isParticipant() && affectedKeysAre(['closedById']) ) ||
 
-        // A participant can archive/unarchive for themselves.
-        ( request.resource.data.diff(resource.data).affectedKeys().hasOnly(['archivedBy']) &&
-          (request.resource.data.archivedBy == (resource.data.get('archivedBy', [])).concat([uid()])) ||
-          (request.resource.data.archivedBy == (resource.data.get('archivedBy', [])).removeAll([uid()])) )
+            // A participant can archive/unarchive for themselves.
+            ( request.resource.data.diff(resource.data).affectedKeys().hasOnly(['archivedBy']) &&
+              (request.resource.data.archivedBy == (resource.data.get('archivedBy', [])).concat([uid()])) ||
+              (request.resource.data.archivedBy == (resource.data.get('archivedBy', [])).removeAll([uid()])) )
+        )) ||
+        // Admin-only action to mark engagement as having a deleted participant
+        (isAdmin() && request.resource.data.status == 'participant_deleted')
       );
 
       match /messages/{messageId} {

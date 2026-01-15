@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Paperclip, Send, XCircle, Loader2, ShieldAlert, PlayCircle, Edit } from 'lucide-react';
+import { Paperclip, Send, XCircle, Loader2, ShieldAlert, PlayCircle, Edit, UserX } from 'lucide-react'; // Added UserX
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { checkBlockStatus } from '@/lib/firebase/users';
@@ -109,9 +109,12 @@ const EngagementRoomPage = (): JSX.Element => {
                 return;
             }
 
-            const otherUserId = user.uid === engData.developerId ? engData.advisorId : engData.developerId;
-            const blockStatus = await checkBlockStatus(user.uid, otherUserId);
-            setIsBlocked(blockStatus);
+            // Check for block status only if the engagement is not frozen
+            if (engData.status !== 'participant_deleted') {
+                const otherUserId = user.uid === engData.developerId ? engData.advisorId : engData.developerId;
+                const blockStatus = await checkBlockStatus(user.uid, otherUserId);
+                setIsBlocked(blockStatus);
+            }
 
             setEngagement(engData);
 
@@ -228,18 +231,28 @@ const EngagementRoomPage = (): JSX.Element => {
 
     const isParticipant = user && engagement && (user.uid === engagement.developerId || user.uid === engagement.advisorId);
     const isRoomActive = engagement?.status === 'active';
+    const isRoomReadOnly = engagement?.status === 'closed' || engagement?.status === 'participant_deleted';
 
     if (loading) return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     if (!engagement || !isParticipant || !user) return <div>Engagement not found or access denied.</div>
 
     return (
         <div className="container mx-auto p-4 space-y-2">
-            {/* Chat and Details Columns */}
+            {/* Page-level alert for deleted participant */}
+            {engagement.status === 'participant_deleted' && (
+                <div className="flex items-center justify-center p-4 mb-4 rounded-lg bg-yellow-100/50 text-yellow-800 border border-yellow-200/80">
+                    <UserX className="mr-3 h-5 w-5" />
+                    <p className="text-sm font-medium">This engagement is frozen because the other participant has deleted their account. The room is now read-only.</p>
+                </div>
+            )}
+            
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
                 <div className="lg:col-span-2 space-y-2">
-                     {/* Message Area */}
                     <Card>
-                        <CardHeader><CardTitle className="text-lg">Engagement Room</CardTitle><CardDescription>Status: <span className={`font-bold ${isRoomActive ? 'text-green-500' : 'text-red-500'}`}>{engagement.status}</span></CardDescription></CardHeader>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Engagement Room</CardTitle>
+                            <CardDescription>Status: <span className={`font-bold ${isRoomActive ? 'text-green-500' : 'text-red-500'}`}>{engagement.status.replace('_', ' ')}</span></CardDescription>
+                        </CardHeader>
                         <CardContent className="h-[500px] overflow-y-auto border-y p-4 space-y-2">
                             {messages.map(msg => (
                                 <div key={msg.id} className={`flex ${msg.senderId === user?.uid ? 'justify-end' : 'justify-start'}`}>
@@ -252,25 +265,32 @@ const EngagementRoomPage = (): JSX.Element => {
                              <div ref={messagesEndRef} />
                         </CardContent>
                         <div className="p-4 space-y-2">
-                            {isBlocked ? <div className="flex items-center justify-center p-4 rounded-lg bg-destructive/10 text-destructive-foreground"><ShieldAlert className="mr-3 h-5 w-5" /><p className="text-sm font-medium">Messaging disabled.</p></div> : <>
-                                {(file || uploading) && <div className="bg-muted/50 p-2 rounded-md mb-2 text-sm"><div className="flex items-center justify-between"><span>{file?.name || 'Uploading...'}</span>{!uploading && <Button size="icon" variant="ghost" onClick={() => setFile(null)}><XCircle className="h-4 w-4"/></Button>}</div></div>}
-                                <div className="flex items-start gap-2">
-                                    <Textarea value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder={isRoomActive ? "Type a message... (Shift + Enter for new line)" : "This room is not active."} disabled={!isRoomActive || uploading} onKeyDown={handleKeyDown} rows={1} className="flex-1 min-h-[40px] resize-none no-scrollbar"/>
-                                    <Button asChild variant="outline" size="icon" disabled={!isRoomActive || uploading}><label htmlFor="file-upload" className="cursor-pointer"><Paperclip className="h-4 w-4"/></label></Button>
-                                    <input id="file-upload" type="file" className="hidden" onChange={handleFileChange} disabled={!isRoomActive || uploading}/>
-                                    <Button onClick={handleSendMessage} disabled={!isRoomActive || uploading || (!newMessage.trim() && !file)}>{uploading ? <Loader2 className="h-4 w-4 animate-spin"/> : <Send className="h-4 w-4"/>}</Button>
+                            {isBlocked ? (
+                                <div className="flex items-center justify-center p-4 rounded-lg bg-destructive/10 text-destructive-foreground"><ShieldAlert className="mr-3 h-5 w-5" /><p className="text-sm font-medium">Messaging disabled.</p></div>
+                            ) : isRoomReadOnly ? (
+                                <div className="flex items-center justify-center p-4 rounded-lg bg-gray-100 text-gray-600">
+                                    <p className="text-sm font-medium">This room is read-only.</p>
                                 </div>
-                            </>}
+                            ) : (
+                                <>
+                                    {(file || uploading) && <div className="bg-muted/50 p-2 rounded-md mb-2 text-sm"><div className="flex items-center justify-between"><span>{file?.name || 'Uploading...'}</span>{!uploading && <Button size="icon" variant="ghost" onClick={() => setFile(null)}><XCircle className="h-4 w-4"/></Button>}</div></div>}
+                                    <div className="flex items-start gap-2">
+                                        <Textarea value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message... (Shift + Enter for new line)" onKeyDown={handleKeyDown} rows={1} className="flex-1 min-h-[40px] resize-none no-scrollbar"/>
+                                        <Button asChild variant="outline" size="icon"><label htmlFor="file-upload" className="cursor-pointer"><Paperclip className="h-4 w-4"/></label></Button>
+                                        <input id="file-upload" type="file" className="hidden" onChange={handleFileChange}/>
+                                        <Button onClick={handleSendMessage} disabled={uploading || (!newMessage.trim() && !file)}>{uploading ? <Loader2 className="h-4 w-4 animate-spin"/> : <Send className="h-4 w-4"/>}</Button>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </Card>
 
-                    {/* Milestone Section */}
                     <Card>
                         <CardHeader><CardTitle className="text-base font-semibold">Milestone Progress</CardTitle></CardHeader>
                         <CardContent>
                             <Accordion type="single" collapsible className="w-full">
                                 {engagement.advisorProposal?.milestones?.map((milestone) => (
-                                    <AccordionItem value={milestone.id} key={milestone.id}>
+                                    <AccordionItem value={milestone.id} key={milestone.id} disabled={isRoomReadOnly}>
                                         <AccordionTrigger className="text-sm font-semibold">{milestone.description}</AccordionTrigger>
                                         <AccordionContent>
                                             <div className="space-y-3">
@@ -281,17 +301,17 @@ const EngagementRoomPage = (): JSX.Element => {
                                                     {milestone.startedAt && <p><b>Started:</b> {formatTimestamp(milestone.startedAt)}</p>}
                                                     {milestone.completedAt && <p><b>Completed:</b> {formatTimestamp(milestone.completedAt)}</p>}
                                                 </div>
-                                                {user?.uid === engagement.advisorId && milestone.status === 'pending' && (
+                                                {user?.uid === engagement.advisorId && milestone.status === 'pending' && !isRoomReadOnly && (
                                                     <Button size="sm" className="mt-2" onClick={() => handleStartMilestone(milestone.id)} disabled={startingMilestone === milestone.id}>
                                                         {startingMilestone === milestone.id ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting...</> : <><PlayCircle className="mr-2 h-4 w-4" /> Start Milestone</>}
                                                     </Button>
                                                 )}
-                                                {user?.uid === engagement.advisorId && milestone.status === 'in_progress' && (
+                                                {user?.uid === engagement.advisorId && milestone.status === 'in_progress' && !isRoomReadOnly && (
                                                     <Button size="sm" className="mt-2" onClick={() => setOpenSubmitDialogs(prev => ({ ...prev, [milestone.id]: true }))}>
                                                         <Edit className="mr-2 h-4 w-4" /> Submit Work
                                                     </Button>
                                                 )}
-                                                {user?.uid === engagement.developerId && milestone.status === 'submitted' && (
+                                                {user?.uid === engagement.developerId && milestone.status === 'submitted' && !isRoomReadOnly && (
                                                     <Button size="sm" className="mt-2" onClick={() => { setSelectedMilestone(milestone); setAcceptWorkDialogOpen(true); }}>Review & Accept</Button>
                                                 )}
                                             </div>
@@ -305,7 +325,6 @@ const EngagementRoomPage = (): JSX.Element => {
                     <Card><CardHeader><CardTitle className="text-base font-semibold">Outcome Log</CardTitle></CardHeader><CardContent><OutcomeLog engagement={engagement} /></CardContent></Card>
                 </div>
 
-                 {/* Right Sidebar */}
                 <div className="space-y-2">
                     <Card><CardHeader><CardTitle className="text-base">Engagement Details</CardTitle></CardHeader><CardContent className="space-y-4">
                         <div><h4 className="font-semibold text-sm">Advisor</h4><div className="flex items-center gap-2 mt-1"><Avatar className="h-10 w-10"><AvatarImage src={engagement.advisorPhotoURL}/><AvatarFallback>{engagement.advisorName[0]}</AvatarFallback></Avatar><div><p>{engagement.advisorName}</p><p className="text-sm text-muted-foreground">{engagement.advisorHeadline}</p></div></div></div>
@@ -317,12 +336,11 @@ const EngagementRoomPage = (): JSX.Element => {
                         </Accordion></div>
                     </CardContent></Card>
                     <Card><CardHeader><CardTitle className="text-base font-semibold">Video Sessions</CardTitle></CardHeader><CardContent>{isRoomActive ? <EngagementVideo engagement={engagement} /> : <p className='text-sm text-muted-foreground'>Video sessions are for active engagements.</p>}</CardContent></Card>
-                    {isRoomActive && <Card className="border-destructive"><CardHeader><CardTitle className="text-base">Danger Zone</CardTitle><CardDescription>Closing the engagement is final.</CardDescription></CardHeader><CardContent><Button variant="destructive" onClick={handleCloseEngagementClick} disabled={isClosing}>{isClosing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Closing...</> : 'Close Engagement'}</Button></CardContent></Card>}
+                    {!isRoomReadOnly && <Card className="border-destructive"><CardHeader><CardTitle className="text-base">Danger Zone</CardTitle><CardDescription>Closing the engagement is final.</CardDescription></CardHeader><CardContent><Button variant="destructive" onClick={handleCloseEngagementClick} disabled={isClosing}>{isClosing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Closing...</> : 'Close Engagement'}</Button></CardContent></Card>}
                     {engagement.status === 'closed' && user?.uid === engagement.developerId && <Card><CardHeader><CardTitle className="text-base">Engagement Closed</CardTitle></CardHeader><CardContent className="flex flex-col gap-4">{hasReviewed ? <><p className='text-sm text-muted-foreground'>You&apos;ve already reviewed.</p><Button asChild><Link href={`/advisory/${engagement.advisorId}`}>View Advisor Profile</Link></Button></> : <><p className='text-sm text-muted-foreground'>This engagement is closed. Leave a review for your advisor.</p><Button asChild><Link href={`/engagements/${engagementId}/review`}>Leave a Review</Link></Button></>}</CardContent></Card>}
                 </div>
             </div>
 
-            {/* Dialogs - Render all potential dialogs */}
             <AlertDialog open={closeEngagementAlertOpen} onOpenChange={setCloseEngagementAlertOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>

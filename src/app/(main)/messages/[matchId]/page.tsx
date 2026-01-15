@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Send, Users, Archive, ArrowLeft, Sparkles, Loader2, Trash2, ShieldAlert } from 'lucide-react';
+import { Send, Users, Archive, ArrowLeft, Sparkles, Loader2, Trash2, ShieldAlert, UserX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { addNotification } from '@/lib/firebase/notifications';
 import { useMemoFirebase } from '@/firebase';
@@ -72,7 +72,6 @@ export default function ChatPage() {
   const [role, setRole] = useState<Role | null>(null);
   const [otherUser, setOtherUser] = useState<UserProfile | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sortedMatches, setSortedMatches] = useState<Match[]>([]);
@@ -82,6 +81,7 @@ export default function ChatPage() {
   const [showAiModal, setShowAiModal] = useState(false);
   const { toast } = useToast();
   const [isBlocked, setIsBlocked] = useState(false);
+  const [isOtherUserDeleted, setIsOtherUserDeleted] = useState(false); // ADDED
 
   const matchesQuery = useMemoFirebase(
     () => user?.uid ? query(collection(db, 'matches'), where('participants', 'array-contains', user.uid)) : null,
@@ -146,14 +146,27 @@ export default function ChatPage() {
         }
 
         const otherUserId = matchData.participants.find(p => p !== user.uid);
-        if (otherUserId) {
-            const blockStatus = await checkBlockStatus(user.uid, otherUserId);
-            setIsBlocked(blockStatus);
 
-            const userDoc = await getDoc(doc(db, 'users', otherUserId));
-            if (userDoc.exists()) {
-                setOtherUser({ uid: userDoc.id, ...userDoc.data() } as UserProfile);
+        if (otherUserId) {
+            // MODIFIED BLOCK - START
+            if (matchData.deletedParticipants?.includes(otherUserId)) {
+                setIsOtherUserDeleted(true);
+                setOtherUser(null);
+            } else {
+                setIsOtherUserDeleted(false);
+                const blockStatus = await checkBlockStatus(user.uid, otherUserId);
+                setIsBlocked(blockStatus);
+
+                const userDoc = await getDoc(doc(db, 'users', otherUserId));
+                if (userDoc.exists()) {
+                    setOtherUser({ uid: userDoc.id, ...userDoc.data() } as UserProfile);
+                } else {
+                    // If user doc doesn't exist, it means they were deleted.
+                    setIsOtherUserDeleted(true);
+                    setOtherUser(null);
+                }
             }
+             // MODIFIED BLOCK - END
         }
 
         if (matchData.type === 'project' && matchData.contextId) {
@@ -173,7 +186,7 @@ export default function ChatPage() {
             setRole(null);
         }
         
-        if ((matchData.unreadCounts?.[user.uid] || 0) > 0 && !isBlocked) {
+        if ((matchData.unreadCounts?.[user.uid] || 0) > 0 && !isBlocked && !isOtherUserDeleted) {
             await updateDoc(matchDocRef, { [`unreadCounts.${user.uid}`]: 0 });
             markMatchNotificationsAsRead(user.uid, matchId);
         }
@@ -197,7 +210,7 @@ export default function ChatPage() {
   }, [messages]);
 
   const handleSendMessage = useCallback(async () => {
-    if (isBlocked) return;
+    if (isBlocked || isOtherUserDeleted) return; // MODIFIED
     if (!newMessage.trim() || !user || !match || !otherUser?.uid) return;
 
     const trimmedMessage = newMessage.trim();
@@ -234,7 +247,7 @@ export default function ChatPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not send your message. Please try again.' });
       setNewMessage(trimmedMessage);
     }
-  }, [newMessage, user, match, otherUser, userProfile, matchId, toast, isBlocked]);
+  }, [newMessage, user, match, otherUser, userProfile, matchId, toast, isBlocked, isOtherUserDeleted]); // MODIFIED
 
   const handleDeleteMessage = async (messageId: string) => {
     if (!user) return;
@@ -249,7 +262,7 @@ export default function ChatPage() {
   };
 
   const handleGetAiInsights = () => {
-    if (isBlocked) return;
+    if (isBlocked || isOtherUserDeleted) return; // MODIFIED
     const isOwner = project?.ownerId === user?.uid || role?.ownerId === user?.uid;
     if (!isOwner) {
       return;
@@ -350,47 +363,48 @@ export default function ChatPage() {
         </aside>
 
         <main className="flex-1 flex flex-col bg-background">
-          {otherUser ? (
-            <div className="p-4 border-b flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="md:hidden">
-                  <Sheet>
-                    <SheetTrigger asChild><Button variant="ghost" size="icon"><Users className="h-5 w-5" /></Button></SheetTrigger>
-                    <SheetContent side="left" className="p-0 w-full sm:w-3/4">
-                      <MatchListContent 
-                        matches={filteredMatches}
-                        isLoading={matchesLoading}
-                        activeMatchId={matchId}
-                        showArchived={showArchived}
-                        onShowArchivedChange={setShowArchived}
-                      />
-                    </SheetContent>
-                  </Sheet>
-                </div>
-                <Avatar><AvatarImage src={otherUser?.photoURL} /><AvatarFallback>{getInitials(otherUser?.name)}</AvatarFallback></Avatar>
-                <div><h3 className="font-semibold">{otherUser?.name || 'New Match'}</h3>{title && <p className="text-sm text-muted-foreground">{title}</p>}</div>
+          {/* MODIFIED HEADER - START */}
+          <div className="p-4 border-b flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="md:hidden">
+                <Sheet>
+                  <SheetTrigger asChild><Button variant="ghost" size="icon"><Users className="h-5 w-5" /></Button></SheetTrigger>
+                  <SheetContent side="left" className="p-0 w-full sm:w-3/4">
+                    <MatchListContent 
+                      matches={filteredMatches}
+                      isLoading={matchesLoading}
+                      activeMatchId={matchId}
+                      showArchived={showArchived}
+                      onShowArchivedChange={setShowArchived}
+                    />
+                  </SheetContent>
+                </Sheet>
               </div>
-                {isOwner && (
-                 <Button variant="outline" size="sm" onClick={handleGetAiInsights} disabled={isAiInsightsLoading || isBlocked}>
-                    {isAiInsightsLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />}
-                    Insights
-                 </Button>
-                )}
+              {isOtherUserDeleted ? (
+                  <>
+                    <Avatar><AvatarFallback><UserX /></AvatarFallback></Avatar>
+                    <div><h3 className="font-semibold">User Deleted</h3>{title && <p className="text-sm text-muted-foreground">{title}</p>}</div>
+                  </>
+              ) : otherUser ? (
+                <>
+                  <Avatar><AvatarImage src={otherUser?.photoURL} /><AvatarFallback>{getInitials(otherUser?.name)}</AvatarFallback></Avatar>
+                  <div><h3 className="font-semibold">{otherUser?.name || 'New Match'}</h3>{title && <p className="text-sm text-muted-foreground">{title}</p>}</div>
+                </>
+              ) : (
+                <div className="flex items-center gap-4 w-full">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="space-y-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-3 w-24" /></div>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="p-4 border-b flex items-center gap-4">
-                <div className="md:hidden"><Button variant="ghost" size="icon" asChild><Link href="/messages"><ArrowLeft className="h-5 w-5" /></Link></Button></div>
-                {loading ? (
-                    <div className="flex items-center gap-4 w-full">
-                        <Skeleton className="h-10 w-10 rounded-full" />
-                        <div className="space-y-2">
-                            <Skeleton className="h-4 w-32" />
-                            <Skeleton className="h-3 w-24" />
-                        </div>
-                    </div>
-                ) : <p>Select a conversation to start chatting</p>}
-            </div>
-          )}
+            {isOwner && !isOtherUserDeleted && (
+              <Button variant="outline" size="sm" onClick={handleGetAiInsights} disabled={isAiInsightsLoading || isBlocked}>
+                {isAiInsightsLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />}
+                Insights
+              </Button>
+            )}
+          </div>
+          {/* MODIFIED HEADER - END */}
 
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {loading && messages.length === 0 ? (
@@ -404,9 +418,15 @@ export default function ChatPage() {
                   </div>
               ) : visibleMessages.map((msg, index) => (
                 <div key={index} className={cn("group flex items-end gap-2", msg.senderId === user?.uid ? "justify-end" : "justify-start")}>
-                    {msg.senderId !== user?.uid && otherUser && (
-                        <Avatar className="h-8 w-8"><AvatarImage src={otherUser?.photoURL} /><AvatarFallback>{getInitials(otherUser?.name)}</AvatarFallback></Avatar>
+                    {/* MODIFIED AVATAR LOGIC - START */}
+                    {msg.senderId !== user?.uid && (
+                        isOtherUserDeleted ? (
+                            <Avatar className="h-8 w-8"><AvatarFallback><UserX /></AvatarFallback></Avatar>
+                        ) : otherUser && (
+                            <Avatar className="h-8 w-8"><AvatarImage src={otherUser?.photoURL} /><AvatarFallback>{getInitials(otherUser?.name)}</AvatarFallback></Avatar>
+                        )
                     )}
+                    {/* MODIFIED AVATAR LOGIC - END */}
                     <div className={cn("max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg shadow-sm relative", msg.senderId === user?.uid ? "bg-primary text-primary-foreground" : "bg-muted")}>
                         <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>
                     </div>
@@ -425,8 +445,14 @@ export default function ChatPage() {
               <div ref={messagesEndRef} />
           </div>
 
+           {/* MODIFIED FOOTER - START */}
            <div className="p-4 border-t bg-card mt-auto">
-              {isBlocked ? (
+              {isOtherUserDeleted ? (
+                  <div className="flex items-center justify-center p-4 rounded-lg bg-yellow-100/50 text-yellow-800 border border-yellow-200/80">
+                      <UserX className="mr-3 h-5 w-5" />
+                      <p className="text-sm font-medium">This user has deleted their account. You can no longer send messages.</p>
+                  </div>
+              ) : isBlocked ? (
                   <div className="flex items-center justify-center p-4 rounded-lg bg-destructive/10 text-destructive-foreground">
                       <ShieldAlert className="mr-3 h-5 w-5" />
                       <p className="text-sm font-medium">Messaging is disabled because a user has been blocked.</p>
@@ -445,6 +471,7 @@ export default function ChatPage() {
                   </form>
               )}
            </div>
+           {/* MODIFIED FOOTER - END */}
         </main>
       </div>
       {aiInsights && (

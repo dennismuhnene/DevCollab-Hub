@@ -5,6 +5,7 @@ import { collection, query, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { PublicAdvisorProfile, UserProfile } from '@/types';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -22,13 +23,13 @@ import {
 import { TagInput } from '@/components/ui/tag-input';
 import { SlidersHorizontal, X, CheckSquare } from 'lucide-react';
 
-// This local interface is now cleaner because standardDeliverables is part of PublicAdvisorProfile
 interface DisplayAdvisorProfile extends PublicAdvisorProfile {
     advisorApplicationId: string;
 }
 
 const AdvisorHubPage = () => {
     const { user } = useAuth();
+    const router = useRouter();
     const [advisors, setAdvisors] = useState<DisplayAdvisorProfile[]>([]);
     const [filteredAdvisors, setFilteredAdvisors] = useState<DisplayAdvisorProfile[]>([]);
     const [loading, setLoading] = useState(true);
@@ -68,8 +69,7 @@ const AdvisorHubPage = () => {
                 const fetchedAdvisors: DisplayAdvisorProfile[] = [];
                 querySnapshot.forEach((doc) => {
                     const advisor = doc.data() as PublicAdvisorProfile;
-                    // Correctly read the true application ID from the profile and ensure it exists
-                     if (!allBlockedIds.includes(advisor.uid) && advisor.activeAdvisorApplicationId) {
+                    if (!allBlockedIds.includes(advisor.uid) && advisor.activeAdvisorApplicationId) {
                         fetchedAdvisors.push({ 
                             ...advisor, 
                             advisorApplicationId: advisor.activeAdvisorApplicationId 
@@ -186,7 +186,13 @@ const AdvisorHubPage = () => {
                         <Card 
                             key={advisor.uid} 
                             className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow duration-300"
-                            onClick={() => setSelectedAdvisor(advisor)}
+                            onClick={() => {
+                                if (user && user.uid === advisor.uid) {
+                                    router.push(`/advisory/${advisor.uid}`);
+                                } else {
+                                    setSelectedAdvisor(advisor);
+                                }
+                            }}
                         >
                             <CardHeader className="flex-row items-start gap-4">
                                 <Avatar className="w-16 h-16 border">
@@ -195,9 +201,9 @@ const AdvisorHubPage = () => {
                                 </Avatar>
                                 <div>
                                     <CardTitle className="text-lg font-semibold">
-                                        <Link href={`/developers/${advisor.uid}`} onClick={(e) => e.stopPropagation()} className="hover:underline">
+                                        <span className="hover:underline">
                                             {advisor.name}
-                                        </Link>
+                                        </span>
                                     </CardTitle>
                                     <CardDescription>{advisor.headline}</CardDescription>
                                 </div>
@@ -255,7 +261,7 @@ const AdvisorHubPage = () => {
                                     </Avatar>
                                     <div className="pt-2">
                                         <DialogTitle className="text-lg">
-                                            <Link href={`/developers/${selectedAdvisor.uid}`} className="hover:underline">
+                                            <Link href={`/advisory/${selectedAdvisor.uid}`} className="hover:underline">
                                                 {selectedAdvisor.name}
                                             </Link>
                                         </DialogTitle>
@@ -307,7 +313,6 @@ const AdvisorHubPage = () => {
                             <DialogFooter className="mt-auto pt-4 border-t">
                                 {user?.uid !== selectedAdvisor.uid && (
                                      <Button asChild className="w-full sm:w-auto" size="lg">
-                                        {/* Correctly pass the true application ID */}
                                         <Link href={`/advisory/${selectedAdvisor.uid}/request?applicationId=${selectedAdvisor.activeAdvisorApplicationId}`}>
                                             Request Engagement
                                         </Link>

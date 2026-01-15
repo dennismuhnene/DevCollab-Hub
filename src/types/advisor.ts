@@ -1,4 +1,3 @@
-'use client';
 import type { Timestamp, FieldValue } from 'firebase/firestore';
 
 // This is the new, correct type for the public-facing advisor profiles.
@@ -63,7 +62,7 @@ export interface Engagement {
     id: string;
     developerId: string;
     advisorId: string;
-    status: 'requested' | 'active' | 'closed' | 'rejected' | 'pending_proposal' | 'pending_developer_acceptance' | 'revision_requested';
+    status: 'requested' | 'active' | 'closed' | 'rejected' | 'pending_proposal' | 'pending_developer_acceptance' | 'revision_requested' | 'participant_deleted';
     message: string;
     createdAt: Timestamp | FieldValue;
     activatedAt?: Timestamp | FieldValue;

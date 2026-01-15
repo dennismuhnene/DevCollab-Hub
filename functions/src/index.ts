@@ -152,25 +152,74 @@ export const deleteUserAccount = functions.https.onCall(async (data, context) =>
 });
 
 /**
- * Cascade delete on user removal
+ * A background Cloud Function that triggers when a Firebase Auth user
+ * is deleted. It performs a "cascade delete" of all associated Firestore data.
  */
 export const onUserAccountDeleted = functions.auth.user().onDelete(async (user: UserRecord) => {
-  const uid = user.uid;
-  logger.info(`Starting cascade delete for user: ${uid}`);
+    const uid = user.uid;
+    logger.info(`Starting cascade actions for deleted user: ${uid}`);
 
-  const batch = adminDb.batch();
+    const batch = adminDb.batch();
 
-  batch.delete(adminDb.doc(`users/${uid}`));
-  batch.delete(adminDb.doc(`publicAdvisorProfiles/${uid}`));
+    // 1. Delete the user's main profile and public advisor profile
+    batch.delete(adminDb.doc(`users/${uid}`));
+    batch.delete(adminDb.doc(`publicAdvisorProfiles/${uid}`));
+    logger.info(`Scheduled deletion for user profiles: users/${uid} and publicAdvisorProfiles/${uid}`);
 
-  const projects = await adminDb.collection("projects").where("ownerId", "==", uid).get();
-  projects.forEach(doc => batch.delete(doc.ref));
+    // 2. Delete all projects owned by the user
+    const projectsQuery = adminDb.collection("projects").where("ownerId", "==", uid);
+    const projectsSnapshot = await projectsQuery.get();
+    if (!projectsSnapshot.empty) {
+        projectsSnapshot.forEach((doc) => {
+            batch.delete(doc.ref);
+            logger.info(`Scheduled deletion for project: ${doc.ref.path}`);
+        });
+    }
 
-  const matches = await adminDb.collection("matches").where("participants", "array-contains", uid).get();
-  matches.forEach(doc => batch.delete(doc.ref));
+    // 3. Mark the user as deleted in any matches (conversations)
+    const matchesQuery = adminDb.collection("matches").where("participants", "array-contains", uid);
+    const matchesSnapshot = await matchesQuery.get();
+    if (!matchesSnapshot.empty) {
+        matchesSnapshot.forEach((doc) => {
+            batch.update(doc.ref, {
+                deletedParticipants: admin.firestore.FieldValue.arrayUnion(uid),
+            });
+            logger.info(`Marking user ${uid} as deleted in match: ${doc.ref.path}`);
+        });
+    }
 
-  await batch.commit();
+    // 4. Update engagements to 'participant_deleted' status
+    const engagementsAsDevQuery = adminDb.collection("engagements").where("developerId", "==", uid);
+    const engagementsAsDevSnapshot = await engagementsAsDevQuery.get();
+    if (!engagementsAsDevSnapshot.empty) {
+        engagementsAsDevSnapshot.forEach((doc) => {
+            batch.update(doc.ref, {
+                status: 'participant_deleted',
+                closingReason: 'The developer on this engagement has deleted their account.',
+                closedById: uid,
+            });
+            logger.info(`Marking engagement ${doc.ref.path} as participant_deleted`);
+        });
+    }
+
+    const engagementsAsAdvisorQuery = adminDb.collection("engagements").where("advisorId", "==", uid);
+    const engagementsAsAdvisorSnapshot = await engagementsAsAdvisorQuery.get();
+    if (!engagementsAsAdvisorSnapshot.empty) {
+        engagementsAsAdvisorSnapshot.forEach((doc) => {
+            batch.update(doc.ref, {
+                status: 'participant_deleted',
+                closingReason: 'The advisor on this engagement has deleted their account.',
+                closedById: uid,
+            });
+            logger.info(`Marking engagement ${doc.ref.path} as participant_deleted`);
+        });
+    }
+
+    // Commit all batched operations
+    await batch.commit();
+    logger.info(`Successfully completed cascade actions for user: ${uid}`);
 });
+
 
 /**
  * ✅ FIXED: Advisor verification function
@@ -244,7 +293,7 @@ export const setAdvisorVerificationStatus = functions.https.onCall(async (data, 
 
   return {
     success: true,
-    message: `Application successfully ${status}.`,
+    message: `Application successfully ${status}.`
   };
 });
 
