@@ -1,4 +1,5 @@
 
+export * from './storage';
 export * from './engagements';
 export * from './generate-upload-url';
 export * from './set-active-advisor-profile';

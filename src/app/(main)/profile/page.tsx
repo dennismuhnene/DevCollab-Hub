@@ -8,7 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ProfileForm from '@/components/profile-form';
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { doc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import { db, storage, auth } from '@/lib/firebase/config';
@@ -23,6 +24,9 @@ import ProfileSidebar from '@/components/profile-sidebar';
 import BlockedUsers from '@/components/blocked-users';
 import DeleteAccount from '@/components/delete-account';
 import UserRoleSettings from '@/components/user-role-settings';
+
+const functions = getFunctions();
+const deleteProfileImage = httpsCallable(functions, 'deleteProfileImage');
 
 export default function ProfilePage() {
   const { user, userProfile, loading, reloadUserProfile } = useAuth();
@@ -90,7 +94,7 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSaveImage = () => {
+  const handleSaveImage = async () => {
     if (!newImageFile || !user || !userProfile) {
       toast({ variant: 'destructive', title: 'Error', description: 'Image or user not available.'});
       return;
@@ -99,35 +103,32 @@ export default function ProfilePage() {
     setUploading(true);
     const oldImageUrl = userProfile.photoURL;
     const storageRef = ref(storage, `profile-images/${user.uid}/${newImageFile.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, newImageFile);
+    
+    try {
+      const uploadTask = await uploadBytesResumable(storageRef, newImageFile);
+      const downloadURL = await getDownloadURL(uploadTask.ref);
 
-    uploadTask.on('state_changed', 
-      () => {}, 
-      (error) => {
-        setUploading(false);
-        toast({ variant: 'destructive', title: 'Upload failed', description: error.message });
-      },
-      async () => {
-        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-        const userDocRef = doc(db, 'users', user.uid);
-        updateDocumentNonBlocking(userDocRef, { photoURL: downloadURL });
-        if (auth.currentUser) await updateProfile(auth.currentUser, { photoURL: downloadURL });
-        if (oldImageUrl && oldImageUrl.startsWith('https://firebasestorage.googleapis.com')) {
-           try {
-              const oldImageRef = ref(storage, oldImageUrl);
-              await deleteObject(oldImageRef);
-           } catch (deleteError: any) {
-              if (deleteError.code !== 'storage/object-not-found') {
-                console.warn("Could not delete old profile picture:", deleteError);
-              }
-           }
+      const userDocRef = doc(db, 'users', user.uid);
+      updateDocumentNonBlocking(userDocRef, { photoURL: downloadURL });
+      if (auth.currentUser) await updateProfile(auth.currentUser, { photoURL: downloadURL });
+
+      if (oldImageUrl) {
+        try {
+          await deleteProfileImage({ imageUrl: oldImageUrl });
+        } catch (deleteError) {
+          console.warn("Cloud function to delete old profile picture failed:", deleteError);
         }
-        toast({ title: 'Profile picture updated!' });
+      }
+
+      toast({ title: 'Profile picture updated!' });
+      reloadUserProfile();
+
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Upload failed', description: error.message });
+    } finally {
         setUploading(false);
         setNewImageFile(null);
-        reloadUserProfile();
-      }
-    );
+    }
   };
 
   const finalProfile = userProfile || cachedProfile;
