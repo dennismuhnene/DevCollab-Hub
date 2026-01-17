@@ -72,6 +72,7 @@ export default function ChatPage() {
   const [role, setRole] = useState<Role | null>(null);
   const [otherUser, setOtherUser] = useState<UserProfile | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sortedMatches, setSortedMatches] = useState<Match[]>([]);
@@ -210,10 +211,11 @@ export default function ChatPage() {
   }, [messages]);
 
   const handleSendMessage = useCallback(async () => {
-    if (isBlocked || isOtherUserDeleted) return; // MODIFIED
-    if (!newMessage.trim() || !user || !match || !otherUser?.uid) return;
-
+    if (isBlocked || isOtherUserDeleted) return;
+    
     const trimmedMessage = newMessage.trim();
+    if (!trimmedMessage || !user || !match || !otherUser?.uid) return;
+
     setNewMessage('');
 
     try {
@@ -247,7 +249,7 @@ export default function ChatPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not send your message. Please try again.' });
       setNewMessage(trimmedMessage);
     }
-  }, [newMessage, user, match, otherUser, userProfile, matchId, toast, isBlocked, isOtherUserDeleted]); // MODIFIED
+  }, [user, match, otherUser, userProfile, matchId, toast, isBlocked, isOtherUserDeleted, newMessage]);
 
   const handleDeleteMessage = async (messageId: string) => {
     if (!user) return;
