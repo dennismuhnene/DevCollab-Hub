@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
@@ -18,7 +18,7 @@ import ImageUploader from './image-uploader';
 import { useToast } from '@/hooks/use-toast';
 import type { Project } from '@/types';
 import { generateProjectDescription } from '@/ai/flows/project-description-generator';
-import { Sparkles, Loader2, X, Trash2, Check, ChevronsUpDown, PlusCircle, Link as LinkIcon } from 'lucide-react';
+import { Sparkles, Loader2, X, Trash2, PlusCircle } from 'lucide-react';
 import { Switch } from './ui/switch';
 import {
   AlertDialog,
@@ -31,19 +31,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from './ui/badge';
-import { cn } from '@/lib/utils';
 import { logAnalyticsEvent } from '@/firebase/analytics';
 import { professionalSkills, projectStages, incentiveOptions, linkTypes } from '@/lib/constants';
+import { SkillInput } from './skill-input';
 
 const projectSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters long' }),
   description: z.string().min(20, { message: 'Description must be at least 20 characters long' }),
   requiredTechStack: z.array(z.string()).min(1, { message: 'At least one technology is required' }),
-  requiredSkills: z.array(z.string()).max(3, { message: 'You can select up to 3 skills.' }).min(1, {message: 'At least one skill is required.'}),
+  requiredSkills: z.array(z.string()).max(5, { message: 'You can select up to 5 skills.' }).min(1, {message: 'At least one skill is required.'}),
   requiredYearsOfExperience: z.coerce.number().min(0, { message: "Years of experience can't be negative."}).optional(),
   imageUrl: z.string().optional(),
   collaborationOpen: z.boolean().default(true),
@@ -100,7 +98,6 @@ export default function ProjectForm({ project }: ProjectFormProps) {
 
   const titleValue = watch('title');
   const techStack = watch('requiredTechStack') || [];
-  const skills = watch('requiredSkills') || [];
   const collaborationOpenValue = watch('collaborationOpen');
   const imageUrlValue = watch('imageUrl');
 
@@ -277,19 +274,20 @@ export default function ProjectForm({ project }: ProjectFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label className="font-semibold">Required Skills</Label>
-              <div className="flex flex-wrap gap-1 mb-2">{skills.map((skill) => <Badge key={skill} variant="secondary" className="flex items-center gap-1">{skill}<button type="button" onClick={() => setValue('requiredSkills', skills.filter((s) => s !== skill), { shouldDirty: true })} className="rounded-full hover:bg-muted-foreground/20"><X className="h-3 w-3" /></button></Badge>)}</div>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" className="w-full justify-between">
-                    <span className="truncate">{skills.length > 0 ? `${skills.length} skills selected` : 'Select up to 3 skills...'}</span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0"><Command><CommandInput placeholder="Search skills..." /><CommandEmpty>No skill found.</CommandEmpty><CommandList><CommandGroup>{professionalSkills.map((skill) => <CommandItem key={skill} value={skill} onSelect={() => { const currentSkills = getValues('requiredSkills') || []; if (currentSkills.includes(skill)) { setValue('requiredSkills', currentSkills.filter((s) => s !== skill), { shouldDirty: true, shouldValidate: true }); } else if(currentSkills.length < 3) { setValue('requiredSkills', [...currentSkills, skill], { shouldDirty: true, shouldValidate: true }); } else { toast({ variant: "destructive", title: "Skill limit reached", description: "You can only select up to 3 skills." }) } }}>
-                            <Check className={cn('mr-2 h-4 w-4', (getValues('requiredSkills') || []).includes(skill) ? 'opacity-100' : 'opacity-0')} />{skill}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
-              </Popover>
-              {errors.requiredSkills && <p className="text-sm text-destructive">{errors.requiredSkills.message}</p>}
+                <Label>Required Professional Skills (Max 5)</Label>
+                <Controller
+                    name="requiredSkills"
+                    control={control}
+                    render={({ field }) => (
+                        <SkillInput 
+                            value={field.value}
+                            onChange={field.onChange}
+                            professionalSkills={professionalSkills}
+                            maxSkills={5}
+                        />
+                    )}
+                />
+                {errors.requiredSkills && <p className="text-sm text-destructive">{errors.requiredSkills.message}</p>}
             </div>
 
             <div className="space-y-2">
