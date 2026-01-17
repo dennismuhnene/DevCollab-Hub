@@ -7,7 +7,8 @@ import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import { doc, serverTimestamp, collection, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase/config';
-import { ref, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +60,9 @@ type ProjectFormData = z.infer<typeof projectSchema>;
 type ProjectFormProps = {
   project?: Project;
 };
+
+const functions = getFunctions();
+const deleteProjectImage = httpsCallable(functions, 'deleteProjectImage');
 
 export default function ProjectForm({ project }: ProjectFormProps) {
   const { user } = useAuth();
@@ -183,12 +187,11 @@ export default function ProjectForm({ project }: ProjectFormProps) {
         const projectRef = doc(db, 'projects', project.id);
         await updateDoc(projectRef, { ...projectData, updatedAt: serverTimestamp() });
 
-        if (imageFile && oldImageUrl && oldImageUrl.startsWith('https://firebasestorage.googleapis.com')) {
+        if (imageFile && oldImageUrl) {
            try {
-              const oldImageRef = ref(storage, oldImageUrl);
-              await deleteObject(oldImageRef);
+              await deleteProjectImage({ imageUrl: oldImageUrl });
            } catch (deleteError: any) {
-              if (deleteError.code !== 'storage/object-not-found') console.warn("Could not delete old image:", deleteError);
+              console.warn("Could not delete old project image via cloud function:", deleteError);
            }
         }
 
@@ -219,12 +222,17 @@ export default function ProjectForm({ project }: ProjectFormProps) {
     if (!project || !user) return;
     setLoading(true);
     try {
-      if (project.imageUrl && project.imageUrl.startsWith('https://firebasestorage.googleapis.com')) {
-        const imageRef = ref(storage, project.imageUrl);
-        await deleteObject(imageRef).catch(err => console.warn("Image deletion failed, may not exist", err));
-      }
       const projectRef = doc(db, 'projects', project.id);
       await deleteDoc(projectRef);
+
+      if (project.imageUrl) {
+        try {
+          await deleteProjectImage({ imageUrl: project.imageUrl });
+        } catch(e) {
+          console.warn("Cloud function to delete project image failed:", e);
+        }
+      }
+
       logAnalyticsEvent('delete_project', { project_id: project.id });
       toast({ title: 'Project deleted successfully' });
       router.push('/projects');

@@ -14,11 +14,11 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
-  Timestamp,
   getDoc,
 } from 'firebase/firestore';
 import { db, storage, auth } from '@/lib/firebase/config';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,7 +41,6 @@ import {
 import { Plus, Trash2, Save, X, LogOut, Loader2, Upload, Image as ImageIcon, ExternalLink } from 'lucide-react';
 import * as mammoth from 'mammoth';
 import type { BlogPost } from '@/types/blog';
-import { format } from 'date-fns';
 import dynamic from 'next/dynamic';
 
 const RichContentEditor = dynamic(() => import('@/components/RichContentEditor'), { 
@@ -50,6 +49,9 @@ const RichContentEditor = dynamic(() => import('@/components/RichContentEditor')
 });
 
 const CATEGORIES: string[] = ['Web Development', 'Data Engineering', 'Machine Learning', 'DevOps', 'Engineering', 'Full Stack'];
+
+const functions = getFunctions();
+const deleteBlogImage = httpsCallable(functions, 'deleteBlogImage');
 
 function normalizePostData(doc: any): BlogPost {
   const data = doc.data();
@@ -192,7 +194,6 @@ export default function BlogAdminPage() {
             return;
         }
     } else if (!imagePreviewUrl && oldImageUrl) {
-      // This means the image was removed but not replaced
       finalImageUrl = '';
     }
 
@@ -203,22 +204,20 @@ export default function BlogAdminPage() {
     };
 
     try {
-      if (isUpdating) {
-        const postRef = doc(db, 'blogs', editingPost.id);
+      let postId = editingPost?.id;
+      if (isUpdating && postId) {
+        const postRef = doc(db, 'blogs', postId);
         await updateDoc(postRef, dataToSave);
         
-        // If a new image was uploaded (or image was removed) and there was an old one, delete the old one.
-        if ((imageFile || !imagePreviewUrl) && oldImageUrl && oldImageUrl.startsWith('https://firebasestorage.googleapis.com')) {
+        if ((imageFile || !imagePreviewUrl) && oldImageUrl) {
            try {
-              const oldImageRef = ref(storage, oldImageUrl);
-              await deleteObject(oldImageRef);
+              await deleteBlogImage({ imageUrl: oldImageUrl });
            } catch (deleteError: any) {
-              if (deleteError.code !== 'storage/object-not-found') {
-                console.warn("Could not delete old image:", deleteError);
-              }
+              console.warn("Cloud function to delete old image failed:", deleteError);
+              toast({ title: 'Cleanup Warning', description: 'Post saved, but the old image could not be deleted.', variant: 'default' });
            }
         }
-        toast({ title: 'Post Updated', description: `The post "${formData.title}" has been successfully updated.` });
+        toast({ title: 'Post Updated', description: `Successfully updated "${formData.title}".` });
 
       } else {
         const docRef = await addDoc(collection(db, 'blogs'), {
@@ -227,17 +226,25 @@ export default function BlogAdminPage() {
           authorName: user.displayName || 'Dennis Munene',
           createdAt: serverTimestamp(),
         });
-        const newPostSnap = await getDoc(docRef);
-        setEditingPost(normalizePostData(newPostSnap));
-        toast({ title: 'Post Created', description: `The post "${formData.title}" has been successfully created.` });
+        postId = docRef.id;
+        toast({ title: 'Post Created', description: `Successfully created "${formData.title}".` });
       }
-      fetchPosts(); 
+
+      await fetchPosts();
+
+      if(postId) {
+        const updatedPostSnap = await getDoc(doc(db, 'blogs', postId));
+        if(updatedPostSnap.exists()) {
+          handleSelectPost(normalizePostData(updatedPostSnap));
+        }
+      }
+
     } catch (e) {
       console.error('Failed to save post:', e);
       toast({ title: isUpdating ? 'Update Failed' : 'Creation Failed', description: e instanceof Error ? e.message : 'Could not save the post.', variant: 'destructive' });
     } finally {
       setIsSaving(false);
-      setImageFile(null); // Reset image file state
+      setImageFile(null); 
     }
   };
 
@@ -247,24 +254,26 @@ export default function BlogAdminPage() {
     const { id, imageUrl, title } = postToDelete;
 
     try {
+      // First, delete the Firestore document
       await deleteDoc(doc(db, 'blogs', id));
 
-      if (imageUrl && imageUrl.startsWith('https://firebasestorage.googleapis.com')) {
+      // Then, if there was an image, call the Cloud Function to delete it
+      if (imageUrl) {
         try {
-          const imageRef = ref(storage, imageUrl);
-          await deleteObject(imageRef);
+          await deleteBlogImage({ imageUrl });
         } catch (storageError: any) {
-          if (storageError.code !== 'storage/object-not-found') {
-            console.warn('Could not delete image from storage:', storageError);
-          }
+          // Log a warning if the image deletion fails, but don't block the UI
+          console.warn('Cloud function to delete image failed:', storageError);
+          toast({ title: 'Cleanup Warning', description: 'Post document was deleted, but the associated image could not be removed.', variant: 'default' });
         }
       }
 
+      // Finally, update the local UI state
       setPosts((prev) => prev.filter((p) => p.id !== id));
       if (editingPost?.id === id) {
         resetForm();
       }
-      toast({ title: 'Post Deleted', description: `The post "${title}" has been removed.` });
+      toast({ title: 'Post Deleted', description: `The post "${title}" has been successfully removed.` });
     } catch (error) {
       console.error('Delete operation failed:', error);
       toast({ title: 'Delete Failed', description: error instanceof Error ? error.message : 'Could not delete the post.', variant: 'destructive' });
