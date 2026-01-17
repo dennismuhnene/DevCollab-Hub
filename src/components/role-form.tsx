@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { Role, Project } from '@/types';
-import { Loader2, X, Trash2, Check, ChevronsUpDown } from 'lucide-react';
+import { Loader2, X, Trash2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,11 +26,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from './ui/badge';
-import { cn } from '@/lib/utils';
 import { logAnalyticsEvent } from '@/firebase/analytics';
 import { 
     professionalSkills, 
@@ -40,11 +37,16 @@ import {
     partnerFunctions, 
     countries 
 } from '@/lib/constants';
+import { SkillInput } from './skill-input';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const roleSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters long' }),
   roleDescription: z.string().min(20, { message: 'Description must be at least 20 characters long' }),
-  requiredTechStack: z.array(z.string()).min(1, { message: 'At least one technology is required' }),
+  requiredTechStack: z.array(z.string()).optional(),
   requiredSkills: z.array(z.string()).max(5, { message: 'You can select up to 5 skills.' }).min(1, {message: 'At least one skill is required.'}),
   requiredYearsOfExperience: z.coerce.number().min(0, { message: "Years of experience can't be negative."}).optional(),
   incentives: z.string().min(1, { message: 'Please specify the incentives.' }),
@@ -107,7 +109,6 @@ export default function RoleForm({ role }: RoleFormProps) {
   });
 
   const techStack = watch('requiredTechStack') || [];
-  const skills = watch('requiredSkills') || [];
   const collaborationType = watch('collaborationType');
   const selectedLocations = watch('locations') || [];
   const selectedPartnerFunctions = watch('partnerFunctions') || [];
@@ -226,7 +227,7 @@ export default function RoleForm({ role }: RoleFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="requiredTechStack">Required Tech Stack</Label>
+          <Label htmlFor="requiredTechStack">Tech Stack (Optional)</Label>
           <div className="flex flex-wrap gap-2 mb-2">
             {techStack.map((tech) => (
               <Badge key={tech} variant="secondary">
@@ -250,32 +251,18 @@ export default function RoleForm({ role }: RoleFormProps) {
 
         <div className="space-y-2">
             <Label>Required Professional Skills (Max 5)</Label>
-            <div className="flex flex-wrap gap-1 mb-2">
-                {skills.map((skill) => (
-                    <Badge key={skill} variant="secondary" className="flex items-center gap-1">
-                        {skill}
-                        <button type="button" onClick={() => setValue('requiredSkills', skills.filter((s) => s !== skill), { shouldDirty: true, shouldValidate: true })} className="rounded-full hover:bg-muted-foreground/20">
-                            <X className="h-3 w-3" />
-                        </button>
-                    </Badge>
-                ))}
-            </div>
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" className="w-full justify-between">
-                        <span className="truncate">{skills.length > 0 ? `${skills.length} skills selected` : 'Select up to 5 skills...'}</span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                    <Command>
-                        <CommandInput placeholder="Search skills..." />
-                        <CommandEmpty>No skill found.</CommandEmpty>
-                        <CommandList><CommandGroup>{professionalSkills.map((skill) => <CommandItem key={skill} value={skill} onSelect={() => { const currentSkills = getValues('requiredSkills') || []; if (currentSkills.includes(skill)) { setValue('requiredSkills', currentSkills.filter((s) => s !== skill), { shouldDirty: true, shouldValidate: true }); } else if (currentSkills.length < 5) { setValue('requiredSkills', [...currentSkills, skill], { shouldDirty: true, shouldValidate: true }); } else { toast({ variant: "destructive", title: "Skill limit reached", description: "You can only select up to 5 skills." }); } }}>
-                            <Check className={cn('mr-2 h-4 w-4', skills.includes(skill) ? 'opacity-100' : 'opacity-0')} />{skill}</CommandItem>)}</CommandGroup></CommandList>
-                    </Command>
-                </PopoverContent>
-            </Popover>
+            <Controller
+                name="requiredSkills"
+                control={control}
+                render={({ field }) => (
+                    <SkillInput 
+                        value={field.value}
+                        onChange={field.onChange}
+                        professionalSkills={professionalSkills}
+                        maxSkills={5}
+                    />
+                )}
+            />
             {errors.requiredSkills && <p className="text-sm text-destructive">{errors.requiredSkills.message}</p>}
         </div>
         

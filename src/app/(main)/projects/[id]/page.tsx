@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Hand, Edit, Trash2, Code, BrainCircuit, Clock, UserCheck, Handshake, Briefcase, UserPlus, UserX, MessageSquare } from 'lucide-react';
+import { Hand, Edit, Trash2, Code, BrainCircuit, Clock, UserCheck, Handshake, Briefcase, UserPlus, UserX, MessageSquare, Github, Link as LinkIcon } from 'lucide-react';
 import Link from 'next/link';
 import {
   AlertDialog,
@@ -382,7 +382,31 @@ export const ProjectDetailsContent = ({ project: initialProject }: { project: Pr
           <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" /> Required Experience</CardTitle></CardHeader><CardContent><p className="text-sm">{formatExperience(project.requiredYearsOfExperience)}</p></CardContent></Card>
           <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Code className="h-4 w-4" />Required Tech Stack</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{project.requiredTechStack?.map(tech => <Badge key={tech} variant="secondary">{tech}</Badge>)}</CardContent></Card>
           <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><BrainCircuit className="h-4 w-4" />Required Skills</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{project.requiredSkills?.map(skill => <Badge key={skill} variant="outline">{skill}</Badge>)}</CardContent></Card>
-
+          {project.projectLinks && project.projectLinks.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <LinkIcon className="h-4 w-4" /> Project Links
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col space-y-2 pt-2">
+                {project.projectLinks.map((link, index) => {
+                  const linkData = link as any;
+                  const isGitHub = linkData.type.toLowerCase() === 'github';
+                  const Icon = isGitHub ? Github : LinkIcon;
+                  
+                  return (
+                    <Button key={index} asChild variant="outline" size="sm" className="justify-start w-full">
+                      <a href={linkData.url} target="_blank" rel="noopener noreferrer" title={linkData.url}>
+                        <Icon className="mr-2 h-4 w-4" />
+                        <span className="truncate">{linkData.type}</span>
+                      </a>
+                    </Button>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
           <div className="flex flex-col space-y-2 !mt-8"> 
             {isOwner ? (
               <div className="flex gap-2">
