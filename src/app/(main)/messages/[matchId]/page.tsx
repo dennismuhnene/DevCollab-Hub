@@ -264,7 +264,7 @@ export default function ChatPage() {
   };
 
   const handleGetAiInsights = () => {
-    if (isBlocked || isOtherUserDeleted) return; // MODIFIED
+    if (isBlocked || isOtherUserDeleted) return; 
     const isOwner = project?.ownerId === user?.uid || role?.ownerId === user?.uid;
     if (!isOwner) {
       return;
