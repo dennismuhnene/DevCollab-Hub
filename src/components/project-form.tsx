@@ -5,7 +5,7 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
-import { doc, serverTimestamp, collection, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, collection, updateDoc, addDoc } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase/config';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -63,6 +63,7 @@ type ProjectFormProps = {
 
 const functions = getFunctions();
 const deleteProjectImage = httpsCallable(functions, 'deleteProjectImage');
+const deleteProject = httpsCallable(functions, 'deleteProject');
 
 export default function ProjectForm({ project }: ProjectFormProps) {
   const { user } = useAuth();
@@ -222,17 +223,7 @@ export default function ProjectForm({ project }: ProjectFormProps) {
     if (!project || !user) return;
     setLoading(true);
     try {
-      const projectRef = doc(db, 'projects', project.id);
-      await deleteDoc(projectRef);
-
-      if (project.imageUrl) {
-        try {
-          await deleteProjectImage({ imageUrl: project.imageUrl });
-        } catch(e) {
-          console.warn("Cloud function to delete project image failed:", e);
-        }
-      }
-
+      await deleteProject({ projectId: project.id });
       logAnalyticsEvent('delete_project', { project_id: project.id });
       toast({ title: 'Project deleted successfully' });
       router.push('/projects');
