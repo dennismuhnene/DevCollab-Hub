@@ -124,6 +124,7 @@ export const manageMeeting = functions.https.onCall(async (data, context) => {
             const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
             const meetingId = meeting.id || uuidv4();
             const timezone = meeting.timezone || 'UTC';
+            let notification;
 
             if (action === 'schedule') {
                 if (Object.keys(meetings).length >= 3) {
@@ -156,6 +157,16 @@ export const manageMeeting = functions.https.onCall(async (data, context) => {
                 
                 transaction.update(engagementRef, { [`meetings.${meetingId}`]: newMeetingData });
 
+                notification = {
+                    type: 'engagement',
+                    title: 'Meeting Scheduled',
+                    message: `A meeting has been scheduled by ${advisorName} for your engagement.`,
+                    link: `/engagements/${engagementId}`,
+                    read: false,
+                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                };
+                transaction.set(db.collection('users').doc(developerId).collection('notifications').doc(), notification);
+
             } else if (action === 'reschedule') {
                 if (!meeting.id || !meeting.eventId) throw new functions.https.HttpsError('invalid-argument', 'Meeting ID and Event ID are required for rescheduling.');
                 
@@ -182,6 +193,16 @@ export const manageMeeting = functions.https.onCall(async (data, context) => {
                     [`meetings.${meeting.id}.rescheduleCount`]: admin.firestore.FieldValue.increment(1),
                 });
 
+                notification = {
+                    type: 'engagement',
+                    title: 'Meeting Rescheduled',
+                    message: `A meeting has been rescheduled by ${advisorName}. Please check the new time.`,
+                    link: `/engagements/${engagementId}`,
+                    read: false,
+                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                };
+                transaction.set(db.collection('users').doc(developerId).collection('notifications').doc(), notification);
+
             } else if (action === 'cancel') {
                 if (!meeting.id || !meeting.eventId) throw new functions.https.HttpsError('invalid-argument', 'Meeting ID and Event ID are required for cancellation.');
                 
@@ -194,6 +215,16 @@ export const manageMeeting = functions.https.onCall(async (data, context) => {
                     if (err.code !== 410) { throw err; } // Ignore if event is already gone
                 }
                 transaction.update(engagementRef, { [`meetings.${meeting.id}`]: admin.firestore.FieldValue.delete() });
+
+                notification = {
+                    type: 'engagement',
+                    title: 'Meeting Cancelled',
+                    message: `A meeting has been cancelled by ${advisorName}.`,
+                    link: `/engagements/${engagementId}`,
+                    read: false,
+                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                };
+                transaction.set(db.collection('users').doc(developerId).collection('notifications').doc(), notification);
 
             } else {
                 throw new functions.https.HttpsError('invalid-argument', 'Invalid action specified.');
