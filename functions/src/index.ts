@@ -1,4 +1,3 @@
-
 export * from './storage';
 export * from './engagements';
 export * from './generate-upload-url';
@@ -19,11 +18,25 @@ import axios from 'axios';
 if (admin.apps.length === 0) {
     admin.initializeApp();
 }
-const adminDb = getFirestore();
+const db = getFirestore();
+
+// Helper function to extract storage path from URL (already exists in storage.ts but duplicated here for standalone use)
+function getPathFromStorageUrl(url: string): string | null {
+  if (!url || !url.startsWith("https://firebasestorage.googleapis.com")) {
+    return null;
+  }
+  try {
+    const pathWithQuery = url.split("/o/")[1];
+    const encodedPath = pathWithQuery.split("?")[0];
+    return decodeURIComponent(encodedPath);
+  } catch (error) {
+    logger.error("Error extracting path from Firebase Storage URL:", error);
+    return null;
+  }
+}
 
 /**
  * Creates or retrieves a private Daily.co video room for an engagement and generates a meeting token.
- * This function is now idempotent and resilient to partial failures.
  */
 export const createVideoRoom = functions.https.onCall(async (data, context) => {
   logger.info("createVideoRoom function invoked - v2");
@@ -39,7 +52,7 @@ export const createVideoRoom = functions.https.onCall(async (data, context) => {
   }
 
   const uid = context.auth.uid;
-  const engagementRef = adminDb.doc(`engagements/${engagementId}`);
+  const engagementRef = db.doc(`engagements/${engagementId}`);
 
   try {
     const engagementSnap = await engagementRef.get();
@@ -154,71 +167,82 @@ export const deleteUserAccount = functions.https.onCall(async (data, context) =>
 
 /**
  * A background Cloud Function that triggers when a Firebase Auth user
- * is deleted. It performs a "cascade delete" of all associated Firestore data.
+ * is deleted. It performs a "cascade delete" of all associated Firestore data and Storage files.
  */
 export const onUserAccountDeleted = functions.auth.user().onDelete(async (user: UserRecord) => {
     const uid = user.uid;
-    logger.info(`Starting cascade actions for deleted user: ${uid}`);
+    logger.info(`Starting cascade delete for user: ${uid}`);
 
-    const batch = adminDb.batch();
+    const batch = db.batch();
+    const storage = admin.storage();
 
-    // 1. Delete the user's main profile and public advisor profile
-    batch.delete(adminDb.doc(`users/${uid}`));
-    batch.delete(adminDb.doc(`publicAdvisorProfiles/${uid}`));
-    logger.info(`Scheduled deletion for user profiles: users/${uid} and publicAdvisorProfiles/${uid}`);
+    // 1. Delete user's main profile and public advisor profile
+    batch.delete(db.doc(`users/${uid}`));
+    batch.delete(db.doc(`publicAdvisorProfiles/${uid}`));
+    logger.info(`Scheduled deletion for core user profiles.`);
 
-    // 2. Delete all projects owned by the user
-    const projectsQuery = adminDb.collection("projects").where("ownerId", "==", uid);
+    // 2. Delete all projects and associated images owned by the user
+    const projectsQuery = db.collection("projects").where("ownerId", "==", uid);
     const projectsSnapshot = await projectsQuery.get();
     if (!projectsSnapshot.empty) {
-        projectsSnapshot.forEach((doc) => {
+        logger.info(`Found ${projectsSnapshot.size} projects to delete.`);
+        for (const doc of projectsSnapshot.docs) {
+            const projectData = doc.data();
+            const imageUrl = projectData.imageUrl;
+
+            // Schedule project document for deletion
             batch.delete(doc.ref);
-            logger.info(`Scheduled deletion for project: ${doc.ref.path}`);
-        });
+
+            // If an image URL exists, schedule the image file for deletion
+            if (imageUrl && typeof imageUrl === 'string') {
+                const filePath = getPathFromStorageUrl(imageUrl);
+                if (filePath) {
+                    try {
+                        await storage.bucket().file(filePath).delete();
+                        logger.info(`Successfully deleted project image: ${filePath}`);
+                    } catch (error: any) {
+                        if (error.code === 404) {
+                            logger.warn(`Project image not found, skipping deletion: ${filePath}`);
+                        } else {
+                            logger.error(`Failed to delete project image ${filePath}:`, error);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // 3. Mark the user as deleted in any matches (conversations)
-    const matchesQuery = adminDb.collection("matches").where("participants", "array-contains", uid);
+    const matchesQuery = db.collection("matches").where("participants", "array-contains", uid);
     const matchesSnapshot = await matchesQuery.get();
     if (!matchesSnapshot.empty) {
         matchesSnapshot.forEach((doc) => {
-            batch.update(doc.ref, {
-                deletedParticipants: admin.firestore.FieldValue.arrayUnion(uid),
-            });
-            logger.info(`Marking user ${uid} as deleted in match: ${doc.ref.path}`);
+            batch.update(doc.ref, { deletedParticipants: FieldValue.arrayUnion(uid) });
+            logger.info(`Marking user as deleted in match: ${doc.ref.path}`);
         });
     }
 
     // 4. Update engagements to 'participant_deleted' status
-    const engagementsAsDevQuery = adminDb.collection("engagements").where("developerId", "==", uid);
-    const engagementsAsDevSnapshot = await engagementsAsDevQuery.get();
-    if (!engagementsAsDevSnapshot.empty) {
-        engagementsAsDevSnapshot.forEach((doc) => {
-            batch.update(doc.ref, {
-                status: 'participant_deleted',
-                closingReason: 'The developer on this engagement has deleted their account.',
-                closedById: uid,
-            });
-            logger.info(`Marking engagement ${doc.ref.path} as participant_deleted`);
-        });
-    }
+    const devEngagementsQuery = db.collection("engagements").where("developerId", "==", uid);
+    const advEngagementsQuery = db.collection("engagements").where("advisorId", "==", uid);
+    
+    const [devEngagements, advEngagements] = await Promise.all([
+        devEngagementsQuery.get(),
+        advEngagementsQuery.get(),
+    ]);
 
-    const engagementsAsAdvisorQuery = adminDb.collection("engagements").where("advisorId", "==", uid);
-    const engagementsAsAdvisorSnapshot = await engagementsAsAdvisorQuery.get();
-    if (!engagementsAsAdvisorSnapshot.empty) {
-        engagementsAsAdvisorSnapshot.forEach((doc) => {
-            batch.update(doc.ref, {
-                status: 'participant_deleted',
-                closingReason: 'The advisor on this engagement has deleted their account.',
-                closedById: uid,
-            });
-            logger.info(`Marking engagement ${doc.ref.path} as participant_deleted`);
-        });
-    }
+    const updatePayload = {
+        status: 'participant_deleted',
+        closingReason: 'A participant on this engagement has deleted their account.',
+        closedById: uid,
+    };
 
-    // Commit all batched operations
+    devEngagements.forEach(doc => batch.update(doc.ref, updatePayload));
+    advEngagements.forEach(doc => batch.update(doc.ref, updatePayload));
+
+    // Commit all batched Firestore operations
     await batch.commit();
-    logger.info(`Successfully completed cascade actions for user: ${uid}`);
+    logger.info(`Successfully completed cascade delete for user: ${uid}`);
 });
 
 
@@ -245,12 +269,12 @@ export const setAdvisorVerificationStatus = functions.https.onCall(async (data, 
     throw new functions.https.HttpsError("invalid-argument", "Invalid parameters.");
   }
 
-  const appRef = adminDb.doc(`users/${applicantId}/advisorApplications/${applicationId}`);
-  const userRef = adminDb.doc(`users/${applicantId}`);
-  const publicProfileRef = adminDb.doc(`publicAdvisorProfiles/${applicantId}`);
-  const notificationRef = adminDb.collection(`users/${applicantId}/notifications`).doc();
+  const appRef = db.doc(`users/${applicantId}/advisorApplications/${applicationId}`);
+  const userRef = db.doc(`users/${applicantId}`);
+  const publicProfileRef = db.doc(`publicAdvisorProfiles/${applicantId}`);
+  const notificationRef = db.collection(`users/${applicantId}/notifications`).doc();
 
-  const batch = adminDb.batch();
+  const batch = db.batch();
 
   const userSnap = await userRef.get();
   if (!userSnap.exists) {
@@ -264,7 +288,7 @@ export const setAdvisorVerificationStatus = functions.https.onCall(async (data, 
   // If rejecting, check if it was the active profile and deactivate it.
   if (status === "rejected" && userData.activeAdvisorApplicationId === applicationId) {
       batch.delete(publicProfileRef);
-      batch.update(userRef, { activeAdvisorApplicationId: admin.firestore.FieldValue.delete() });
+      batch.update(userRef, { activeAdvisorApplicationId: FieldValue.delete() });
   }
   
   // Create a notification for the user
@@ -278,7 +302,7 @@ export const setAdvisorVerificationStatus = functions.https.onCall(async (data, 
       : 'Your application was reviewed but not approved at this time.',
     link: '/profile#applications', // Direct link to the relevant section
     read: false,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
   });
 
   await batch.commit();
@@ -313,14 +337,14 @@ export const onEngagementCreated = functions.firestore
         const { advisorId, developerName, developerRequest } = engagement;
         logger.info(`New engagement ${context.params.engagementId} created. Notifying advisor ${advisorId}.`);
 
-        const notificationRef = adminDb.collection(`users/${advisorId}/notifications`).doc();
+        const notificationRef = db.collection(`users/${advisorId}/notifications`).doc();
         await notificationRef.set({
             type: 'engagement',
             title: developerRequest.subject || 'New Engagement Request',
             message: `You have a new advisory request from ${developerName}.`,
             link: '/dashboard',
             read: false,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
         });
     });
 
@@ -445,7 +469,7 @@ export const onEngagementUpdated = functions.firestore
         // Send the notification if a valid scenario was matched
         if (recipientId && notificationPayload) {
             logger.info(`Sending notification to ${recipientId} for engagement ${engagementId}`);
-            const notificationRef = adminDb.collection(`users/${recipientId}/notifications`).doc();
+            const notificationRef = db.collection(`users/${recipientId}/notifications`).doc();
             await notificationRef.set({
                 ...notificationPayload,
                 type: 'engagement',
@@ -471,7 +495,7 @@ export const onNewEngagementMessage = functions.firestore
             return;
         }
 
-        const engagementRef = adminDb.doc(`engagements/${engagementId}`);
+        const engagementRef = db.doc(`engagements/${engagementId}`);
         const engagementSnap = await engagementRef.get();
         const engagement = engagementSnap.data();
 
@@ -494,23 +518,23 @@ export const onNewEngagementMessage = functions.firestore
 
         logger.info(`New message in engagement ${engagementId}. Notifying ${recipientId}.`);
 
-        const batch = adminDb.batch();
+        const batch = db.batch();
 
         // 1. Create notification for the recipient
-        const notificationRef = adminDb.collection(`users/${recipientId}/notifications`).doc();
+        const notificationRef = db.collection(`users/${recipientId}/notifications`).doc();
         batch.set(notificationRef, {
             type: 'engagement',
             title: `New Message from ${senderName}`,
             message: `You have a new message: "${message.text.substring(0, 100)}${message.text.length > 100 ? '...' : ''}"`,
             link: `/engagements/${context.params.engagementId}`,
             read: false,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
         });
 
         // 2. Update the parent engagement doc with last message info
         batch.update(engagementRef, {
             lastMessage: message.text,
-            lastMessageTimestamp: admin.firestore.FieldValue.serverTimestamp(),
+            lastMessageTimestamp: FieldValue.serverTimestamp(),
             lastMessageSenderId: senderId,
         });
 
