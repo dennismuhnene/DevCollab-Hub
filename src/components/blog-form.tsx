@@ -36,6 +36,7 @@ export default function BlogForm({ blogPost }: BlogFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const {
     register,
@@ -62,17 +63,33 @@ export default function BlogForm({ blogPost }: BlogFormProps) {
     }
     setLoading(true);
 
+    let imageUrl = data.imageUrl;
+    if (imageFile) {
+      // In a real app, you would upload the file to a service like Firebase Storage
+      // and get the URL back. For this example, we'll just use a placeholder.
+      imageUrl = URL.createObjectURL(imageFile);
+    }
+
     if (blogPost) {
       const postRef = doc(db, 'blogs', blogPost.id);
       await updateDoc(postRef, {
         ...data,
+        imageUrl,
         updatedAt: serverTimestamp(),
       });
+
+      try {
+        sessionStorage.removeItem(`blog_${blogPost.id}`);
+      } catch (error) {
+        console.warn('Could not remove item from session storage', error);
+      }
+
       toast({ title: 'Blog post updated successfully!' });
       router.push('/d_blog');
     } else {
       await addDoc(collection(db, 'blogs'), {
         ...data,
+        imageUrl,
         authorId: user.uid,
         authorName: user.displayName || 'DevCollab Admin',
         createdAt: serverTimestamp(),
@@ -105,9 +122,8 @@ export default function BlogForm({ blogPost }: BlogFormProps) {
           <div className="space-y-2">
             <Label>Featured Image</Label>
             <ImageUploader
-              onUpload={(url) => setValue('imageUrl', url, { shouldDirty: true, shouldValidate: true })}
+              onFileSelect={setImageFile}
               initialUrl={blogPost?.imageUrl}
-              folderPath={`blog-images/${user?.uid}`}
             />
           </div>
           

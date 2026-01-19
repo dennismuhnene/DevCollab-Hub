@@ -48,7 +48,7 @@ const RichContentEditor = dynamic(() => import('@/components/RichContentEditor')
     loading: () => <div className="w-full bg-muted rounded-lg border h-64 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground"/></div>
 });
 
-const CATEGORIES: string[] = ['Web Development', 'Data Engineering', 'Machine Learning', 'DevOps', 'Engineering', 'Full Stack'];
+const CATEGORIES: string[] = ['Insight', ' Story time', 'Web Development', 'Data Engineering', 'Machine Learning', 'DevOps', 'Engineering', 'Full Stack'];
 
 const functions = getFunctions();
 const deleteBlogImage = httpsCallable(functions, 'deleteBlogImage');
