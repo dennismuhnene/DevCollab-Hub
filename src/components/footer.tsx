@@ -14,7 +14,7 @@ export default function Footer() {
 
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <p>&copy; {new Date().getFullYear()}</p>
-                        <span className="hidden sm:inline-block">A project by</span>
+                        <span className="hidden sm:inline-block">by</span>
                         <a href="https://neuralaxislabs.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 font-semibold text-foreground hover:text-primary transition-colors">
                             <Image
                                 src="/images/neuralaxis-logo.png"
@@ -23,7 +23,7 @@ export default function Footer() {
                                 height={64}
                                 className="h-16 w-12 rounded-full flex-shrink-0"
                             />
-                            <span>NeuralAxis Labs</span>
+                            <span>NAxL</span>
                         </a>
                     </div>
                     
