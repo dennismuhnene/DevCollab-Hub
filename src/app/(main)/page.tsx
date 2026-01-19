@@ -134,7 +134,7 @@ export default function HomePage() {
                     From Idea to Impact: <br /> Build What's Next, Together.
                   </motion.h1>
                   <motion.p variants={itemVariants} className="max-w-3xl mx-auto text-base mt-4">
-                    DevCollab Hub is the premier platform for creators, developers and product experts and newbies to connect, collaborate and transform innovative projects into market-ready products.
+                    DevCollab Hub is the premier platform for creators, developers and product experts and newbies to connect, collaborate and transform innovative projects into useful products.
                   </motion.p>
                   <motion.div variants={itemVariants} className="mt-8 flex flex-col items-center gap-4 min-[400px]:flex-row justify-center">
                     <Button asChild size="lg" className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-shadow">
@@ -167,9 +167,9 @@ export default function HomePage() {
         >
           <motion.div variants={itemVariants} className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="text-center space-y-4 mb-16">
-              <h2 className="text-2xl font-semibold leading-none tracking-tight">What is DevCollab Hub?</h2>
+              <h2 className="text-2xl font-bold tracking-tight text-primary">What is DevCollab Hub?</h2>
               <p className="max-w-2xl mx-auto text-muted-foreground text-base">
-                A collaborative platform for developers, creators, and experts to connect, build, and launch innovative products.
+                A collaborative platform for developers, creators and experts to connect, share ideas and collaborate when building their products.
               </p>
             </div>
             <motion.div 
@@ -211,7 +211,7 @@ export default function HomePage() {
             <div className="text-center space-y-4 mb-16">
               <h2 className="text-2xl font-semibold leading-none tracking-tight">Featured</h2>
               <p className="max-w-2xl mx-auto text-muted-foreground text-base">
-                Check out some cool projects in the hub.
+                Check out some of the projects in the hub.
               </p>
             </div>
             <motion.div 
@@ -357,7 +357,7 @@ export default function HomePage() {
                         transition={{ duration: 0.5, ease: 'easeInOut' }}
                     >
                         <AccordionContent className="text-base text-muted-foreground pt-2">
-                            Gain a strategic advantage in team building. Our platform provides a holistic view of your potential collaborators and provide an avenue to engage with them. This helps you identify the right tribe and uncover hidden opportunities beyond product creation- enabling you find the tribe for your growth and development of your product and its distribution to the target market.
+                            Gain a strategic advantage in collaborative insights. Our platform provides a holistic view of your potential collaborators and provide an avenue to engage with them. This helps you identify the right tribe and uncover hidden opportunities beyond product creation- enabling you find the tribe for your growth and development of your product and its distribution to the target market.
                         </AccordionContent>
                     </motion.div>
                 </AccordionItem>
@@ -393,11 +393,23 @@ export default function HomePage() {
                         transition={{ duration: 0.5, ease: 'easeInOut' }}
                     >
                         <AccordionContent className="text-base text-muted-foreground pt-2">
-                            That's what <strong>Roles</strong> are for. You can create a Role to post a specific need, without exposing much about your idea or project. They remain confidential until you choose to share it with a matched collaborator after a chat.
+                            That's what <strong>Roles</strong> are for. You can create a Role to share a collaboration opportunity, without exposing much about your idea or project. They remain confidential until you choose to provide more context with a matched collaborator after a chat.
                         </AccordionContent>
                     </motion.div>
                 </AccordionItem>
                 <AccordionItem value="item-6">
+                  <AccordionTrigger className="text-lg hover:text-primary transition-colors">How do I become an Advisor?</AccordionTrigger>
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        transition={{ duration: 0.5, ease: 'easeInOut' }}
+                    >
+                        <AccordionContent className="text-base text-muted-foreground pt-2">
+                        An Expert Advisor is a vetted professional who offers confidential, milestone-driven guidance to help you overcome specific project challenges and accelerate your progress. To become an advisor, you need to submit a simple application via the profile page that is reviewed by our team. Once approved, you can define your standard deliverables and begin offering your expertise to developers through our confidential, outcome-driven engagement system.
+                        </AccordionContent>
+                    </motion.div>
+                </AccordionItem>
+                <AccordionItem value="item-7">
                   <AccordionTrigger className="text-lg hover:text-primary transition-colors">How can Advisory help me?</AccordionTrigger>
                     <motion.div
                         initial={{ opacity: 0, height: 0 }}

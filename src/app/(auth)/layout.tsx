@@ -38,7 +38,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <div className="container grid max-w-6xl grid-cols-1 items-center gap-12 lg:grid-cols-2">
             <div className="hidden flex-col items-center justify-center p-8 text-center lg:flex">
                 <div className="max-w-md">
-                <Link href="/" className="mr-4 md:mr-6 flex items-center space-x-2 justify-center mb-6">
+                <Link href="/" className="mr-4 md:mr-6 flex items-center space-x-2 justify-center mb-2">
                     <Image src="/images/devcollab-logo.png" alt="DevCollab Hub Logo" width={64} height={64} className="h-16 w-16" />
                     <span className="font-bold text-[#c5a35a] text-4xl">DevCollab Hub</span>
                 </Link>

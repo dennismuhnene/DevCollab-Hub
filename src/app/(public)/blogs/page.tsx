@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -69,53 +68,57 @@ export default function BlogsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-12 text-center">
-            <Skeleton className="h-12 w-1/2 mx-auto mb-4" />
-            <Skeleton className="h-6 w-3/4 mx-auto" />
-        </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="space-y-2 rounded-lg border p-4">
-              <Skeleton className="h-48 w-full rounded-lg" />
-              <Skeleton className="h-6 w-3/4" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          ))}
+      <div className="wavy-background min-h-screen">
+        <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="mb-12 text-center">
+              <Skeleton className="h-12 w-1/2 mx-auto mb-4" />
+              <Skeleton className="h-6 w-3/4 mx-auto" />
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="space-y-2 rounded-lg border p-4">
+                <Skeleton className="h-48 w-full rounded-lg" />
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-12 text-center">
-        <h1 className="text-2xl font-semibold leading-none tracking-tight">Just a Read</h1>
-        <p className="mt-3 text-base text-muted-foreground">Insights from Us</p>
-      </div>
-
-      {posts.length > 0 ? (
-        <>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {posts.map((post) => (
-              <BlogCard key={post.id} post={post} />
-            ))}
-          </div>
-          {hasMore && (
-            <div className="mt-12 flex justify-center">
-              <Button onClick={() => fetchPosts()} disabled={loadingMore}>
-                {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {loadingMore ? 'Loading...' : 'Load More'}
-              </Button>
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 py-20 text-center">
-          <h2 className="text-base font-semibold">No Posts Yet</h2>
-          <p className="mt-2 text-muted-foreground text-sm">Check back soon for the latest articles!</p>
+    <div className="wavy-background min-h-screen">
+      <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-12 text-center">
+          <h1 className="text-3xl font-bold tracking-tight text-primary">Just a Read</h1>
+          <p className="mt-3 text-lg shiny-orange-subtitle">Insights from Us</p>
         </div>
-      )}
+
+        {posts.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {posts.map((post) => (
+                <BlogCard key={post.id} post={post} />
+              ))}
+            </div>
+            {hasMore && (
+              <div className="mt-12 flex justify-center">
+                <Button onClick={() => fetchPosts()} disabled={loadingMore}>
+                  {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {loadingMore ? 'Loading...' : 'Load More'}
+                </Button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 py-20 text-center">
+            <h2 className="text-base font-semibold">No Posts Yet</h2>
+            <p className="mt-2 text-muted-foreground text-sm">Check back soon for the latest articles!</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
