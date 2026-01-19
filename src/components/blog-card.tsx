@@ -14,12 +14,11 @@ type BlogCardProps = {
 
 function stripHtml(html: string) {
     if (typeof window === 'undefined') {
-        return html.replace(/<[^>]*>?/gm, '');
+        return html.replace(/<(?!(a\s*\/?))[^>]*>/gm, '');
     }
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    return doc.body.textContent || "";
+    return doc.body.innerHTML || "";
 }
-
 
 export default function BlogCard({ post }: BlogCardProps) {
   const excerpt = post.excerpt || stripHtml(post.content).substring(0, 150) + '...';
@@ -41,9 +40,7 @@ export default function BlogCard({ post }: BlogCardProps) {
             <CardContent className="flex flex-1 flex-col p-6">
                 {post.category && <Badge variant="secondary" className="mb-2 w-fit">{post.category}</Badge>}
                 <CardTitle className="mb-2 text-xl font-bold leading-tight">{post.title}</CardTitle>
-                <p className="mb-4 line-clamp-3 flex-grow text-foreground/80">
-                    {excerpt}
-                </p>
+                <p className="mb-4 line-clamp-3 flex-grow text-foreground/80" dangerouslySetInnerHTML={{ __html: excerpt }} />
             </CardContent>
             <CardFooter className="p-6 pt-0 flex justify-between items-center text-sm text-muted-foreground">
                  {post.createdAt && (

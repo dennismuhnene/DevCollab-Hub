@@ -16,6 +16,41 @@ import '.././blog-content.css';
 
 const WORD_COUNT_LIMIT = 250;
 
+/**
+ * Parses an HTML string, finds all anchor tags, and prepends 'https://' 
+ * to any href that looks like an external link but is missing a protocol.
+ * @param html The HTML string to process.
+ * @returns The processed HTML string with corrected links.
+ */
+function correctRelativeLinks(html: string): string {
+    if (typeof window === 'undefined' || !html) {
+        return html;
+    }
+    try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const links = doc.querySelectorAll('a');
+
+        links.forEach(link => {
+            const href = link.getAttribute('href');
+            if (href) {
+                // Regex to check if the link is absolute, internal, an anchor, or a special protocol
+                const isAbsoluteOrSpecial = /^(https?:\/\/|mailto:|tel:|#|\/)/.test(href);
+                // A simple check to see if it looks like a domain (contains a dot)
+                const hasDomainChars = href.includes('.');
+
+                if (!isAbsoluteOrSpecial && hasDomainChars) {
+                    link.setAttribute('href', `https://${href}`);
+                }
+            }
+        });
+        return doc.body.innerHTML;
+    } catch (error) {
+        console.error("Error correcting relative links:", error);
+        return html; // Return original html on error
+    }
+}
+
 function truncateHtml(html: string, limit: number): { isTruncated: boolean, html: string } {
     if (!html) return { isTruncated: false, html: '' };
 
@@ -79,59 +114,69 @@ export default function BlogPostPage() {
 
     const fetchPost = async () => {
       setLoading(true);
-
-      // 1. Check cache first
-      try {
-        const cachedPost = sessionStorage.getItem(`blog_${blogId}`);
-        if (cachedPost) {
-          const parsedPost = JSON.parse(cachedPost, (key, value) => {
-            // Firestore Timestamps need to be converted back from string
-            if ((key === 'createdAt' || key === 'updatedAt') && value) {
-              return new Date(value);
-            }
-            return value;
-          });
-          
-          // Re-create Timestamp-like objects for compatibility
-           const postDataWithTimestamps = {
-             ...parsedPost,
-             createdAt: { toDate: () => parsedPost.createdAt },
-             updatedAt: { toDate: () => parsedPost.updatedAt },
-           } as BlogPost
-           
-          setPost(postDataWithTimestamps);
-          setupContent(postDataWithTimestamps);
-          setLoading(false);
-          return;
-        }
-      } catch (error) {
-        console.warn('Could not read from session storage', error);
-      }
-
-      // 2. If not in cache, fetch from Firestore
       const postDocRef = doc(db, 'blogs', blogId);
-      const postDoc = await getDoc(postDocRef);
 
-      if (postDoc.exists()) {
-        const postData = { id: postDoc.id, ...postDoc.data() } as BlogPost;
+      // Helper function to process and set post data
+      const setupPost = (postData: BlogPost, id: string) => {
         if (postData.isPublished) {
-          setPost(postData);
-          setupContent(postData);
+          const fullPostData = { ...postData, id };
+          setPost(fullPostData);
+          setupContent(fullPostData);
           // 3. Save to cache
           try {
-            // When stringifying, convert Timestamp to a serializable format (ISO string)
             const cacheablePost = {
               ...postData,
+              // When stringifying, convert Timestamp to a serializable format (ISO string)
               createdAt: postData.createdAt.toDate().toISOString(),
               updatedAt: postData.updatedAt.toDate().toISOString(),
-            }
-            sessionStorage.setItem(`blog_${blogId}`, JSON.stringify(cacheablePost));
+            };
+            sessionStorage.setItem(`blog_${id}`, JSON.stringify(cacheablePost));
           } catch (error) {
             console.warn('Could not write to session storage', error);
           }
         } else {
           setPost(null);
         }
+      };
+      
+      // 1. Check cache first
+      try {
+        const cachedPostJSON = sessionStorage.getItem(`blog_${blogId}`);
+        if (cachedPostJSON) {
+          const cachedPost = JSON.parse(cachedPostJSON);
+          const postDataWithTimestamps = {
+            ...cachedPost,
+            id: blogId,
+            createdAt: { toDate: () => new Date(cachedPost.createdAt) },
+            updatedAt: { toDate: () => new Date(cachedPost.updatedAt) },
+          } as BlogPost
+          setPost(postDataWithTimestamps);
+          setupContent(postDataWithTimestamps);
+          setLoading(false); // Stop initial loading, but revalidate in background
+
+          // Revalidate in the background
+          const postDoc = await getDoc(postDocRef);
+          if (postDoc.exists()) {
+            const serverTimestamp = postDoc.data().updatedAt.toDate();
+            if (serverTimestamp > new Date(cachedPost.updatedAt)) {
+              console.log('Stale cache, re-fetching post...');
+              setupPost(postDoc.data() as BlogPost, postDoc.id);
+            }
+          } else {
+             setPost(null); // Post was deleted
+          }
+
+          return; // End execution here if cache was found
+        }
+      } catch (error) {
+        console.warn('Could not read from session storage', error);
+      }
+
+      // 2. If not in cache, fetch from Firestore
+      const postDoc = await getDoc(postDocRef);
+
+      if (postDoc.exists()) {
+        setupPost(postDoc.data() as BlogPost, postDoc.id);
       } else {
         setPost(null);
       }
@@ -179,6 +224,7 @@ export default function BlogPostPage() {
   }
 
   const contentToShow = isExpanded ? post.content : truncatedContent;
+  const finalContent = correctRelativeLinks(contentToShow);
 
 
   return (
@@ -230,7 +276,7 @@ export default function BlogPostPage() {
 
             <div
                 className="blog-content mx-auto"
-                dangerouslySetInnerHTML={{ __html: contentToShow }}
+                dangerouslySetInnerHTML={{ __html: finalContent }}
             />
             
             {!isExpanded && isTruncated && (
