@@ -134,7 +134,7 @@ export default function HomePage() {
                     From Idea to Impact: <br /> Build What's Next, Together.
                   </motion.h1>
                   <motion.p variants={itemVariants} className="max-w-3xl mx-auto text-base mt-4">
-                    DevCollab Hub is the premier platform for creators, developers and product experts to connect, collaborate and transform innovative projects into market-ready products.
+                    DevCollab Hub is the premier platform for creators, developers and product experts and newbies to connect, collaborate and transform innovative projects into market-ready products.
                   </motion.p>
                   <motion.div variants={itemVariants} className="mt-8 flex flex-col items-center gap-4 min-[400px]:flex-row justify-center">
                     <Button asChild size="lg" className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-shadow">
@@ -156,9 +156,9 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Features Section */}
+        {/* About Section */}
         <motion.section 
-          id="how-it-works" 
+          id="about" 
           className="relative w-full py-20 md:py-32 bg-background"
           initial="hidden"
           whileInView="visible"
@@ -167,9 +167,9 @@ export default function HomePage() {
         >
           <motion.div variants={itemVariants} className="container mx-auto max-w-screen-xl px-4 md:px-8">
             <div className="text-center space-y-4 mb-16">
-              <h2 className="text-2xl font-semibold leading-none tracking-tight">How It Works</h2>
+              <h2 className="text-2xl font-semibold leading-none tracking-tight">What is DevCollab Hub?</h2>
               <p className="max-w-2xl mx-auto text-muted-foreground text-base">
-                Find your crew, build your vision
+                A collaborative platform for developers, creators, and experts to connect, build, and launch innovative products.
               </p>
             </div>
             <motion.div 
@@ -177,9 +177,9 @@ export default function HomePage() {
               variants={containerVariants}
             >
               {[
-                { icon: Search, title: '1. Discover', description: 'Explore a curated ecosystem of projects, roles and build a skilled team. Our intelligent platform helps you find the perfect tribe.' },
-                { icon: Handshake, title: '2. Connect', description: 'Initiate meaningful collaborations by expressing interest. The tribal chief will review and match with the best-fit for their vision.' },
-                { icon: Rocket, title: '3. Build & Launch', description: "Use the messaging feature to align on goals, share ideas and begin your collaboration. It's time to build your vision and bring it to life, from idea to project to distribution." }
+                { icon: Search, title: 'Find Collaborators, Not Candidates', description: 'Discover and connect with like-minded developers, creators and experts. Search for projects that ignite your passion or post your own idea to build a collaborative team.'},
+                { icon: Handshake, title: 'Forge Strategic Connections', description: 'Move beyond simple profiles. Express interest, match with project owners, and use integrated coversation UI to build meaningful, private collaborations.' },
+                { icon: Rocket, title: 'Structured Advisory & Growth', description: 'Engage with expert advisors through a confidential, milestone-driven system to accelerate your project from a great idea to a market-ready product.' }
               ].map((feature, index) => (
                  <motion.div key={index} variants={itemVariants} whileHover={{ y: -8, transition: { duration: 0.2 } }}>
                    <Card className="relative overflow-hidden h-full bg-white/10 backdrop-blur-sm border-white/20 hover:border-primary/50 transition-all duration-300 transform hover:shadow-glow">
@@ -345,7 +345,7 @@ export default function HomePage() {
                         transition={{ duration: 0.5, ease: 'easeInOut' }}
                     >
                         <AccordionContent className="text-base text-muted-foreground pt-2">
-                           We are a dedicated ecosystem that provides the strategic framework to connect you with your perfect collaborators, cut through the noise and foster long-term partnerships that build, launch and scale your products at every stage—while growing the tribe that drives your success. 
+                           We are a dedicated ecosystem that provides the strategic framework to connect you with your perfect collaborators, cut through the noise and foster long-term partnerships that build, launch and scale your products at every stage- while growing the tribe that drives your success. 
                         </AccordionContent>
                     </motion.div>
                 </AccordionItem>
@@ -357,19 +357,19 @@ export default function HomePage() {
                         transition={{ duration: 0.5, ease: 'easeInOut' }}
                     >
                         <AccordionContent className="text-base text-muted-foreground pt-2">
-                            Gain a strategic advantage in team building. Our platform provides a holistic view of your potential collaborators and provide an avenue to engage with them. This helps you identify the right tribe and uncover hidden opportunities beyond product creation- enabling you find the right talent for your growth and development of your product and its distribution to the target market.
+                            Gain a strategic advantage in team building. Our platform provides a holistic view of your potential collaborators and provide an avenue to engage with them. This helps you identify the right tribe and uncover hidden opportunities beyond product creation- enabling you find the tribe for your growth and development of your product and its distribution to the target market.
                         </AccordionContent>
                     </motion.div>
                 </AccordionItem>
                 <AccordionItem value="item-3">
-                  <AccordionTrigger className="text-lg hover:text-primary transition-colors">Is it just for coders?</AccordionTrigger>
+                  <AccordionTrigger className="text-lg hover:text-primary transition-colors">Is it just for technical guys?</AccordionTrigger>
                     <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         transition={{ duration: 0.5, ease: 'easeInOut' }}
                     >
                         <AccordionContent className="text-base text-muted-foreground pt-2">
-                            DevCollab Hub is for all creators in the tech space. Whether you're a designer, a project manager, a data scientist, product manager, Marketing, finance and branding expert or a visionary, you'll find your place here.
+                            DevCollab Hub is for all creators in the tech space. Whether you're a designer, a data scientist, product manager; Marketing, graphics and branding experts or a visionary, you'll find your place here.
                         </AccordionContent>
                     </motion.div>
                 </AccordionItem>
@@ -386,14 +386,26 @@ export default function HomePage() {
                     </motion.div>
                 </AccordionItem>
                 <AccordionItem value="item-5">
-                  <AccordionTrigger className="text-lg hover:text-primary transition-colors">What if I need to find a tribe but want to keep it on the down low?</AccordionTrigger>
+                  <AccordionTrigger className="text-lg hover:text-primary transition-colors">What if I need to collaborate but want to keep my work private?</AccordionTrigger>
                     <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         transition={{ duration: 0.5, ease: 'easeInOut' }}
                     >
                         <AccordionContent className="text-base text-muted-foreground pt-2">
-                            That's what <strong>Roles</strong> are for. You can create a Role to post a specific need, like 'I am looking for a study partner to build projects together' without exposing much about your idea or project. They remain confidential (your business) until you choose to share it with a matched collaborator after a chat.
+                            That's what <strong>Roles</strong> are for. You can create a Role to post a specific need, without exposing much about your idea or project. They remain confidential until you choose to share it with a matched collaborator after a chat.
+                        </AccordionContent>
+                    </motion.div>
+                </AccordionItem>
+                <AccordionItem value="item-6">
+                  <AccordionTrigger className="text-lg hover:text-primary transition-colors">How can Advisory help me?</AccordionTrigger>
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        transition={{ duration: 0.5, ease: 'easeInOut' }}
+                    >
+                        <AccordionContent className="text-base text-muted-foreground pt-2">
+                            No more stalling or getting stuck. Share your challenge with an expert advisor in a confidential, milestone-driven engagement to get the specific guidance you need and keep your project moving forward.- It doesn't have to be a technical issue btw.
                         </AccordionContent>
                     </motion.div>
                 </AccordionItem>
@@ -421,7 +433,7 @@ export default function HomePage() {
                 Ready to Build What's Next?
               </h2>
               <p className="mx-auto mt-6 max-w-xl text-base text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.2)]">
-              Sometimes you don't have the time to build everything, sometimes you don't know how and where to find the technical team to build a feature; or sometimes you need to maybe iterate your MVP, or you wanna find better ways to reach your target market and sometimes there are legalese you wanna figure out etc...That's the tribe you are missing. That's what this platfrom is about. Join a community of innovators and builders. Find your perfect tribe and transform your vision into a real-world product.
+              Are you shaping an idea, iterating it, aligning on direction, or moving a product forward? DevCollab Hub brings together people who contribute to real outcomes. Collaborate through projects, roles and structured engagements- and turn your vision into concrete progress.
               </p>
               <div className="mt-10 flex items-center justify-center gap-x-6">
                 <Button asChild size="lg" className="bg-white text-orange-500 hover:bg-gray-100 shadow-lg">
@@ -450,4 +462,4 @@ export default function HomePage() {
       </main>
     </div>
   );
-}
+} 
