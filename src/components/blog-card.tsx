@@ -25,7 +25,7 @@ export default function BlogCard({ post }: BlogCardProps) {
 
   return (
     <Card className="h-full transform transition-all duration-300 hover:shadow-xl dark:hover:shadow-primary/20 flex flex-col group">
-        <Link href={`/blogs/${post.id}`} className="block h-full flex flex-col">
+        <Link href={`/blogs/${post.slug}`} className="block h-full flex flex-col">
             <CardHeader className="p-0">
                 <div className="aspect-[16/9] w-full overflow-hidden rounded-t-lg">
                     <Image
