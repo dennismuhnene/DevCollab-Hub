@@ -90,7 +90,7 @@ service cloud.firestore {
     // BLOGS
     match /blogs/{blogId} {
       allow get, list: if true;
-      allow create, update, delete: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && isAdmin();
     }
 
     // MATCHES & MESSAGES

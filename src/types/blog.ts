@@ -13,4 +13,5 @@ export interface BlogPost {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   category?: string;
+  views?: number;
 }

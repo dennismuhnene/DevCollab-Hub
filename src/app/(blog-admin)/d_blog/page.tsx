@@ -38,7 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Trash2, Save, X, LogOut, Loader2, Upload, Image as ImageIcon, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Save, X, LogOut, Loader2, Upload, Image as ImageIcon, ExternalLink, Eye } from 'lucide-react';
 import * as mammoth from 'mammoth';
 import type { BlogPost } from '@/types/blog';
 import dynamic from 'next/dynamic';
@@ -68,6 +68,7 @@ function normalizePostData(doc: any): BlogPost {
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
     category: data.category || '',
+    views: data.views || 0, // Include the views count
   };
 }
 
@@ -84,7 +85,7 @@ export default function BlogAdminPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
-  const initialFormData: Omit<BlogPost, 'id' | 'createdAt' | 'updatedAt' | 'authorId' | 'authorName'> = {
+  const initialFormData: Omit<BlogPost, 'id' | 'createdAt' | 'updatedAt' | 'authorId' | 'authorName' | 'views'> = {
     title: '',
     slug: '',
     content: '',
@@ -254,21 +255,17 @@ export default function BlogAdminPage() {
     const { id, imageUrl, title } = postToDelete;
 
     try {
-      // First, delete the Firestore document
       await deleteDoc(doc(db, 'blogs', id));
 
-      // Then, if there was an image, call the Cloud Function to delete it
       if (imageUrl) {
         try {
           await deleteBlogImage({ imageUrl });
         } catch (storageError: any) {
-          // Log a warning if the image deletion fails, but don't block the UI
           console.warn('Cloud function to delete image failed:', storageError);
           toast({ title: 'Cleanup Warning', description: 'Post document was deleted, but the associated image could not be removed.', variant: 'default' });
         }
       }
 
-      // Finally, update the local UI state
       setPosts((prev) => prev.filter((p) => p.id !== id));
       if (editingPost?.id === id) {
         resetForm();
@@ -379,6 +376,10 @@ export default function BlogAdminPage() {
                           <div className="flex items-center gap-2 mt-2">
                             <Badge variant={post.isPublished ? 'default' : 'secondary'}>{post.isPublished ? 'Published' : 'Draft'}</Badge>
                             {post.category && <Badge variant="outline">{post.category}</Badge>}
+                            <div className="flex items-center text-xs text-muted-foreground ml-auto">
+                              <Eye className="h-3 w-3 mr-1" />
+                              <span>{post.views || 0}</span>
+                            </div>
                           </div>
                         </div>
                       ))}

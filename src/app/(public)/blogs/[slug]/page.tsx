@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
+import { logAnalyticsEvent } from '@/firebase/analytics';
 import type { BlogPost } from '@/types/blog';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
@@ -127,7 +128,7 @@ export default function BlogPostPage() {
           // 3. Save to cache
           try {
             const cacheablePost = {
-              ...postData,
+              ...fullPostData,
               // When stringifying, convert Timestamp to a serializable format (ISO string)
               createdAt: postData.createdAt.toDate().toISOString(),
               updatedAt: postData.updatedAt.toDate().toISOString(),
@@ -195,6 +196,17 @@ export default function BlogPostPage() {
 
     fetchPost();
   }, [slug]);
+
+  useEffect(() => {
+    // When the post has successfully loaded, log an analytics event.
+    if (post && !loading) {
+      logAnalyticsEvent('view_blog_post', {
+        post_slug: post.slug,
+        post_title: post.title,
+      });
+    }
+    // We only want this to run when the post object itself changes, not on every render.
+  }, [post, loading]);
 
 
   if (loading) {

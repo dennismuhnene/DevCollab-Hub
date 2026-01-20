@@ -7,6 +7,7 @@ export * from './google-auth'; // Exports getGoogleAuthUrl and handleGoogleRedir
 export * from './get-advisor-application';
 export * from './startMilestone';
 export * from './closeEngagement';
+export * from './blog'; // Export the new blog view counter function
 
 import * as functions from "firebase-functions";
 import * as logger from "firebase-functions/logger";
