@@ -398,7 +398,7 @@ export default function BlogAdminPage() {
                     </div>
                     {editingPost && formData.isPublished && (
                       <Button variant="outline" size="sm" asChild>
-                        <a href={`/blogs/${editingPost.id}`} target="_blank" rel="noopener noreferrer">
+                        <a href={`/blogs/${editingPost.slug}`} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="h-4 w-4 mr-2" /> View Live
                         </a>
                       </Button>

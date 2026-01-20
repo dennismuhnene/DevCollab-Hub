@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { BlogPost } from '@/types/blog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,6 +12,7 @@ import Image from 'next/image';
 import { format } from 'date-fns';
 import { Calendar, User, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ShareButtons } from '@/components/share-buttons';
 import '.././blog-content.css';
 
 const WORD_COUNT_LIMIT = 250;
@@ -101,7 +102,7 @@ function truncateHtml(html: string, limit: number): { isTruncated: boolean, html
 export default function BlogPostPage() {
   const params = useParams();
   const router = useRouter();
-  const blogId = params.id as string;
+  const slug = params.slug as string;
 
   const [post, setPost] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);
@@ -110,11 +111,12 @@ export default function BlogPostPage() {
   const [isTruncated, setIsTruncated] = useState(false);
 
   useEffect(() => {
-    if (!blogId) return;
+    if (!slug) return;
 
     const fetchPost = async () => {
       setLoading(true);
-      const postDocRef = doc(db, 'blogs', blogId);
+      const blogsRef = collection(db, 'blogs');
+      const q = query(blogsRef, where("slug", "==", slug));
 
       // Helper function to process and set post data
       const setupPost = (postData: BlogPost, id: string) => {
@@ -130,7 +132,7 @@ export default function BlogPostPage() {
               createdAt: postData.createdAt.toDate().toISOString(),
               updatedAt: postData.updatedAt.toDate().toISOString(),
             };
-            sessionStorage.setItem(`blog_${id}`, JSON.stringify(cacheablePost));
+            sessionStorage.setItem(`blog_${slug}`, JSON.stringify(cacheablePost));
           } catch (error) {
             console.warn('Could not write to session storage', error);
           }
@@ -141,12 +143,11 @@ export default function BlogPostPage() {
       
       // 1. Check cache first
       try {
-        const cachedPostJSON = sessionStorage.getItem(`blog_${blogId}`);
+        const cachedPostJSON = sessionStorage.getItem(`blog_${slug}`);
         if (cachedPostJSON) {
           const cachedPost = JSON.parse(cachedPostJSON);
           const postDataWithTimestamps = {
             ...cachedPost,
-            id: blogId,
             createdAt: { toDate: () => new Date(cachedPost.createdAt) },
             updatedAt: { toDate: () => new Date(cachedPost.updatedAt) },
           } as BlogPost
@@ -155,8 +156,9 @@ export default function BlogPostPage() {
           setLoading(false); // Stop initial loading, but revalidate in background
 
           // Revalidate in the background
-          const postDoc = await getDoc(postDocRef);
-          if (postDoc.exists()) {
+          const querySnapshot = await getDocs(q);
+          if (!querySnapshot.empty) {
+            const postDoc = querySnapshot.docs[0];
             const serverTimestamp = postDoc.data().updatedAt.toDate();
             if (serverTimestamp > new Date(cachedPost.updatedAt)) {
               console.log('Stale cache, re-fetching post...');
@@ -173,9 +175,10 @@ export default function BlogPostPage() {
       }
 
       // 2. If not in cache, fetch from Firestore
-      const postDoc = await getDoc(postDocRef);
+      const querySnapshot = await getDocs(q);
 
-      if (postDoc.exists()) {
+      if (!querySnapshot.empty) {
+        const postDoc = querySnapshot.docs[0];
         setupPost(postDoc.data() as BlogPost, postDoc.id);
       } else {
         setPost(null);
@@ -191,7 +194,7 @@ export default function BlogPostPage() {
 
 
     fetchPost();
-  }, [blogId]);
+  }, [slug]);
 
 
   if (loading) {
@@ -278,6 +281,8 @@ export default function BlogPostPage() {
                 className="blog-content mx-auto"
                 dangerouslySetInnerHTML={{ __html: finalContent }}
             />
+
+            {isExpanded && <ShareButtons title={post.title} slug={post.slug} />}
             
             {!isExpanded && isTruncated && (
                  <div className="mt-8 text-center bg-gradient-to-t from-background to-transparent pt-20 -mt-20 relative">
