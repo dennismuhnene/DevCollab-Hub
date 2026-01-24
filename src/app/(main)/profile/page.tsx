@@ -9,13 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ProfileForm from '@/components/profile-form';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { doc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, updateDoc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import { db, storage, auth } from '@/lib/firebase/config';
 import { useToast } from '@/hooks/use-toast';
 import { Camera, Save, X, Loader2, Link as LinkIcon } from 'lucide-react';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -27,6 +26,7 @@ import UserRoleSettings from '@/components/user-role-settings';
 
 const functions = getFunctions();
 const deleteProfileImage = httpsCallable(functions, 'deleteProfileImage');
+const updatePublicAdvisorProfileData = httpsCallable(functions, 'updatePublicAdvisorProfileData');
 
 export default function ProfilePage() {
   const { user, userProfile, loading, reloadUserProfile } = useAuth();
@@ -101,16 +101,33 @@ export default function ProfilePage() {
     }
 
     setUploading(true);
+    toast({ title: 'Uploading image...' });
     const oldImageUrl = userProfile.photoURL;
-    const storageRef = ref(storage, `profile-images/${user.uid}/${newImageFile.name}`);
+    const storageRef = ref(storage, `profile-images/${user.uid}/${Date.now()}_${newImageFile.name}`);
     
     try {
-      const uploadTask = await uploadBytesResumable(storageRef, newImageFile);
-      const downloadURL = await getDownloadURL(uploadTask.ref);
+      const snapshot = await uploadBytes(storageRef, newImageFile);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      toast({ title: 'Image uploaded, saving profile...' });
+
+      const updatePromises: Promise<any>[] = [];
 
       const userDocRef = doc(db, 'users', user.uid);
-      updateDocumentNonBlocking(userDocRef, { photoURL: downloadURL });
-      if (auth.currentUser) await updateProfile(auth.currentUser, { photoURL: downloadURL });
+      updatePromises.push(updateDoc(userDocRef, { photoURL: downloadURL }));
+
+      if (userProfile.roles?.advisor) {
+        updatePromises.push(updatePublicAdvisorProfileData({ photoURL: downloadURL }).catch(err => {
+            console.warn("Public profile photo update via cloud function failed. This is likely okay if no public profile is active.", err);
+        }));
+      }
+
+      await Promise.all(updatePromises);
+      
+      if (auth.currentUser) {
+        await updateProfile(auth.currentUser, { photoURL: downloadURL });
+        // Force a refresh of the user's token to propagate the change to all components
+        await auth.currentUser.getIdToken(true);
+      }
 
       if (oldImageUrl) {
         try {
@@ -124,6 +141,7 @@ export default function ProfilePage() {
       reloadUserProfile();
 
     } catch (error: any) {
+      console.error("Image upload failed", error);
       toast({ variant: 'destructive', title: 'Upload failed', description: error.message });
     } finally {
         setUploading(false);
@@ -210,7 +228,7 @@ export default function ProfilePage() {
                             <CardDescription>Update your personal information and skills.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <ProfileForm userProfile={finalProfile} isAdvisor={finalProfile.isAdvisorOnly} />
+                            <ProfileForm userProfile={finalProfile} isAdvisor={!!finalProfile.roles?.advisor} />
                         </CardContent>
                     </Card>
                 </>
