@@ -77,41 +77,54 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       auth,
       (firebaseUser) => {
         if (firebaseUser) {
-            // User is logged in, reload to get fresh state
-            firebaseUser.reload().then(async () => { // Make the callback async
+            firebaseUser.reload().then(async () => {
               const freshUser = auth.currentUser;
+              if (!freshUser) return;
 
-              // *** START SESSION MANAGEMENT ***
-              if (freshUser) {
-                try {
-                  const idToken = await freshUser.getIdToken();
-                  await fetch('/api/auth/session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ idToken }),
-                  });
-                } catch (error) {
-                  console.error("FirebaseProvider: Error creating session cookie:", error);
-                }
+              // Session Management
+              try {
+                const idToken = await freshUser.getIdToken();
+                await fetch('/api/auth/session', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ idToken }),
+                });
+              } catch (error) {
+                console.error("FirebaseProvider: Error creating session cookie:", error);
               }
-              // *** END SESSION MANAGEMENT ***
 
               setUserAuthState({ user: freshUser, isUserLoading: false, userError: null });
     
               const currentPath = pathnameRef.current;
-              if (freshUser && !freshUser.emailVerified) {
+
+              // Check if it's a new user and redirect to profile
+              const { creationTime, lastSignInTime } = freshUser.metadata;
+              if (creationTime && lastSignInTime) {
+                  const creationTimestamp = new Date(creationTime).getTime();
+                  const lastSignInTimestamp = new Date(lastSignInTime).getTime();
+                  // Check if the difference is less than 10 seconds to identify a new user
+                  if (Math.abs(lastSignInTimestamp - creationTimestamp) < 10000) {
+                      if (currentPath !== '/profile') {
+                          router.push('/profile');
+                          return; // Stop further checks after redirect
+                      }
+                  }
+              }
+
+              // Check for email verification
+              if (!freshUser.emailVerified) {
                   const allowedUnverifiedPaths = ['/verify-email', '/login', '/signup', '/forgot-password'];
                   if (!allowedUnverifiedPaths.includes(currentPath)) {
                     router.push('/verify-email');
                   }
               }
+
             }).catch(error => {
                 console.error("FirebaseProvider: user.reload() error:", error);
                 setUserAuthState({ user: auth.currentUser, isUserLoading: false, userError: error });
             });
         } else {
             // User is logged out
-            // *** START SESSION MANAGEMENT ***
             (async () => {
               try {
                 await fetch('/api/auth/session', { method: 'DELETE' });
@@ -119,7 +132,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 console.error("FirebaseProvider: Error deleting session cookie:", error);
               }
             })();
-            // *** END SESSION MANAGEMENT ***
             setUserAuthState({ user: null, isUserLoading: false, userError: null });
         }
       },

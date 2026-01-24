@@ -2,6 +2,7 @@
 import type { ReactNode } from 'react';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
+import ProfileCompletionBanner from '@/components/profile-completion-banner';
 
 export default function MainLayout({ children }: { children: ReactNode }) {
   const structuredData = {
@@ -35,6 +36,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteStructuredData) }}
       />
       <Header />
+      <ProfileCompletionBanner />
       <main className="flex-1">{children}</main>
       <Footer />
     </div>
