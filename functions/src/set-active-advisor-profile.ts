@@ -9,8 +9,7 @@ if (admin.apps.length === 0) {
 const db = admin.firestore();
 
 /**
- * ✅ FIXED: Toggles a user's active advisor profile.
- * 
+ * Toggles a user's active advisor profile.
  * This function handles both activating a new profile and deactivating an existing one.
  */
 export const setActiveAdvisorProfile = functions.https.onCall(async (data, context) => {
@@ -46,16 +45,13 @@ export const setActiveAdvisorProfile = functions.https.onCall(async (data, conte
             throw new functions.https.HttpsError('failed-precondition', 'Application must be verified.');
         }
 
-        // Check if the user is trying to deactivate the currently active profile.
         const isDeactivating = userData.activeAdvisorApplicationId === applicationId;
 
         if (isDeactivating) {
-            // DEACTIVATE logic
             batch.update(userRef, { activeAdvisorApplicationId: admin.firestore.FieldValue.delete() });
             batch.delete(publicProfileRef);
-            await admin.auth().setCustomUserClaims(userId, { ...(userDoc.data()?.customClaims || {}), isAdvisor: false });
+            await admin.auth().setCustomUserClaims(userId, { ...(userData.customClaims || {}), isAdvisor: false });
         } else {
-            // ACTIVATE logic
             batch.update(userRef, { activeAdvisorApplicationId: applicationId });
             batch.set(publicProfileRef, {
                 uid: userId,
@@ -66,10 +62,10 @@ export const setActiveAdvisorProfile = functions.https.onCall(async (data, conte
                 specialties: appData.specialties || [],
                 credentials: appData.credentials || [],
                 standardDeliverables: appData.standardDeliverables || [],
-                activeAdvisorApplicationId: applicationId, // This links the public profile to the source application
-                createdAt: admin.firestore.FieldValue.serverTimestamp(), // Use server timestamp for consistency
+                activeAdvisorApplicationId: applicationId,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
             });
-            await admin.auth().setCustomUserClaims(userId, { ...(userDoc.data()?.customClaims || {}), isAdvisor: true });
+            await admin.auth().setCustomUserClaims(userId, { ...(userData.customClaims || {}), isAdvisor: true });
         }
         
         await batch.commit();
@@ -82,5 +78,33 @@ export const setActiveAdvisorProfile = functions.https.onCall(async (data, conte
             throw error;
         }
         throw new functions.https.HttpsError('internal', 'An internal error occurred.');
+    }
+});
+
+/**
+ * Updates the photoURL for a user's public advisor profile.
+ * This is a dedicated function to securely update profile imagery.
+ */
+export const updatePublicAdvisorProfileData = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "You must be logged in to update your profile.");
+    }
+
+    const { photoURL } = data;
+    if (!photoURL || typeof photoURL !== 'string') {
+        throw new functions.https.HttpsError("invalid-argument", "The function must be called with a 'photoURL' string argument.");
+    }
+
+    const uid = context.auth.uid;
+    const publicProfileRef = db.collection("publicAdvisorProfiles").doc(uid);
+
+    try {
+        await publicProfileRef.update({ photoURL });
+        return { success: true, message: "Public advisor profile photo updated successfully." };
+    } catch (error) {
+        console.warn(`Could not update public advisor profile for UID: ${uid}. This may be because the profile does not exist yet.`);
+        // Return success to the client as this is a non-critical failure. 
+        // The main user profile photo was updated successfully.
+        return { success: true, message: "Public profile not found or could not be updated." };
     }
 });
