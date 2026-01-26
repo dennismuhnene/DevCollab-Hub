@@ -1,54 +1,12 @@
 'use client';
 
-import { useUser } from '@/firebase/provider';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
-import type { UserProfile } from '@/types';
-import { useEffect, useState, useCallback } from 'react';
+// The FirebaseProvider (src/firebase/provider.tsx) has been refactored to be the single source of truth
+// for authentication and user profile data. It now directly provides a `useAuth` hook that includes
+// the user, their real-time profile, and loading states.
+//
+// This file previously contained a separate, redundant hook that also tried to fetch the user profile.
+// To fix the build error and remove duplicated logic, this file now simply re-exports the authoritative
+// `useAuth` hook from the central provider. All components importing from `@/lib/hooks/use-auth`
+// will now correctly receive the data from the main context.
 
-export const useAuth = () => {
-  const { user, isUserLoading, userError } = useUser();
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [key, setKey] = useState(0); // Add a key to force re-fetching
-
-  const fetchUserProfile = useCallback(async () => {
-    if (user) {
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
-      if (userDoc.exists()) {
-        setUserProfile({ uid: user.uid, ...userDoc.data() } as UserProfile);
-      } else {
-        setUserProfile(null);
-      }
-    } else {
-      setUserProfile(null);
-    }
-    setLoading(false);
-  }, [user]);
-
-  useEffect(() => {
-    if (isUserLoading) {
-      setLoading(true);
-    } else if (user) {
-      setLoading(true);
-      fetchUserProfile();
-    } else {
-      // Handle the case where the user is not logged in.
-      setUserProfile(null);
-      setLoading(false);
-    }
-  }, [user, isUserLoading, fetchUserProfile, key]);
-
-  const reloadUserProfile = useCallback(() => {
-    setKey(prevKey => prevKey + 1);
-  }, []);
-
-  return {
-    user,
-    userProfile,
-    loading,
-    error: userError,
-    reloadUserProfile
-  };
-};
+export { useAuth } from '@/firebase/provider';

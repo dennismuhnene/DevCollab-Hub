@@ -40,6 +40,7 @@ export interface UserProfile {
     yearsOfExperience?: number; 
     timezone?: string;
     isProfileComplete?: boolean;
+    onboardingComplete?: boolean; // Added for the new onboarding wizard
     roles: { 
         developer: boolean; 
         advisor: boolean; 
