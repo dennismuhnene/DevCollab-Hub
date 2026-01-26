@@ -22,6 +22,9 @@ export interface AuthContextState {
   loading: boolean;
   error: Error | null;
   reloadUserProfile: () => Promise<void>;
+  // Add the core Firebase services to the context
+  firestore: Firestore;
+  auth: Auth;
 }
 
 export const AuthContext = createContext<AuthContextState | undefined>(undefined);
@@ -127,7 +130,9 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({ children, fi
     loading,
     error,
     reloadUserProfile,
-  }), [user, userProfile, loading, error, reloadUserProfile]);
+    firestore, // Pass firestore instance in context
+    auth,      // Pass auth instance in context
+  }), [user, userProfile, loading, error, reloadUserProfile, firestore, auth]);
 
   // Define paths where the onboarding wizard should NOT take over.
   const onboardingBypassPaths = ['/login', '/signup', '/verify-email', '/forgot-password', '/advisory'];
