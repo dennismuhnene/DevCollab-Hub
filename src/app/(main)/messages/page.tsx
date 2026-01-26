@@ -2,13 +2,11 @@
 
 import { collection, query, where, Timestamp, FieldValue } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { useAuth } from '@/lib/hooks/use-auth';
-import { db } from '@/lib/firebase/config';
+import { useAuth } from '@/firebase/provider';
 import type { Match } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MessageSquare, Users, Archive } from 'lucide-react';
 import MatchList from '@/components/match-list';
-import { useMemoFirebase } from '@/firebase';
 import { useEffect, useState, useMemo } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -19,29 +17,31 @@ const getSortableTime = (timestamp: Timestamp | FieldValue | null | undefined): 
   if (timestamp instanceof Timestamp) {
     return timestamp.toMillis();
   }
-  // For FieldValue (like serverTimestamp()), return current time for optimistic sorting
   return Date.now();
 };
 
 export default function MessagesPage() {
-  const { user } = useAuth();
+  const { user, firestore } = useAuth();
   const [sortedMatches, setSortedMatches] = useState<Match[]>([]);
   const [showArchived, setShowArchived] = useState(false);
 
-  const matchesQuery = useMemoFirebase(
+  const matchesQuery = useMemo(
     () => {
       if (!user?.uid) return null;
-      return query(
-        collection(db, 'matches'),
+      const q = query(
+        collection(firestore, 'matches'),
         where('participants', 'array-contains', user.uid)
       );
+      // This is the critical fix. The useCollection hook has a custom check that requires
+      // the query to be "tagged" with a __memo property.
+      (q as any).__memo = true;
+      return q;
     },
-    [user?.uid]
+    [user?.uid, firestore]
   );
 
   const { data: matches, isLoading, error } = useCollection<Match>(user ? matchesQuery : null);
   
-  // ROBUST SORTING: Handles both new and legacy data structures
   useEffect(() => {
     if (matches) {
         const sorted = [...matches].sort((a, b) => {

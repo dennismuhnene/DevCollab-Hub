@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Engagement, Meeting } from '@/types/advisor';
-import { useFirebase } from '@/firebase/provider';
+import { useAuth } from '@/firebase/provider';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
@@ -24,7 +24,7 @@ async function callManageMeeting(body: any) {
 
 export default function EngagementVideo({ engagement }: EngagementVideoProps) {
   const { toast } = useToast();
-  const { user: currentUser } = useFirebase();
+  const { user: currentUser } = useAuth();
 
   const [isLoading, setIsLoading] = useState(false);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);

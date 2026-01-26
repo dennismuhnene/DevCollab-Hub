@@ -3,8 +3,7 @@
 import { useEffect, useState, useRef, useMemo, useCallback, useTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, increment, Timestamp, FieldValue, arrayUnion } from 'firebase/firestore';
-import { useAuth } from '@/lib/hooks/use-auth';
-import { db } from '@/lib/firebase/config';
+import { useAuth } from '@/firebase/provider';
 import type { Match, Message, UserProfile, Project, Role } from '@/types';
 import type { GetChatInsightsOutput } from '@/types/ai';
 import { useCollection } from '@/firebase/firestore/use-collection';
@@ -16,7 +15,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Send, Users, Archive, ArrowLeft, Sparkles, Loader2, Trash2, ShieldAlert, UserX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { addNotification } from '@/lib/firebase/notifications';
-import { useMemoFirebase } from '@/firebase';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { markMatchNotificationsAsRead } from '@/lib/firebase/notifications';
@@ -61,7 +59,7 @@ const MatchListContent = ({ matches, isLoading, activeMatchId, showArchived, onS
 );
 
 export default function ChatPage() {
-  const { user, userProfile, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading, firestore } = useAuth();
   const router = useRouter();
   const params = useParams();
   const matchId = params.matchId as string;
@@ -82,11 +80,18 @@ export default function ChatPage() {
   const [showAiModal, setShowAiModal] = useState(false);
   const { toast } = useToast();
   const [isBlocked, setIsBlocked] = useState(false);
-  const [isOtherUserDeleted, setIsOtherUserDeleted] = useState(false); // ADDED
+  const [isOtherUserDeleted, setIsOtherUserDeleted] = useState(false);
 
-  const matchesQuery = useMemoFirebase(
-    () => user?.uid ? query(collection(db, 'matches'), where('participants', 'array-contains', user.uid)) : null,
-    [user?.uid]
+  const matchesQuery = useMemo(
+    () => {
+      if (!user?.uid) return null;
+      const q = query(collection(firestore, 'matches'), where('participants', 'array-contains', user.uid));
+      // This is the critical fix. The useCollection hook has a custom check that requires
+      // the query to be "tagged" with a __memo property.
+      (q as any).__memo = true;
+      return q;
+    },
+    [user?.uid, firestore]
   );
   const { data: matches, isLoading: matchesLoading, error: matchesError } = useCollection<Match>(matchesQuery);
 
@@ -125,13 +130,13 @@ export default function ChatPage() {
     if (!matchId || !user) return;
     setLoading(true);
 
-    const messagesQuery = query(collection(db, 'matches', matchId, 'messages'), orderBy('timestamp', 'asc'));
+    const messagesQuery = query(collection(firestore, 'matches', matchId, 'messages'), orderBy('timestamp', 'asc'));
     const unsubscribeMessages = onSnapshot(messagesQuery, 
         (snapshot) => setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message))),
         (err) => console.error("ChatPage Messages Snapshot Error:", err)
     );
 
-    const matchDocRef = doc(db, 'matches', matchId);
+    const matchDocRef = doc(firestore, 'matches', matchId);
     const unsubscribeMatch = onSnapshot(matchDocRef, async (matchDoc) => {
         if (!matchDoc.exists()) {
             toast({ variant: 'destructive', title: 'Match not found' });
@@ -149,7 +154,6 @@ export default function ChatPage() {
         const otherUserId = matchData.participants.find(p => p !== user.uid);
 
         if (otherUserId) {
-            // MODIFIED BLOCK - START
             if (matchData.deletedParticipants?.includes(otherUserId)) {
                 setIsOtherUserDeleted(true);
                 setOtherUser(null);
@@ -158,28 +162,26 @@ export default function ChatPage() {
                 const blockStatus = await checkBlockStatus(user.uid, otherUserId);
                 setIsBlocked(blockStatus);
 
-                const userDoc = await getDoc(doc(db, 'users', otherUserId));
+                const userDoc = await getDoc(doc(firestore, 'users', otherUserId));
                 if (userDoc.exists()) {
                     setOtherUser({ uid: userDoc.id, ...userDoc.data() } as UserProfile);
                 } else {
-                    // If user doc doesn't exist, it means they were deleted.
                     setIsOtherUserDeleted(true);
                     setOtherUser(null);
                 }
             }
-             // MODIFIED BLOCK - END
         }
 
         if (matchData.type === 'project' && matchData.contextId) {
-            const projectDoc = await getDoc(doc(db, 'projects', matchData.contextId));
+            const projectDoc = await getDoc(doc(firestore, 'projects', matchData.contextId));
             setProject(projectDoc.exists() ? { id: projectDoc.id, ...projectDoc.data() } as Project : null);
             setRole(null);
         } else if (matchData.type === 'role' && matchData.contextId) {
-            const roleDoc = await getDoc(doc(db, 'roles', matchData.contextId));
+            const roleDoc = await getDoc(doc(firestore, 'roles', matchData.contextId));
             setRole(roleDoc.exists() ? { id: roleDoc.id, ...roleDoc.data() } as Role : null);
             setProject(null);
         } else if ((matchData as any).projectId) {
-            const projectDoc = await getDoc(doc(db, 'projects', (matchData as any).projectId));
+            const projectDoc = await getDoc(doc(firestore, 'projects', (matchData as any).projectId));
             setProject(projectDoc.exists() ? { id: projectDoc.id, ...projectDoc.data() } as Project : null);
             setRole(null);
         } else {
@@ -204,7 +206,7 @@ export default function ChatPage() {
       unsubscribeMatch();
     };
 
-  }, [matchId, user, router, toast]);
+  }, [matchId, user, router, toast, firestore]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -219,13 +221,13 @@ export default function ChatPage() {
     setNewMessage('');
 
     try {
-      await addDoc(collection(db, 'matches', matchId, 'messages'), {
+      await addDoc(collection(firestore, 'matches', matchId, 'messages'), {
         text: trimmedMessage,
         senderId: user.uid,
         timestamp: serverTimestamp(),
       });
 
-      await updateDoc(doc(db, 'matches', matchId), { 
+      await updateDoc(doc(firestore, 'matches', matchId), { 
         lastMessage: trimmedMessage,
         lastMessageSender: user.uid,
         lastMessageTimestamp: serverTimestamp(),
@@ -249,11 +251,11 @@ export default function ChatPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not send your message. Please try again.' });
       setNewMessage(trimmedMessage);
     }
-  }, [user, match, otherUser, userProfile, matchId, toast, isBlocked, isOtherUserDeleted, newMessage]);
+  }, [user, match, otherUser, userProfile, matchId, toast, isBlocked, isOtherUserDeleted, newMessage, firestore]);
 
   const handleDeleteMessage = async (messageId: string) => {
     if (!user) return;
-    const messageRef = doc(db, 'matches', matchId, 'messages', messageId);
+    const messageRef = doc(firestore, 'matches', matchId, 'messages', messageId);
     try {
       await updateDoc(messageRef, { deletedFor: arrayUnion(user.uid) });
       toast({ title: 'Message Deleted' });
@@ -365,7 +367,6 @@ export default function ChatPage() {
         </aside>
 
         <main className="flex-1 flex flex-col bg-background">
-          {/* MODIFIED HEADER - START */}
           <div className="p-4 border-b flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="md:hidden">
@@ -406,7 +407,6 @@ export default function ChatPage() {
               </Button>
             )}
           </div>
-          {/* MODIFIED HEADER - END */}
 
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {loading && messages.length === 0 ? (
@@ -420,7 +420,6 @@ export default function ChatPage() {
                   </div>
               ) : visibleMessages.map((msg, index) => (
                 <div key={index} className={cn("group flex items-end gap-2", msg.senderId === user?.uid ? "justify-end" : "justify-start")}>
-                    {/* MODIFIED AVATAR LOGIC - START */}
                     {msg.senderId !== user?.uid && (
                         isOtherUserDeleted ? (
                             <Avatar className="h-8 w-8"><AvatarFallback><UserX /></AvatarFallback></Avatar>
@@ -428,7 +427,6 @@ export default function ChatPage() {
                             <Avatar className="h-8 w-8"><AvatarImage src={otherUser?.photoURL} /><AvatarFallback>{getInitials(otherUser?.name)}</AvatarFallback></Avatar>
                         )
                     )}
-                    {/* MODIFIED AVATAR LOGIC - END */}
                     <div className={cn("max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg shadow-sm relative", msg.senderId === user?.uid ? "bg-primary text-primary-foreground" : "bg-muted")}>
                         <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>
                     </div>
@@ -447,7 +445,6 @@ export default function ChatPage() {
               <div ref={messagesEndRef} />
           </div>
 
-           {/* MODIFIED FOOTER - START */}
            <div className="p-4 border-t bg-card mt-auto">
               {isOtherUserDeleted ? (
                   <div className="flex items-center justify-center p-4 rounded-lg bg-yellow-100/50 text-yellow-800 border border-yellow-200/80">
@@ -473,7 +470,6 @@ export default function ChatPage() {
                   </form>
               )}
            </div>
-           {/* MODIFIED FOOTER - END */}
         </main>
       </div>
       {aiInsights && (
